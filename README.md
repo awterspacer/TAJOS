@@ -58,8 +58,8 @@ Usuario
 ```
 tajos/
 ├── index.html              # Página de inicio con links a ambas apps
-├── barberia_v01_2.html     # App principal: admin y cajeros
-├── barberos_portal.html    # Portal exclusivo para barberos
+├── TAJOS-MNGMNT_v01_0.html     # App principal: admin y cajeros
+├── TAJOS-BRBRS_V01_0.html    # Portal exclusivo para barberos
 ├── supabase_schema.sql     # Schema completo para inicializar Supabase
 └── README.md               # Este archivo
 ```
