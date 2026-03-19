@@ -35,8 +35,8 @@ Usuario
 ┌─────────────────────────────┐
 │     Navegador (cliente)     │
 │                             │
-│  barberia_v01_2.html        │
-│  barberos_portal.html       │
+│  TAJOS-MNGMNT_v01_0.html        │
+│  TAJOS-BRBRS_V01_0.html       │
 │                             │
 │  ┌──────────┐  ┌─────────┐  │
 │  │IndexedDB │  │ Pending │  │
