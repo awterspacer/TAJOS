@@ -144,8 +144,8 @@ const SUPA_KEY = 'TU_ANON_KEY';
 
 | App | Usuario | Contraseña / PIN |
 |---|---|---|
-| Admin (`barberia_v01_2.html`) | `admin` | `1234` |
-| Portal (`barberos_portal.html`) | Definido al crear cada barbero | `1234` |
+| Admin (`TAJOS-MNGMNT_v01_0.html`) | `admin` | `1234` |
+| Portal (`TAJOS-BRBRS_V01_0.html`) | Definido al crear cada barbero | `1234` |
 
 > ⚠ Cambiar las contraseñas por defecto tras el primer acceso.
 
