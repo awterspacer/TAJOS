@@ -919,7 +919,7 @@ const FIELD_TO_DB = {
   notaAdmin:'nota_admin', fechaAprobacion:'fecha_aprobacion',
   barberoNombre:'barbero_nombre', clienteNombre:'cliente_nombre',
   registradoPor:'registrado_por', createdAt:'created_at',
-  giftcardId:'giftcard_id',
+  giftcardId:'giftcard_id', cajero:'registrado_por',
 };
 const FIELD_FROM_DB = Object.fromEntries(Object.entries(FIELD_TO_DB).map(([k,v])=>[v,k]));
 
@@ -1171,6 +1171,7 @@ async function doLogin(){
 }
 
 function showApp(){
+  sessionStorage.setItem('tajos_user_id', ST.user.id);
   document.getElementById('loginScreen').classList.remove('visible');
   document.getElementById('app').classList.add('visible');
   const u=ST.user;
@@ -1203,6 +1204,7 @@ async function logoutConfirm(){await showRecordatorioBackup();}
 async function doLogout(){
   await logAct('Cierre de sesión');
   ST.user=null;
+  sessionStorage.removeItem('tajos-user_id');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('loginScreen').classList.add('visible');
   document.getElementById('loginUser').value='';
@@ -2011,7 +2013,7 @@ async function guardarCobro(){
     await dbPut('giftcards',gcUsada);
     ST._gcAplicada=null;
   }
-  await dbAdd('cobros',{clienteId:cId,barberoId:bId,items:[...ST.cobroItems],pagos:ST.cobroPagos.map(p=>({metodo:p.metodo,monto:parseFloat(p.monto)||0})),total:tot,factura:facturaAmt,giftcardId:gcUsada?.id||null,fecha:toDS(now),hora:now.toTimeString().slice(0,5),local:ST.localActivo,cajero:ST.user?.login||'?',creado:now.toISOString()});
+  await dbAdd('cobros',{clienteId:cId,barberoId:bId,items:[...ST.cobroItems],pagos:ST.cobroPagos.map(p=>({metodo:p.metodo,monto:parseFloat(p.monto)||0})),total:tot,factura:facturaAmt,giftcardId:gcUsada?.id||null,fecha:toDS(now),hora:now.toTimeString().slice(0,5),local:ST.localActivo,registradoPor:ST.user?.login||'?',creado:now.toISOString()});
   await logAct(`Registró cobro de ${fmt(tot)} · Cliente: ${c?c.nombre+' '+c.apellido:'sin registro'} · Barbero: ${b?b.nombre+' '+b.apellido:'?'}`);
   toast('Cobro registrado ✅','success');closeModal('modalNuevoCobro');
   ST.cobroItems=[];ST.cobroPagos=[];ST._gcAplicada=null;refreshDash();refreshCaja();
@@ -2796,6 +2798,12 @@ initDB().then(async()=>{
   await seedData();
   document.getElementById('cajaFechaFiltro').value=hoy();
   verificarAlertaMensual();
+  // Restaurar sesion si existe
+  const savedUId=sessionStorage.getItem('tajos-user-id');
+  if(savedUId){
+    const u=await dbGet('usuarios',savedUId);
+    if(u&&u.estado=='activo'){ST.user=u;showApp();}
+  }
 }).catch(err=>{
   console.error('DB Error:',err);
   alert('Error al inicializar la base de datos. Recarga la página.');
