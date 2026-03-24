@@ -655,6 +655,8 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="form-group"><label class="form-label">Apellido *</label><input type="text" class="form-control" id="barberoApellido"></div>
       </div>
       <div class="form-row">
+        <div class="form-group"><label class="form-label">Celular</label><input type="tel" class="form-control" id="barberoCelular">
+      </div>
         <div class="form-group"><label class="form-label">Fecha de Ingreso</label><input type="date" class="form-control" id="barberoIngreso"></div>
         <div class="form-group"><label class="form-label">Sucursal</label><select class="form-control" id="barberoLocal"><option value="1">Central</option><option value="2">Superseis</option><option value="0">Ambas</option></select></div>
       </div>
@@ -712,6 +714,7 @@ tbody tr:last-child td{border-bottom:none;}
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Categoría</label><select class="form-control" id="prodCategoria"></select></div>
+        <div class="form-group"><label class="form-label"><input type="checkbox" id="prodComisionable"> Genera comisión (10%)</label></div>
         <div class="form-group"><label class="form-label">Descripción</label><input type="text" class="form-control" id="prodDesc"></div>
       </div>
     </div>
@@ -925,11 +928,11 @@ const FIELD_FROM_DB = Object.fromEntries(Object.entries(FIELD_TO_DB).map(([k,v])
 
 const SUPA_COLS={
   cobros:new Set(['id','cliente_id','barbero_id','fecha','hora','local','items','pagos','total','factura','giftcard_id','registrado_por','created_at']),
-  barberos:new Set(['id','nombre','apellido','fecha_ingreso','local','comision','email','activo','created_at','updated_at']),
+  barberos:new Set(['id','nombre','apellido','fecha_ingreso','local','comision','email', 'celualr','activo','created_at','updated_at',]),
   barbero_users:new Set(['id','barbero_id','login','pin','activo','ultimo_acceso','created_at']),
   clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
   servicios:new Set(['id','nombre','precio','duracion','categoria','descripcion','activo','created_at','updated_at']),
-  productos:new Set(['id','nombre','precio','stock','categoria','descripcion','activo','created_at','updated_at']),
+  productos:new Set(['id','nombre','precio','stock','categoria','comisionable','descripcion','activo','created_at','updated_at']),
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','created_at','updated_at']),
   usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
   historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
@@ -1748,6 +1751,7 @@ async function guardarBarbero(){
   const id=document.getElementById('barberoEditId').value;
   const loginPortal=document.getElementById('barberoLoginPortal').value.trim().toLowerCase();
   const pinPortal=document.getElementById('barbaroPinPortal').value.trim();
+  const celular=document.getElementById('barberoCelular').value.trim();  
   const data={nombre:document.getElementById('barberoNombre').value.trim(),apellido:document.getElementById('barberoApellido').value.trim(),fechaIngreso:document.getElementById('barberoIngreso').value,local:+document.getElementById('barberoLocal').value,comision:+document.getElementById('barberoComision').value||50,email:document.getElementById('barberoEmail').value.trim()};
   if(!data.nombre||!data.apellido)return toast('Nombre y apellido son requeridos','error');
   if(!loginPortal)return toast('El usuario del portal es requerido','error');
@@ -1768,7 +1772,7 @@ async function guardarBarbero(){
       await dbPut('barberoUsers',existingBU);
     }else{
       // No se encontro registro existente: crear uno nuevo correctamente vinculado
-      await dbAdd('barberoUsers',{barberoId:id,login:loginPortal,pin:pinPortal||'1234',activo:true,ultimoAcceso:''});
+      await dbAdd('barberoUsers',{barberoId:id,login:loginPortal,pin:pinPortal||'1234',activo:true,ultimoAcceso:'','celular':''});
     }
     await logAct(`Editó barbero: ${data.nombre} ${data.apellido} (portal: ${loginPortal})`);
     toast('Barbero actualizado','success');
@@ -1906,10 +1910,17 @@ async function verDetTurno(id){
         <option value="completado"${t.estado==='completado'?' selected':''}>Completado</option>
         <option value="cancelado"${t.estado==='cancelado'?' selected':''}>Cancelado</option>
       </select></div>`;
+  let extraBtn = '';
+
+  if(t.estado === 'completado'){
+    extraBtn = `<button class="btn btn-gold" onclick="abrirCobroDesdeTurno(${t.id})">💰 Cobrar</button>`;
+  }
   document.getElementById('detTurnoFooter').innerHTML=`
     <button class="btn btn-danger btn-sm" onclick="eliminarTurno(${t.id})">🗑 Eliminar</button>
     <button class="btn btn-ghost" onclick="closeModal('modalDetalleTurno')">Cerrar</button>
-    <button class="btn btn-gold" onclick="actualizarTurnoEstado(${t.id})">Guardar Estado</button>`;
+    <button class="btn btn-gold" onclick="actualizarTurnoEstado(${t.id})">Guardar Estado</button>
+    ${extraBtn}
+    `;
   openModal('modalDetalleTurno');
 }
 
@@ -1917,6 +1928,31 @@ async function actualizarTurnoEstado(id){
   const t=await dbGet('turnos',id);t.estado=document.getElementById('turnoEstadoSel').value;
   await dbPut('turnos',t);await logAct(`Cambió turno a: ${t.estado}`);
   toast('Estado actualizado','success');closeModal('modalDetalleTurno');renderAgenda();
+}
+
+async function abrirCobroDesdeTurno(id){
+  const t = await dbGet('turnos', id);
+  if(!t) return;
+
+  document.getElementById('cobroCliente').value = t.clienteId || '';
+  document.getElementById('cobroBarbero').value = t.barberoId || '';
+
+  // limpiar items actuales
+  ST.cobroItems = [];
+
+  const servicios = await dbAll('servicios');
+
+  (t.servicios || []).forEach(nombreServ => {
+    const s = servicios.find(x => x.nombre === nombreServ);
+    if(s){
+      ST.cobroItems.push({...s, tipo:'servicio'});
+    }
+  });
+
+  renderCobroItems();
+
+  closeModal('modalDetalleTurno');
+  openModal('modalNuevoCobro');
 }
 
 async function eliminarTurno(id){
@@ -1948,6 +1984,33 @@ async function guardarTurno(){
     return toast('Este barbero ya tiene un turno a esa hora','error');
   const cl=await dbAll('clientes');const c=cl.find(x=>x.id===cId);
   await dbAdd('turnos',{clienteId:cId,clienteNombre:c?c.nombre+' '+c.apellido:'',barberoId:bId,fecha,hora,local,servicios:[...ST.turnoServTemp],notas,estado:'pendiente',creado:new Date().toISOString()});
+  // ───── WHATSAPP AUTO ─────
+  const barberos = await dbAll('barberos');
+  const barbero = barberos.find(b => b.id === bId);
+
+  // ⚠️ Asegúrate de tener campo celular en barbero (luego te digo cómo)
+  const telefono = barbero?.celular || '';
+
+  // Formateo fecha: hoy / mañana / día
+  const hoy = new Date();
+  const fechaTurno = new Date(fecha + 'T00:00:00');
+
+  let etiquetaFecha = '';
+  const diff = Math.floor((fechaTurno - new Date(hoy.toDateString())) / (1000*60*60*24));
+
+  if(diff === 0) etiquetaFecha = 'HOY';
+  else if(diff === 1) etiquetaFecha = 'MAÑANA';
+  else etiquetaFecha = fechaTurno.toLocaleDateString('es-PY',{weekday:'long'});
+  
+  // Mensaje
+  const nombreCliente = c ? (c.nombre + ' ' + c.apellido) : 'Cliente';
+  const mensaje = `Nuevo turno agendado:%0A%0A👤 Cliente: ${nombreCliente}%0A📅 ${etiquetaFecha} (${fecha})%0A⏰ Hora: ${hora}`;
+  
+  // Link WA
+  if(telefono){
+    const url = `https://wa.me/${telefono.replace(/\D/g,'')}?text=${mensaje}`;
+    window.open(url, '_blank');
+  }
   await logAct(`Agendó turno: ${hora} del ${fecha} · ${c?c.nombre+' '+c.apellido:'sin cliente'}`);
   toast('Turno agendado','success');closeModal('modalNuevoTurno');
   ST.turnoServTemp=[];renderTurnoChips();document.getElementById('turnoNotas').value='';
