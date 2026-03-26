@@ -920,7 +920,9 @@ tbody tr:last-child td{border-bottom:none;}
 // Supabase → Settings → API
 // ══════════════════════════════════════════════════════════════
 const SUPA_URL='https://tgwhegmgchnttsmrhcfc.supabase.co';
+
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnd2hlZ21nY2hudHRzbXJoY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODg1ODgsImV4cCI6MjA4OTQ2NDU4OH0.3g20p6yGber_j6HNB5oQqesOm_YgQ_fo9P2Yl2jGPbM';
+
 
 // ══════════════════════════════════════════════════════════════
 // MAPA: nombre de store (IndexedDB) → nombre de tabla (Supabase)
@@ -1154,11 +1156,16 @@ async function dbAdd(store,data){
       const rows=await supaFetch('POST',tbl,null,body);
       if(rows&&rows.length){
         const saved=fromDbObj(rows[0]);
+        // Supabase guardó correctamente — solo actualizar cache local, NO encolar offline
         _idbAdd(store,saved).catch(()=>{});
         return saved.id;
       }
+      // Supabase respondió OK pero sin datos (no debería pasar con Prefer:return=representation)
+      // En este caso tampoco encolamos para evitar duplicado: relanzar para que caiga al fallback
+      throw new Error('Supabase POST returned empty');
     }catch(e){console.warn('dbAdd Supabase error, guardando offline:',e);}
   }
+  // Solo llegar aquí si estamos offline O si Supabase falló antes de confirmar el guardado
   const localId=await _idbAdd(store,{...data});
   addPending({type:'insert',store,data:{...data,id:localId}});
   return localId;
@@ -1343,12 +1350,16 @@ function openModal(id,extra){
   if(id==='modalNuevoTurno'){
     document.getElementById('turnoFecha').value=toDS(ST.agendaFecha);
     document.getElementById('turnoLocal').value=ST.localActivo;
+    // Invalidar cache de selects para que los filtros lean opciones frescas
+    ['turnoCliente','turnoServicio'].forEach(id=>delete _selCache[id]);
     populateTurnoHoras();ST.turnoServTemp=[];renderTurnoChips();
   }
   if(id==='modalNuevoCobro'){
     ST.cobroItems=[];ST.cobroPagos=[{metodo:'efectivo',monto:''}];ST._gcAplicada=null;
     renderCobroItems();renderCobroPagos();
     const fld=document.getElementById('cobroFactura');if(fld)fld.value='0';
+    // Invalidar cache de selects para que los filtros lean opciones frescas
+    ['cobroServicio','cobroProducto','cobroCliente'].forEach(id=>delete _selCache[id]);
     resetModalSearches('modalNuevoCobro');
   }
   if(id==='modalMiPerfil'){
@@ -1778,14 +1789,14 @@ async function renderBarberos(){
   const list=document.getElementById('barberosList');
   if(!barbs.length){list.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">💈</div><p>No hay barberos</p></div>';return;}
   list.innerHTML=barbs.map(b=>{
-    const bc=cobros.filter(c=>c.barberoId===b.id);
+    const bc=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));
     const bh=bc.filter(c=>c.fecha===td);
     const th=bh.reduce((s,c)=>s+c.total,0);
     const comH=calcComisionLista(bh);
     const tm=bc.filter(c=>c.fecha&&c.fecha.startsWith(td.slice(0,7))).reduce((s,c)=>s+c.total,0);
     const sucLabel=b.local==0?'Ambas':localNombre(b.local);
-    const bu=bUsers.find(u=>u.barberoId===b.id);
-    const adelPend=adelantos.filter(a=>a.barberoId===b.id&&a.estado==='pendiente').length;
+    const bu=bUsers.find(u=>Number(u.barberoId||u.barbero_id)===Number(b.id));
+    const adelPend=adelantos.filter(a=>Number(a.barberoId||a.barbero_id)===Number(b.id)&&a.estado==='pendiente').length;
     return `<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
         <div>
@@ -1827,22 +1838,37 @@ async function guardarBarbero(){
   if(!loginPortal)return toast('El usuario del portal es requerido','error');
   if(!id&&(!pinPortal||pinPortal.length<4))return toast('El PIN debe tener al menos 4 caracteres','error');
   // Cargar todos los barberoUsers para verificar duplicados
-  // Comparar IDs como string para evitar mismatch number/string con Supabase
   const bUsers=await dbAll('barberoUsers');
-  const existingBU=id?bUsers.find(u=>String(u.barberoId||u.barbero_id)===String(id)):null;
-  // Verificar que el login no este en uso por otro barberoUser distinto
-  const dup=bUsers.find(u=>u.login===loginPortal&&(!existingBU||String(u.id)!==String(existingBU.id)));
+  // Normalizar: siempre comparar IDs como número para evitar mismatch string/number
+  const numId=id?Number(id):null;
+  // Todos los registros que pertenecen a este barbero (puede haber duplicados huérfanos)
+  const busDeBarbero=id?bUsers.filter(u=>Number(u.barberoId||u.barbero_id)===numId):[];
+  // El registro "principal" a editar (el primero encontrado)
+  const existingBU=busDeBarbero.length>0?busDeBarbero[0]:null;
+  // Verificar que el login no esté en uso por un barberoUser de OTRO barbero
+  const dup=bUsers.find(u=>{
+    if(u.login!==loginPortal)return false;
+    // Si estamos editando, el login puede pertenecer al mismo barbero (ok)
+    if(existingBU&&Number(u.id)===Number(existingBU.id))return false;
+    // También ignorar registros duplicados del mismo barbero
+    if(numId&&Number(u.barberoId||u.barbero_id)===numId)return false;
+    return true;
+  });
   if(dup)return toast('Ese usuario de portal ya está en uso por otro barbero','error');
   if(id){
-    data.id=+id;
+    data.id=numId;
     await dbPut('barberos',data);
     if(existingBU){
+      // Limpiar registros duplicados del mismo barbero (si existen)
+      for(const extra of busDeBarbero.slice(1)){
+        await dbDel('barberoUsers',extra.id);
+      }
       existingBU.login=loginPortal;
       if(pinPortal&&pinPortal.length>=4)existingBU.pin=pinPortal;
       await dbPut('barberoUsers',existingBU);
     }else{
-      // No se encontro registro existente: crear uno nuevo correctamente vinculado
-      await dbAdd('barberoUsers',{barberoId:id,login:loginPortal,pin:pinPortal||'1234',activo:true,ultimoAcceso:''});
+      // No existía registro: crear uno nuevo correctamente vinculado
+      await dbAdd('barberoUsers',{barberoId:numId,login:loginPortal,pin:pinPortal||'1234',activo:true,ultimoAcceso:''});
     }
     await logAct(`Editó barbero: ${data.nombre} ${data.apellido} (portal: ${loginPortal})`);
     toast('Barbero actualizado','success');
@@ -1864,8 +1890,8 @@ async function editarBarbero(id){
   document.getElementById('barberoCelular').value=b.celular||'';
   // Cargar credenciales del portal
   const bUsers=await dbAll('barberoUsers');
-  // Comparar como string para compatibilidad con IDs de Supabase
-  const bu=bUsers.find(u=>String(u.barberoId||u.barbero_id)===String(id));
+  // Normalizar IDs a número para compatibilidad con Supabase y IndexedDB
+  const bu=bUsers.find(u=>Number(u.barberoId||u.barbero_id)===Number(id));
   document.getElementById('barberoLoginPortal').value=bu?.login||'';
   document.getElementById('barbaroPinPortal').value=''; // PIN no se pre-rellena por seguridad
   document.getElementById('modalBarberoTitulo').textContent='✏ Editar Barbero';openModal('modalNuevoBarbero');
@@ -1873,13 +1899,17 @@ async function editarBarbero(id){
 
 async function eliminarBarbero(id){
   const b=await dbGet('barberos',id);if(!confirm('¿Eliminar este barbero?'))return;
+  // Eliminar también todos los accesos de portal asociados
+  const bUsers=await dbAll('barberoUsers');
+  const busDeBarbero=bUsers.filter(u=>Number(u.barberoId||u.barbero_id)===Number(id));
+  for(const bu of busDeBarbero){await dbDel('barberoUsers',bu.id);}
   await dbDel('barberos',id);await logAct(`Eliminó barbero: ${b.nombre} ${b.apellido}`);
   toast('Eliminado','info');renderBarberos();populateSels();
 }
 
 async function verDetBarbero(id){
   const b=await dbGet('barberos',id);const cobros=await dbAll('cobros');
-  window._detB={b,cobros:cobros.filter(c=>c.barberoId===id)};
+  window._detB={b,cobros:cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(id))};
   document.getElementById('detBarberoTitulo').textContent=`💈 ${b.nombre} ${b.apellido}`;
   document.getElementById('detBarberoContent').innerHTML=`
     <div class="tabs" id="dtTabs">
@@ -1939,7 +1969,7 @@ async function renderAgenda(){
   HORAS.forEach(hora=>{
     html+=`<div style="display:grid;grid-template-columns:${cols}"><div class="agenda-cell time-col">${hora}</div>`;
     bf.forEach(b=>{
-      const t=td.find(t=>t.hora===hora&&t.barberoId===b.id);
+      const t=td.find(t=>t.hora===hora&&Number(t.barberoId||t.barbero_id)===Number(b.id));
       if(t){
         const sl=(t.servicios||[]).join(', ')||'—';
         const cn=cMap[t.clienteId]||t.clienteNombre||'Sin nombre';
@@ -2090,7 +2120,7 @@ async function guardarTurno(){
   if(!bId)return toast('Selecciona un barbero','error');
   if(!fecha)return toast('Selecciona una fecha','error');
   const all=await dbAll('turnos');
-  if(all.find(t=>t.fecha===fecha&&t.hora===hora&&t.barberoId===bId&&t.local==local&&t.estado!=='cancelado'))
+  if(all.find(t=>t.fecha===fecha&&t.hora===hora&&Number(t.barberoId||t.barbero_id)===Number(bId)&&t.local==local&&t.estado!=='cancelado'))
     return toast('Este barbero ya tiene un turno a esa hora','error');
   const cl=await dbAll('clientes');const c=cl.find(x=>x.id===cId);
   const barbs=await dbAll('barberos');const b=barbs.find(x=>x.id===bId);
@@ -2399,7 +2429,7 @@ async function refreshDash(){
   </div>`).join(''):'<div class="empty-state"><div class="icon">💳</div><p>Sin transacciones hoy</p></div>';
   const lb=barbs.filter(b=>b.local==ST.localActivo||b.local==0);
   document.getElementById('dashBarberos').innerHTML=lb.length?lb.map(b=>{
-    const bh=hc.filter(c=>c.barberoId===b.id);const bt=bh.reduce((s,c)=>s+c.total,0);
+    const bh=hc.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));const bt=bh.reduce((s,c)=>s+c.total,0);
     return `<div class="card" style="padding:14px;cursor:pointer" onclick="verDetBarbero(${b.id})">
       <div style="font-family:var(--font-cond);font-weight:700;font-size:1rem">${b.nombre} ${b.apellido}</div>
       <div style="font-family:var(--font-display);font-size:1.4rem;color:var(--gold-light);margin:6px 0">${fmt(bt)}</div>
@@ -2442,7 +2472,7 @@ async function generarReporte(){
   }).join('');
   const barbs=await dbAll('barberos');
   document.getElementById('rComisionesTbody').innerHTML=barbs.map(b=>{
-    const bc=cobros.filter(c=>c.barberoId===b.id);const bt=bc.reduce((s,c)=>s+c.total,0);
+    const bc=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));const bt=bc.reduce((s,c)=>s+c.total,0);
     const bco=calcComisionLista(bc);const pct=tot?(bt/tot*100).toFixed(1):0;
     return `<tr><td><strong>${b.nombre} ${b.apellido}</strong></td><td>${bc.length}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(bt)}</td><td style="font-family:var(--font-cond);color:var(--success)">${fmt(bco)}</td><td style="min-width:120px"><div class="comm-bar-wrap"><div class="comm-bar" style="width:${pct}%"></div></div><div style="font-size:.72rem;color:var(--text-dim)">${pct}%</div></td></tr>`;
   }).join('')||'<tr><td colspan="5"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
@@ -2459,7 +2489,9 @@ const _selCache={};
 function cacheSelect(selId){
   const sel=document.getElementById(selId);
   if(!sel)return;
-  if(!_selCache[selId]||sel.options.length>1){
+  // Siempre reconstruir el cache si el select tiene opciones reales (más de solo el placeholder)
+  // o si el cache no existe aún. Esto evita que un cache vacío/desactualizado bloquee el filtro.
+  if(!_selCache[selId]||sel.options.length>(_selCache[selId].length||0)||sel.options.length>1){
     _selCache[selId]=Array.from(sel.options).map(o=>({value:o.value,text:o.text}));
   }
 }
@@ -2721,7 +2753,7 @@ async function seedData(){
   const allBarbs=await dbAll('barberos');
   const bUsers=await dbAll('barberoUsers');
   for(const barb of allBarbs){
-    if(!bUsers.find(u=>u.barberoId===barb.id)){
+    if(!bUsers.find(u=>Number(u.barberoId||u.barbero_id)===Number(barb.id))){
       const login=barb.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
       await dbAdd('barberoUsers',{barberoId:barb.id,login,pin:'1234',activo:true,ultimoAcceso:''});
     }
@@ -2741,7 +2773,7 @@ async function gestionarAdelantos(barberoId){
 async function renderModalAdelantos(){
   const bId=window._adelBarberoId;
   const adelantos=await dbAll('adelantos');
-  const misAdel=adelantos.filter(a=>a.barberoId===bId).sort((a,b)=>b.fechaSolicitud>a.fechaSolicitud?1:-1);
+  const misAdel=adelantos.filter(a=>Number(a.barberoId||a.barbero_id)===Number(bId)).sort((a,b)=>b.fechaSolicitud>a.fechaSolicitud?1:-1);
   const tbody=document.getElementById('adelantosAdminTbody');
   if(!misAdel.length){
     tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="icon">💸</div><p>Sin solicitudes de adelanto</p></div></td></tr>`;
