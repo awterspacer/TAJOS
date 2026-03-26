@@ -455,7 +455,9 @@ tbody tr:last-child td{border-bottom:none;}
 // CONFIGURACIÓN SUPABASE — reemplazar con tus valores reales
 // ══════════════════════════════════════════════════════════════
 const SUPA_URL='https://tgwhegmgchnttsmrhcfc.supabase.co';
+
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnd2hlZ21nY2hudHRzbXJoY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODg1ODgsImV4cCI6MjA4OTQ2NDU4OH0.3g20p6yGber_j6HNB5oQqesOm_YgQ_fo9P2Yl2jGPbM';
+
 
 const STORE_TABLE={
   barberos:'barberos',clientes:'clientes',servicios:'servicios',productos:'productos',
@@ -663,7 +665,7 @@ async function doLogin(){
       errEl.classList.add('show');
       btn.textContent='Ingresar';btn.disabled=false;return;
     }
-    const bId=bu.barberoId||bu.barbero_id;
+    const bId=Number(bu.barberoId||bu.barbero_id);
     const barbero=await dbGet('barberos',bId);
     if(!barbero){
       errEl.textContent='❌ No se encontro el perfil de barbero. Contacta al administrador.';
@@ -753,7 +755,7 @@ function navAgenda(delta){
 function goHoy(){ST.agendaFecha=new Date();renderAgenda();}
 
 async function renderAgenda(){
-  const bId=ST.barbero.id;
+  const bId=Number(ST.barbero.id);
   const turnos=await dbAll('turnos');
   const clientes=await dbAll('clientes');
   const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
@@ -763,7 +765,7 @@ async function renderAgenda(){
     document.getElementById('agendaDateLabel').textContent=
       ST.agendaFecha.toLocaleDateString('es-PY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     document.getElementById('agendaSubtitle').textContent='Vista diaria';
-    const misTurnos=turnos.filter(t=>t.barberoId===bId&&t.fecha===fecha);
+    const misTurnos=turnos.filter(t=>Number(t.barberoId||t.barbero_id)===bId&&t.fecha===fecha);
     let html='<div style="display:grid;grid-template-columns:64px 1fr;min-width:320px">';
     HORAS.forEach(hora=>{
       const t=misTurnos.find(t=>t.hora===hora);
@@ -791,7 +793,7 @@ async function renderAgenda(){
     document.getElementById('agendaDateLabel').textContent=
       `${dias[0].toLocaleDateString('es-PY',{day:'numeric',month:'short'})} — ${dias[6].toLocaleDateString('es-PY',{day:'numeric',month:'short',year:'numeric'})}`;
     document.getElementById('agendaSubtitle').textContent='Vista semanal (Lun–Dom)';
-    const misTurnos=turnos.filter(t=>t.barberoId===bId&&t.fecha>=desde&&t.fecha<=hasta);
+    const misTurnos=turnos.filter(t=>Number(t.barberoId||t.barbero_id)===bId&&t.fecha>=desde&&t.fecha<=hasta);
     const DIAS_LABEL=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
     const cols=`64px repeat(7,minmax(100px,1fr))`;
     let html=`<div style="min-width:800px">`;
@@ -845,7 +847,7 @@ async function verTurno(id){
 }
 // ══ SERVICIOS ══
 async function renderServicios(){
-  const bId=ST.barbero.id;
+  const bId=Number(ST.barbero.id);
   const pct=(ST.barbero.comision||50)/100;
   const cobros=await dbAll('cobros');
   cobros.sort((a,b)=>b.fecha>a.fecha?1:-1);
@@ -853,15 +855,16 @@ async function renderServicios(){
   const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
   const td=hoy();
   const fechaFiltro=document.getElementById('servFechaFiltro').value||td;
-  const misCobros=cobros.filter(c=>c.barberoId===bId);
+  // Normalizar barberoId a número para evitar mismatch string/number con Supabase
+  const misCobros=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===bId);
   const cobrosHoy=misCobros.filter(c=>c.fecha===td);
   const cobrosMes=misCobros.filter(c=>c.fecha&&c.fecha.startsWith(td.slice(0,7)));
   const cobrosFiltered=misCobros.filter(c=>c.fecha===fechaFiltro);
 
-  // Stats
-  const comHoy=cobrosHoy.reduce((s,c)=>s+c.total*pct,0);
+  // Stats — comisión calculada sobre ítems de servicio (no sobre total del cobro)
+  const comHoy=cobrosHoy.reduce((s,c)=>s+c.items.filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0),0);
   const cntHoy=cobrosHoy.reduce((s,c)=>s+c.items.filter(i=>i.tipo==='servicio').length,0);
-  const comMes=cobrosMes.reduce((s,c)=>s+c.total*pct,0);
+  const comMes=cobrosMes.reduce((s,c)=>s+c.items.filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0),0);
   const cntMes=cobrosMes.reduce((s,c)=>s+c.items.filter(i=>i.tipo==='servicio').length,0);
   document.getElementById('srvComHoy').textContent=fmt(comHoy);
   document.getElementById('srvCntHoy').textContent=cntHoy;
@@ -877,11 +880,12 @@ async function renderServicios(){
   tbody.innerHTML=cobrosFiltered.sort((a,b)=>(b.hora||'')>(a.hora||'')?1:-1).map(co=>{
     const svcs=co.items.filter(i=>i.tipo==='servicio').map(i=>i.nombre).join(', ')||'—';
     const prods=co.items.filter(i=>i.tipo==='producto').map(i=>i.nombre).join(', ')||'—';
-    const comision=co.total*pct;
+    // Comisión = suma de precios de ítems de servicio × pct (no total del cobro)
+    const comision=co.items.filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0);
     return `<tr>
       <td>${fmtD(co.fecha)}</td>
       <td>${co.hora||'—'}</td>
-      <td>${cMap[co.clienteId]||'Sin registro'}</td>
+      <td>${cMap[co.clienteId||co.cliente_id]||'Sin registro'}</td>
       <td>${svcs}</td>
       <td style="font-size:.8rem;color:var(--text-muted)">${prods}</td>
       <td style="font-family:var(--font-cond);color:var(--text-muted)">${fmt(co.total)}</td>
@@ -909,7 +913,7 @@ function setPeriodo(p,el){
 }
 
 async function renderReportes(){
-  const bId=ST.barbero.id;
+  const bId=Number(ST.barbero.id);
   const pct=(ST.barbero.comision||50)/100;
   const {desde,hasta,label}=getPeriodoRange(ST.reportePeriodo);
   document.getElementById('reportePeriodoLabel').textContent=label;
@@ -918,9 +922,9 @@ async function renderReportes(){
   const egresos=await dbAll('egresos');
   const adelantos=await dbAll('adelantos');
 
-  const misCobros=cobros.filter(c=>c.barberoId===bId&&c.fecha>=desde&&c.fecha<=hasta);
-  const misEgresos=egresos.filter(e=>e.barberoId===bId&&e.fecha>=desde&&e.fecha<=hasta);
-  const misAdelantos=adelantos.filter(a=>a.barberoId===bId&&a.estado==='aprobado'&&a.fechaAprobacion&&a.fechaAprobacion>=desde&&a.fechaAprobacion<=hasta);
+  const misCobros=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===bId&&c.fecha>=desde&&c.fecha<=hasta);
+  const misEgresos=egresos.filter(e=>Number(e.barberoId||e.barbero_id)===bId&&e.fecha>=desde&&e.fecha<=hasta);
+  const misAdelantos=adelantos.filter(a=>Number(a.barberoId||a.barbero_id)===bId&&a.estado==='aprobado'&&a.fechaAprobacion&&a.fechaAprobacion>=desde&&a.fechaAprobacion<=hasta);
 
   // Comisiones por servicios
   const comServ=misCobros.reduce((s,c)=>s+c.items.filter(i=>i.tipo==='servicio').reduce((a,i)=>a+i.precio*pct,0),0);
@@ -989,9 +993,9 @@ async function renderReportes(){
 
 // ══ ADELANTOS ══
 async function renderAdelantos(){
-  const bId=ST.barbero.id;
+  const bId=Number(ST.barbero.id);
   const adelantos=await dbAll('adelantos');
-  const misAdelantos=adelantos.filter(a=>a.barberoId===bId).sort((a,b)=>b.fechaSolicitud>a.fechaSolicitud?1:-1);
+  const misAdelantos=adelantos.filter(a=>Number(a.barberoId||a.barbero_id)===bId).sort((a,b)=>b.fechaSolicitud>a.fechaSolicitud?1:-1);
   const td=hoy().slice(0,7);
 
   const pendienteTotal=misAdelantos.filter(a=>a.estado==='pendiente').reduce((s,a)=>s+(a.montoSolicitado||0),0);
@@ -1050,7 +1054,8 @@ async function seedBarberoUsers(){
     const bId=b.id;
     const loginName=(b.nombre||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
     if(!loginName)continue;
-    await dbAdd('barberoUsers',{barberoId:bId,login:loginName,pin:'1234',activo:true,ultimoAcceso:''});
+    if(!bUsers.find(u=>Number(u.barberoId||u.barbero_id)===Number(bId)))
+      await dbAdd('barberoUsers',{barberoId:bId,login:loginName,pin:'1234',activo:true,ultimoAcceso:''});
   }
   if(barbs.length)toast('Accesos creados con PIN 1234. Cambialos desde la app admin.','info');
 }
