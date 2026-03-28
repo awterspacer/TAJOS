@@ -997,6 +997,13 @@ const FIELD_TO_DB = {
   barberoNombre:'barbero_nombre', clienteNombre:'cliente_nombre',
   registradoPor:'registrado_por', createdAt:'created_at',
   giftcardId:'giftcard_id',
+  // Arqueos
+  turnoLabel:'turno_label',
+  cajaInicial:'caja_inicial',
+  verificadoPor:'verificado_por',
+  verificadoAt:'verificado_at',
+  egresosEfectivo:'egresos_efectivo',
+  efectivoEntregado:'efectivo_entregado',
 };
 const FIELD_FROM_DB = Object.fromEntries(Object.entries(FIELD_TO_DB).map(([k,v])=>[v,k]));
 
@@ -1010,7 +1017,7 @@ const SUPA_COLS={
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','created_at','updated_at']),
   usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
   historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
-  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','verificado','verificado_por','verificado_at','created_at']),
+  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','created_at']),
   adelantos:new Set(['id','barbero_id','barbero_nombre','monto_solicitado','monto_aprobado','estado','fecha_solicitud','nota_solicitud','nota_admin','fecha_aprobacion','ts']),
   egresos:new Set(['id','barbero_id','barbero_nombre','producto_id','producto','cantidad','monto','nota','registrado_por','fecha','created_at']),
   giftcards:new Set(['id','codigo','cliente_id','valor','saldo','metodo_pago','nota','estado','fecha','ultimo_uso','created_at']),
@@ -1037,6 +1044,20 @@ function fromDbObj(obj){
   }
   // asegurar que 'id' siempre sea número
   if(r.id!==undefined)r.id=Number(r.id);
+  // Supabase puede devolver columnas JSONB como string — parsear si es necesario
+  const jsonCols=['pagos','items','detalle','egresosEfectivo','egresos_efectivo','acceso'];
+  jsonCols.forEach(col=>{
+    if(typeof r[col]==='string'){try{r[col]=JSON.parse(r[col]);}catch(e){r[col]=[];}}
+    if(r[col]==null)r[col]=col==='acceso'?{}:[];
+  });
+  // Normalizar montos dentro de pagos para que siempre sean números
+  if(Array.isArray(r.pagos)){
+    r.pagos=r.pagos.map(p=>({...p,monto:parseFloat(p.monto)||0}));
+  }
+  // Normalizar precios dentro de items
+  if(Array.isArray(r.items)){
+    r.items=r.items.map(i=>({...i,precio:parseFloat(i.precio)||0}));
+  }
   return r;
 }
 
@@ -1238,23 +1259,44 @@ async function dbDel(store,id){
 // ══ STATE ══
 const ST={localActivo:1,agendaFecha:new Date(),turnoServTemp:[],cobroItems:[],cobroPagos:[],user:null,_gcAplicada:null,_pendingServCat:null,_pendingProdCat:null};
 const HORAS=[];for(let h=8;h<=20;h++){HORAS.push(String(h).padStart(2,'0')+':00');if(h<20)HORAS.push(String(h).padStart(2,'0')+':30');}
-// METODOS: cargados desde Supabase, fallback offline
-let METODOS=[
-  {id:'efectivo',label:'Efectivo',icon:'💵'},
-  {id:'debito',label:'Débito',icon:'💳'},
-  {id:'credito',label:'Crédito',icon:'💳'},
+// METODOS: fallback hardcodeado con IDs descriptivos (siempre se usan como clave en cobros)
+const METODOS_DEFAULT=[
+  {id:'efectivo',     label:'Efectivo',     icon:'💵'},
+  {id:'debito',       label:'Débito',       icon:'💳'},
+  {id:'credito',      label:'Crédito',      icon:'💳'},
   {id:'transferencia',label:'Transferencia',icon:'🏦'},
-  {id:'vale',label:'Vale/Promo',icon:'🎟'},
-  {id:'cortesia',label:'Cortesía',icon:'🎁'},
-  {id:'giftcard',label:'Giftcard',icon:'🎁'}
+  {id:'vale',         label:'Vale/Promo',   icon:'🎟'},
+  {id:'cortesia',     label:'Cortesía',     icon:'🎁'},
+  {id:'giftcard',     label:'Giftcard',     icon:'🎁'},
 ];
+let METODOS=[...METODOS_DEFAULT];
+
 async function cargarMetodos(){
   try{
     const rows=await dbAll('metodosPago');
     if(rows&&rows.length){
-      METODOS=rows.filter(m=>m.activo!==false).sort((a,b)=>(a.orden||0)-(b.orden||0)).map(m=>({
-        id:String(m.id),label:m.nombre,icon:m.icono||'💳',_dbId:m.id
-      }));
+      // Los métodos de pago en Supabase pueden tener IDs numéricos.
+      // Los cobros siempre guardan el ID descriptivo (string: 'efectivo', 'debito', etc.)
+      // Para no romper los filtros, usamos el nombre normalizado como ID,
+      // o si hay un match con los defaults por nombre, usamos el ID del default.
+      const mapped=rows.filter(m=>m.activo!==false).sort((a,b)=>(a.orden||0)-(b.orden||0)).map(m=>{
+        const nombre=String(m.nombre||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
+        // Buscar coincidencia en defaults por nombre normalizado
+        const def=METODOS_DEFAULT.find(d=>
+          d.id===nombre||
+          d.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'')===nombre
+        );
+        return {
+          id: def?def.id:nombre,   // usar ID descriptivo siempre
+          label: m.nombre,
+          icon: m.icono||def?.icon||'💳',
+          _dbId: m.id
+        };
+      });
+      // Asegurar que 'efectivo' siempre esté (es requerido para cálculos de caja)
+      const tieneEfectivo=mapped.some(m=>m.id==='efectivo');
+      if(!tieneEfectivo)mapped.unshift(METODOS_DEFAULT[0]);
+      METODOS=mapped;
     }
   }catch(e){console.warn('cargarMetodos fallback:',e);}
 }
@@ -2273,8 +2315,8 @@ async function refreshCaja(){
   const lc=cobros.filter(c=>c.local==ST.localActivo);
   const hoyC=lc.filter(c=>c.fecha===fecha);
   const tot=hoyC.reduce((s,c)=>s+c.total,0);
-  const ef=hoyC.reduce((s,c)=>s+c.pagos.filter(p=>p.metodo==='efectivo').reduce((a,p)=>a+p.monto,0),0);
-  const dig=hoyC.reduce((s,c)=>s+c.pagos.filter(p=>['debito','credito','transferencia'].includes(p.metodo)).reduce((a,p)=>a+p.monto,0),0);
+  const ef=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);
+  const dig=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>['debito','credito','transferencia'].includes(p.metodo)).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);
   document.getElementById('cajaTotalDia').textContent=fmt(tot);
   document.getElementById('cajaCantDia').textContent=`${hoyC.length} cobros`;
   document.getElementById('cajaEfectivo').textContent=fmt(ef);
@@ -2306,7 +2348,7 @@ async function refreshCaja(){
   const tbody=document.getElementById('cajaTbody');
   if(!fl.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="icon">💰</div><p>Sin cobros</p></div></td></tr>`;return;}
   tbody.innerHTML=fl.map(co=>{
-    const ms=[...new Set(co.pagos.map(p=>METODOS.find(m=>m.id===p.metodo)?.label||p.metodo))].join(', ');
+    const ms=[...new Set((co.pagos||[]).map(p=>METODOS.find(m=>m.id===p.metodo)?.label||p.metodo))].join(', ');
     return `<tr>
       <td>${co.hora||fmtD(co.fecha)}</td><td>${cMap[co.clienteId]||'—'}</td><td>${bMap[co.barberoId]||'?'}</td>
       <td style="font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${co.items.map(i=>i.nombre).join(', ')}</td>
@@ -2343,7 +2385,7 @@ async function verDetCobro(id){
     </div>`).join('')}
     <div class="divider"></div>
     <div class="card-title" style="margin-bottom:8px">Pagos</div>
-    ${co.pagos.map(p=>{const m=METODOS.find(m=>m.id===p.metodo);return `<div style="display:flex;justify-content:space-between;padding:5px 0"><div>${m?.icon||''} ${m?.label||p.metodo}</div><div style="font-family:var(--font-cond);font-weight:700">${fmt(p.monto)}</div></div>`;}).join('')}
+    ${(co.pagos||[]).map(p=>{const m=METODOS.find(m=>m.id===p.metodo);return `<div style="display:flex;justify-content:space-between;padding:5px 0"><div>${m?.icon||''} ${m?.label||p.metodo}</div><div style="font-family:var(--font-cond);font-weight:700">${fmt(p.monto)}</div></div>`;}).join('')}
     <div class="divider"></div>
     <div style="font-size:.8rem;color:var(--success)">Comisión barbero: ${fmt(co.total*0.5)}</div>
     ${co.factura>0?`<div style="font-size:.8rem;color:var(--text-muted);margin-top:4px">🧾 Factura emitida por: <strong>${fmt(co.factura)}</strong></div>`:''}
@@ -2366,7 +2408,7 @@ async function renderArqueo(){
   const arqs=await dbAll('arqueos');
   const aqActual=arqs.find(a=>a.fecha===td&&a.local==ST.localActivo&&a.turno==turno)||{cajaInicial:0,notas:'',turno};
   const totDia=h.reduce((s,c)=>s+c.total,0);
-  const mets={};METODOS.forEach(m=>{mets[m.id]=h.reduce((s,c)=>s+c.pagos.filter(p=>p.metodo===m.id).reduce((a,p)=>a+p.monto,0),0);});
+  const mets={};METODOS.forEach(m=>{mets[m.id]=h.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo===m.id).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);});
   window._aqMeta={td,h,mets,totDia,turno};
   const cajaIni=aqActual.cajaInicial||aqActual.caja_inicial||0;
   const efTotal=(mets['efectivo']||0);
@@ -2394,7 +2436,7 @@ async function renderArqueo(){
         const totEgEf=egEf.reduce((s,e)=>s+(e.monto||0),0);
         const efEnt=a.efectivoEntregado||0;
         const cobsTurno=cobros.filter(c=>c.fecha===td&&c.local==ST.localActivo);
-        const efCobros=cobsTurno.reduce((s,c)=>s+c.pagos.filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+p.monto,0),0);
+        const efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
         const efEsperado=ini+efCobros-totEgEf;
         const diferencia=efEnt-efEsperado;
         return `<div class="arqueo-box" style="margin-bottom:12px">
@@ -2597,7 +2639,7 @@ async function guardarArqueo(){
   const cobros=await dbAll('cobros');
   const h=cobros.filter(co=>co.fecha===td&&co.local==ST.localActivo);
   const total=h.reduce((s,co)=>s+co.total,0);
-  const detalle={};METODOS.forEach(m=>{detalle[m.id]=h.reduce((s,co)=>s+co.pagos.filter(p=>p.metodo===m.id).reduce((a,p)=>a+p.monto,0),0);});
+  const detalle={};METODOS.forEach(m=>{detalle[m.id]=h.reduce((s,co)=>s+(co.pagos||[]).filter(p=>p.metodo===m.id).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);});
   const arqs=await dbAll('arqueos');
   const ex=arqs.find(a=>a.fecha===td&&a.local==ST.localActivo&&a.turno==turno);
   const egresosEfectivo=ex?.egresosEfectivo||[];
@@ -2690,7 +2732,7 @@ async function generarReporte(){
   document.getElementById('rTotalCli').textContent=cliAt;document.getElementById('rTotalComis').textContent=fmt(tot*0.5);
   const pendFactEl=document.getElementById('rPendienteFact');
   if(pendFactEl){pendFactEl.textContent=fmt(pendFact>0?pendFact:0);pendFactEl.closest('.stat-card').style.display=per==='dia'?'':'none';}
-  const mMap={};cobros.forEach(co=>co.pagos.forEach(p=>{mMap[p.metodo]=(mMap[p.metodo]||0)+p.monto;}));
+  const mMap={};cobros.forEach(co=>(co.pagos||[]).forEach(p=>{mMap[p.metodo]=(mMap[p.metodo]||0)+p.monto;}));
   document.getElementById('rPorMetodo').innerHTML=METODOS.map(m=>{
     const v=mMap[m.id]||0;const pct=tot?(v/tot*100).toFixed(1):0;
     return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>${m.icon} ${m.label}</span><span style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(v)} <span style="color:var(--text-muted)">(${pct}%)</span></span></div><div class="comm-bar-wrap"><div class="comm-bar" style="width:${pct}%"></div></div></div>`;
@@ -2968,11 +3010,6 @@ async function seedData(){
   if(!p.length){
     const pp=[{nombre:'Pomada Suave',precio:40000,stock:15,descripcion:'Fijación suave y brillo'},{nombre:'Pomada Fuerte',precio:40000,stock:12,descripcion:'Máxima fijación'},{nombre:'Aceite de Barba',precio:65000,stock:8,descripcion:'Hidratación y suavizado'},{nombre:'Shampoo para Barba',precio:50000,stock:10,descripcion:'Limpieza suave'}];
     for(const x of pp)await dbAdd('productos',x);
-  }
-  const b=await dbAll('barberos');
-  if(!b.length){
-    const bb=[{nombre:'Carlos',apellido:'Martínez',fechaIngreso:'2023-01-15',local:1,comision:50,email:''},{nombre:'Juan',apellido:'Pérez',fechaIngreso:'2023-03-20',local:1,comision:50,email:''},{nombre:'Luis',apellido:'García',fechaIngreso:'2023-06-01',local:2,comision:50,email:''}];
-    for(const x of bb)await dbAdd('barberos',x);
   }
   // Seed barberoUsers: create portal access for each barbero without one
   const allBarbs=await dbAll('barberos');
@@ -3441,7 +3478,7 @@ async function guardarCajaInicial(){
   const turnoLabel=turno===1?'Turno 1':'Turno 2';
   const arqs=await dbAll('arqueos');
   const ex=arqs.find(a=>a.fecha===td&&a.local==ST.localActivo&&a.turno==turno);
-  const data={fecha:td,local:ST.localActivo,turno,turnoLabel,cajaInicial:monto,nota,cajero:ST.user?.login,verificado:false};
+  const data={fecha:td,local:ST.localActivo,turno,turnoLabel,cajaInicial:monto,notas:nota,nota,cajero:ST.user?.login,verificado:false,egresosEfectivo:[],efectivoEntregado:0};
   if(ex){data.id=ex.id;await dbPut('arqueos',data);}
   else{await dbAdd('arqueos',data);}
   localStorage.setItem(getCajaKey(),'done');
