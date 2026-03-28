@@ -132,6 +132,7 @@ tbody tr:last-child td{border-bottom:none;}
 .badge-blue{background:rgba(41,128,185,.2);color:#5dade2;}
 .badge-gray{background:rgba(255,255,255,.06);color:var(--text-muted);}
 .badge-purple{background:rgba(142,68,173,.2);color:#bb8fce;}
+.badge-yellow{background:rgba(241,196,15,.15);color:#f1c40f;}
 
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;animation:overlayIn .2s ease;}
@@ -960,6 +961,8 @@ const SUPA_URL='https://tgwhegmgchnttsmrhcfc.supabase.co';
 
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnd2hlZ21nY2hudHRzbXJoY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODg1ODgsImV4cCI6MjA4OTQ2NDU4OH0.3g20p6yGber_j6HNB5oQqesOm_YgQ_fo9P2Yl2jGPbM';
 
+
+
 // ══════════════════════════════════════════════════════════════
 // MAPA: nombre de store (IndexedDB) → nombre de tabla (Supabase)
 // Los nombres en snake_case corresponden al schema SQL generado.
@@ -1017,7 +1020,7 @@ const SUPA_COLS={
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','created_at','updated_at']),
   usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
   historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
-  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','created_at']),
+  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','cerrado','created_at']),
   adelantos:new Set(['id','barbero_id','barbero_nombre','monto_solicitado','monto_aprobado','estado','fecha_solicitud','nota_solicitud','nota_admin','fecha_aprobacion','ts']),
   egresos:new Set(['id','barbero_id','barbero_nombre','producto_id','producto','cantidad','monto','nota','registrado_por','fecha','created_at']),
   giftcards:new Set(['id','codigo','cliente_id','valor','saldo','metodo_pago','nota','estado','fecha','ultimo_uso','created_at']),
@@ -2409,7 +2412,7 @@ async function renderArqueo(){
   const aqActual=arqs.find(a=>a.fecha===td&&a.local==ST.localActivo&&a.turno==turno)||{cajaInicial:0,notas:'',turno};
   const totDia=h.reduce((s,c)=>s+c.total,0);
   const mets={};METODOS.forEach(m=>{mets[m.id]=h.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo===m.id).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);});
-  window._aqMeta={td,h,mets,totDia,turno};
+  window._aqMeta={td,h,mets,totDia,turno,_egresosEf:egresosEf,_cajaIni:cajaIni};
   const cajaIni=aqActual.cajaInicial||aqActual.caja_inicial||0;
   const efTotal=(mets['efectivo']||0);
   // Egresos de efectivo del turno actual
@@ -2454,7 +2457,9 @@ async function renderArqueo(){
             <div>
               ${verif
                 ?`<span class="badge badge-green" style="font-size:.8rem">✅ Verificado por ${a.verificadoPor||a.verificado_por||'—'}</span>`
-                :`<button class="btn btn-gold btn-sm" onclick="verificarArqueo(${a.id})">✅ Verificar Arqueo</button>`}
+                :a.cerrado
+                  ?`<button class="btn btn-gold btn-sm" onclick="verificarArqueo(${a.id})">✅ Verificar Arqueo</button>`
+                  :`<span class="badge badge-yellow" style="font-size:.8rem">⏳ Turno en curso</span>`}
             </div>
           </div>
         </div>`;
@@ -2536,14 +2541,24 @@ async function renderArqueo(){
     <div class="form-group"><label class="form-label">Notas / Observaciones</label>
       <input type="text" class="form-control" id="arqueoNotas" value="${aqActual.notas||aqActual.nota||''}" placeholder="Observaciones del turno..."></div>`;
 
-  // Footer cajero
+  // Footer cajero — dos botones: guardar parcial y cerrar turno
   const footer=document.querySelector('#modalArqueo .modal-footer');
-  if(footer)footer.innerHTML=`<button class="btn btn-ghost" onclick="closeModal('modalArqueo')">Cerrar</button><button class="btn btn-gold" onclick="guardarArqueo()">Guardar &amp; Enviar Cierre</button>`;
+  const yaCerrado=aqActual.cerrado===true;
+  if(footer)footer.innerHTML=`
+    <button class="btn btn-ghost" onclick="closeModal('modalArqueo')">Cerrar</button>
+    <button class="btn btn-outline" onclick="actualizarEstadoCaja()" title="Guarda sin cerrar el turno">💾 Actualizar Estado</button>
+    ${yaCerrado
+      ?`<span class="badge badge-green" style="font-size:.82rem;padding:6px 14px">✅ Turno cerrado</span>`
+      :`<button class="btn btn-gold" onclick="guardarArqueo()">✅ Guardar &amp; Enviar Cierre</button>`
+    }`;
 
   updDiferenciaEntrega();
 }
 function updArqueoCalc(){
-  const ini=parseFloat(document.getElementById('arqueoInicial')?.value)||0;
+  const inputEl=document.getElementById('arqueoInicial');
+  const ini=inputEl
+    ?parseFloat(inputEl.value)||0
+    :window._aqMeta?._cajaIni||0;
   const ef=window._aqMeta?.mets?.efectivo||0;
   const egEf=window._aqMeta?._egresosEf||[];
   const totEg=egEf.reduce((s,e)=>s+(e.monto||0),0);
@@ -2560,7 +2575,17 @@ async function confirmarCajaInicial(){
   const turnoLabel=turno===1?'Turno 1':'Turno 2';
   const arqs=await dbAll('arqueos');
   const ex=arqs.find(a=>a.fecha===td&&a.local==ST.localActivo&&a.turno==turno);
-  const data={fecha:td,local:ST.localActivo,turno,turnoLabel,cajaInicial:monto,notas:'',cajero:ST.user?.login,verificado:false,egresosEfectivo:[],efectivoEntregado:0};
+  // Preservar egresos y entrega existentes — solo actualizar cajaInicial
+  const data={
+    fecha:td,local:ST.localActivo,turno,turnoLabel,
+    cajaInicial:monto,
+    notas:ex?.notas||ex?.nota||'',
+    cajero:ex?.cajero||ST.user?.login,
+    verificado:ex?.verificado||false,
+    cerrado:ex?.cerrado||false,
+    egresosEfectivo:ex?.egresosEfectivo||[],
+    efectivoEntregado:ex?.efectivoEntregado||0,
+  };
   if(ex){data.id=ex.id;await dbPut('arqueos',data);}
   else{await dbAdd('arqueos',data);}
   localStorage.setItem(getCajaKey(),'done');
@@ -2581,7 +2606,7 @@ async function agregarEgresoEf(){
   let aq=arqs.find(a=>a.fecha===td&&a.local==ST.localActivo&&a.turno==turno);
   if(!aq){
     // Crear arqueo vacío si no existe
-    const newId=await dbAdd('arqueos',{fecha:td,local:ST.localActivo,turno,turnoLabel,cajaInicial:0,notas:'',cajero:ST.user?.login,verificado:false,egresosEfectivo:[{concepto,monto,hora:new Date().toTimeString().slice(0,5)}],efectivoEntregado:0});
+    const newId=await dbAdd('arqueos',{fecha:td,local:ST.localActivo,turno,turnoLabel,cajaInicial:0,notas:'',cajero:ST.user?.login,verificado:false,cerrado:false,egresosEfectivo:[{concepto,monto,hora:new Date().toTimeString().slice(0,5)}],efectivoEntregado:0});
     toast(`Egreso registrado: ${fmt(monto)}`,'success');
   }else{
     const lista=(aq.egresosEfectivo||[]);
@@ -2611,8 +2636,10 @@ async function quitarEgresoEf(idx){
 
 // Actualizar etiqueta de diferencia en entrega de efectivo
 function updDiferenciaEntrega(){
-  const ini=parseFloat(document.getElementById('arqueoInicial')?.value)||
-            parseFloat(document.getElementById('aqMostrarInicial')?.textContent?.replace(/\D/g,''))||0;
+  const inputEl=document.getElementById('arqueoInicial');
+  const ini=inputEl
+    ?parseFloat(inputEl.value)||0
+    :window._aqMeta?._cajaIni||0;
   const ef=window._aqMeta?.mets?.efectivo||0;
   const egEf=window._aqMeta?._egresosEf||[];
   const totEg=egEf.reduce((s,e)=>s+(e.monto||0),0);
@@ -2629,26 +2656,61 @@ function updDiferenciaEntrega(){
   }
 }
 
-async function guardarArqueo(){
+// Función base que persiste el arqueo — usada por actualizar y cerrar
+async function _persistirArqueo(cerrar){
   const td=hoy();
-  const ini=parseFloat(document.getElementById('arqueoInicial')?.value)||0;
-  const notas=document.getElementById('arqueoNotas')?.value.trim()||'';
-  const efectivoEntregado=parseFloat(document.getElementById('aqEfEntregado')?.value)||0;
   const turno=getTurnoActual();
   const turnoLabel=turno===1?'Turno 1':'Turno 2';
+  const arqs=await dbAll('arqueos');
+  const ex=arqs.find(a=>a.fecha===td&&a.local==ST.localActivo&&a.turno==turno);
+
+  // Caja inicial: tomar del input si está visible, sino del registro existente
+  const inputIni=document.getElementById('arqueoInicial');
+  const cajaInicial=inputIni
+    ?parseFloat(inputIni.value)||0
+    :ex?.cajaInicial||ex?.caja_inicial||window._aqMeta?._cajaIni||0;
+
+  const notas=document.getElementById('arqueoNotas')?.value.trim()||ex?.notas||'';
+  const efectivoEntregado=parseFloat(document.getElementById('aqEfEntregado')?.value)||ex?.efectivoEntregado||0;
+
   const cobros=await dbAll('cobros');
   const h=cobros.filter(co=>co.fecha===td&&co.local==ST.localActivo);
   const total=h.reduce((s,co)=>s+co.total,0);
   const detalle={};METODOS.forEach(m=>{detalle[m.id]=h.reduce((s,co)=>s+(co.pagos||[]).filter(p=>p.metodo===m.id).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);});
-  const arqs=await dbAll('arqueos');
-  const ex=arqs.find(a=>a.fecha===td&&a.local==ST.localActivo&&a.turno==turno);
+
+  // Preservar egresos del registro existente (pueden haber sido agregados sin cerrar)
   const egresosEfectivo=ex?.egresosEfectivo||[];
-  const data={fecha:td,local:ST.localActivo,turno,turnoLabel,cajaInicial:ini,total,detalle,notas,cajero:ST.user?.login,verificado:false,egresosEfectivo,efectivoEntregado};
-  if(ex){data.id=ex.id;await dbPut('arqueos',data);}else{await dbAdd('arqueos',data);}
+
+  const data={
+    fecha:td,local:ST.localActivo,turno,turnoLabel,
+    cajaInicial,total,detalle,notas,
+    cajero:ex?.cajero||ST.user?.login,
+    verificado:ex?.verificado||false,
+    cerrado:cerrar?true:(ex?.cerrado||false),
+    egresosEfectivo,efectivoEntregado,
+  };
+  if(ex){data.id=ex.id;await dbPut('arqueos',data);}
+  else{await dbAdd('arqueos',data);}
   localStorage.setItem(getCajaKey(),'done');
-  await logAct(`Guardó cierre de caja · ${turnoLabel} · ${localNombre(ST.localActivo)} · Caja inicial: ${fmt(ini)} · Entregado: ${fmt(efectivoEntregado)}`);
-  toast('Cierre de caja guardado y enviado al administrador','success');
-  closeModal('modalArqueo');refreshCaja();
+  return {cajaInicial,efectivoEntregado};
+}
+
+async function actualizarEstadoCaja(){
+  try{
+    const {cajaInicial,efectivoEntregado}=await _persistirArqueo(false);
+    await logAct(`Actualizó estado de caja · ${localNombre(ST.localActivo)} · Caja: ${fmt(cajaInicial)}`);
+    toast('Estado de caja actualizado','success');
+    renderArqueo();refreshCaja();
+  }catch(e){toast('Error al guardar: '+e.message,'error');}
+}
+
+async function guardarArqueo(){
+  try{
+    const {cajaInicial,efectivoEntregado}=await _persistirArqueo(true);
+    await logAct(`Guardó cierre de caja · ${localNombre(ST.localActivo)} · Caja: ${fmt(cajaInicial)} · Entregado: ${fmt(efectivoEntregado)}`);
+    toast('Cierre de caja enviado al administrador','success');
+    closeModal('modalArqueo');refreshCaja();
+  }catch(e){toast('Error al guardar: '+e.message,'error');}
 }
 async function verificarArqueo(id){
   const a=await dbGet('arqueos',id);if(!a)return;
@@ -3010,6 +3072,11 @@ async function seedData(){
   if(!p.length){
     const pp=[{nombre:'Pomada Suave',precio:40000,stock:15,descripcion:'Fijación suave y brillo'},{nombre:'Pomada Fuerte',precio:40000,stock:12,descripcion:'Máxima fijación'},{nombre:'Aceite de Barba',precio:65000,stock:8,descripcion:'Hidratación y suavizado'},{nombre:'Shampoo para Barba',precio:50000,stock:10,descripcion:'Limpieza suave'}];
     for(const x of pp)await dbAdd('productos',x);
+  }
+  const b=await dbAll('barberos');
+  if(!b.length){
+    const bb=[{nombre:'Carlos',apellido:'Martínez',fechaIngreso:'2023-01-15',local:1,comision:50,email:''},{nombre:'Juan',apellido:'Pérez',fechaIngreso:'2023-03-20',local:1,comision:50,email:''},{nombre:'Luis',apellido:'García',fechaIngreso:'2023-06-01',local:2,comision:50,email:''}];
+    for(const x of bb)await dbAdd('barberos',x);
   }
   // Seed barberoUsers: create portal access for each barbero without one
   const allBarbs=await dbAll('barberos');
@@ -3478,7 +3545,16 @@ async function guardarCajaInicial(){
   const turnoLabel=turno===1?'Turno 1':'Turno 2';
   const arqs=await dbAll('arqueos');
   const ex=arqs.find(a=>a.fecha===td&&a.local==ST.localActivo&&a.turno==turno);
-  const data={fecha:td,local:ST.localActivo,turno,turnoLabel,cajaInicial:monto,notas:nota,nota,cajero:ST.user?.login,verificado:false,egresosEfectivo:[],efectivoEntregado:0};
+  const data={
+    fecha:td,local:ST.localActivo,turno,turnoLabel,
+    cajaInicial:monto,
+    notas:nota,nota,
+    cajero:ex?.cajero||ST.user?.login,
+    verificado:ex?.verificado||false,
+    cerrado:ex?.cerrado||false,
+    egresosEfectivo:ex?.egresosEfectivo||[],
+    efectivoEntregado:ex?.efectivoEntregado||0,
+  };
   if(ex){data.id=ex.id;await dbPut('arqueos',data);}
   else{await dbAdd('arqueos',data);}
   localStorage.setItem(getCajaKey(),'done');
