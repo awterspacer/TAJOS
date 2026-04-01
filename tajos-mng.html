@@ -1000,6 +1000,7 @@ const SUPA_URL='https://tgwhegmgchnttsmrhcfc.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnd2hlZ21nY2hudHRzbXJoY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODg1ODgsImV4cCI6MjA4OTQ2NDU4OH0.3g20p6yGber_j6HNB5oQqesOm_YgQ_fo9P2Yl2jGPbM';
 
 
+
 // ══════════════════════════════════════════════════════════════
 // MAPA: nombre de store (IndexedDB) → nombre de tabla (Supabase)
 // Los nombres en snake_case corresponden al schema SQL generado.
@@ -1257,12 +1258,10 @@ async function dbAdd(store,data){
       const rows=await supaFetch('POST',tbl,null,body);
       if(rows&&rows.length){
         const saved=fromDbObj(rows[0]);
-        // Supabase guardó correctamente — solo actualizar cache local, NO encolar offline
-        _idbAdd(store,saved).catch(()=>{});
+        // _idbPut hace upsert seguro; _idbAdd fallaría si la clave ya existe en el cache local
+        _idbPut(store,saved).catch(()=>{});
         return saved.id;
       }
-      // Supabase respondió OK pero sin datos (no debería pasar con Prefer:return=representation)
-      // En este caso tampoco encolamos para evitar duplicado: relanzar para que caiga al fallback
       throw new Error('Supabase POST returned empty');
     }catch(e){console.warn('dbAdd Supabase error, guardando offline:',e);}
   }
@@ -2388,7 +2387,12 @@ async function guardarCobro(){
     try{const turno=await dbGet('turnos',window._turnoACobrar);if(turno&&turno.estado!=='completado'){turno.estado='completado';await dbPut('turnos',turno);}}catch(e){}
     window._turnoACobrar=null;renderAgenda();
   }
-  ST.cobroItems=[];ST.cobroPagos=[];ST._gcAplicada=null;refreshDash();refreshCaja();
+  ST.cobroItems=[];ST.cobroPagos=[];ST._gcAplicada=null;
+  // await en orden: garantiza que el cobro ya está en Supabase antes de leer
+  await refreshDash();
+  await refreshCaja();
+  // Si la página de barberos está abierta, actualizar sus totales de servicios y comisiones
+  if(document.getElementById('page-barberos')?.classList.contains('active')) renderBarberos();
 }
 
 async function refreshCaja(){
@@ -2886,7 +2890,7 @@ function calcComisionLista(cobros){
 async function refreshDash(){
   const cobros=await dbAll('cobros');const turnos=await dbAll('turnos');
   const cl=await dbAll('clientes');const barbs=await dbAll('barberos');
-  const td=hoy();const lc=cobros.filter(c=>c.local==ST.localActivo);const hc=lc.filter(c=>c.fecha===td);
+  const td=hoy();const lc=cobros.filter(c=>Number(c.local)===Number(ST.localActivo));const hc=lc.filter(c=>c.fecha===td);
   const tot=hc.reduce((s,c)=>s+c.total,0);const com=calcComisionLista(hc);
   const th=turnos.filter(t=>t.fecha===td&&t.local==ST.localActivo);
   const pen=th.filter(t=>t.estado!=='completado'&&t.estado!=='cancelado');
