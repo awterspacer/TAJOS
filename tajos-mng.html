@@ -1405,12 +1405,52 @@ function showApp(){
     const btn1=document.getElementById('localBtn1');const btn2=document.getElementById('localBtn2');
     if(btn1)btn1.style.display='';if(btn2)btn2.style.display='';
   }
+  // Restringir selector de sucursal en Reportes para cajeros con una sola sucursal
+  _aplicarRestriccionReporteLocal();
   navigate('dashboard');
   populateSels();
   setTimeout(mostrarCajaInicialSiNecesario,600);
 }
 
 function getTurnoLabel(){const h=new Date().getHours();return h<14?'Cajero · Turno 1 (8–14h)':'Cajero · Turno 2 (14–20h)';}
+
+// Devuelve array de locales permitidos para el usuario actual.
+// Admin → [1,2]. Cajero ambas → [1,2]. Cajero solo central → [1]. Cajero solo superseis → [2].
+function getLocalesPermitidos(){
+  const u=ST.user;
+  if(!u||u.rol==='admin')return[1,2];
+  const acc=u.acceso||{};
+  const lista=[];
+  if(acc.central!==false)lista.push(1);
+  if(acc.superseis!==false)lista.push(2);
+  return lista.length?lista:[1]; // fallback a central si no hay nada definido
+}
+
+// Filtra un array de registros que tengan campo 'local' a los locales permitidos.
+// local==0 (barberos "Ambas") siempre se incluye.
+function filtrarPorLocalPermitido(arr){
+  const permitidos=getLocalesPermitidos();
+  if(permitidos.length===2)return arr; // acceso total, sin filtro
+  return arr.filter(r=>Number(r.local)===0||permitidos.includes(Number(r.local)));
+}
+
+// Configura el selector de sucursal en Reportes según permisos del usuario actual.
+// Cajero con una sola sucursal: lo fija en esa sucursal y oculta el selector.
+// Cajero con ambas o admin: muestra todas las opciones.
+function _aplicarRestriccionReporteLocal(){
+  const sel=document.getElementById('reporteLocal');
+  if(!sel)return;
+  const permitidos=getLocalesPermitidos();
+  if(permitidos.length===1){
+    // Solo una sucursal permitida: fijar valor y ocultar selector
+    sel.value=String(permitidos[0]);
+    sel.style.display='none';
+  }else{
+    // Acceso total: mostrar selector completo
+    sel.value='0';
+    sel.style.display='';
+  }
+}
 
 async function logoutConfirm(){await showRecordatorioBackup();}
 
@@ -1450,7 +1490,7 @@ function navigate(page){
   if(page==='usuarios')renderUsuarios();
   if(page==='historial')renderHistorial();
   if(page==='arqueos')renderArqueosAdmin();
-  if(page==='reportes')generarReporte();
+  if(page==='reportes'){_aplicarRestriccionReporteLocal();generarReporte();}
   if(page==='giftcards')renderGiftcards();
   if(page==='consumos')renderConsumos();
 }
@@ -1509,7 +1549,8 @@ function openModal(id,extra){
   }
   if(id==='modalBackup'){selFmt('JSON');cargarResumenBackup();}
   if(id==='modalNuevoConsumo'){
-    dbAll('barberos').then(barbs=>{
+    dbAll('barberos').then(allBarbs=>{
+      const barbs=filtrarPorLocalPermitido(allBarbs);
       const sel=document.getElementById('consumoBarbero');
       if(sel)sel.innerHTML='<option value="">Seleccionar barbero...</option>'+barbs.map(b=>`<option value="${b.id}">${b.nombre} ${b.apellido}</option>`).join('');
     });
@@ -2864,7 +2905,7 @@ async function refreshDash(){
     <div class="history-dot"></div><div class="history-info"><div class="history-title">${cMap[String(co.clienteId||co.cliente_id||'')]||'Sin registro'}</div><div class="history-meta">${co.hora||''} · ${bMap[String(co.barberoId||co.barbero_id||'')]||'?'}</div></div>
     <div class="history-amount">${fmt(co.total)}</div>
   </div>`).join(''):'<div class="empty-state"><div class="icon">💳</div><p>Sin transacciones hoy</p></div>';
-  const lb=barbs.filter(b=>b.local==ST.localActivo||b.local==0);
+  const lb=filtrarPorLocalPermitido(barbs).filter(b=>b.local==ST.localActivo||b.local==0);
   document.getElementById('dashBarberos').innerHTML=lb.length?lb.map(b=>{
     const bh=hc.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));const bt=bh.reduce((s,c)=>s+c.total,0);
     return `<div class="card" style="padding:14px;cursor:pointer" onclick="verDetBarbero(${b.id})">
@@ -2884,7 +2925,11 @@ function switchReporteTab(tab,el){
   generarReporte();
 }
 async function generarReporte(){
-  const per=document.getElementById('reportePeriodo').value;const lf=+document.getElementById('reporteLocal').value;
+  const per=document.getElementById('reportePeriodo').value;
+  const permitidos=getLocalesPermitidos();
+  // Filtro de local: respetar selector solo si el usuario tiene acceso a ese local
+  const lfSel=+document.getElementById('reporteLocal').value;
+  const lf=lfSel>0&&permitidos.includes(lfSel)?lfSel:(permitidos.length===1?permitidos[0]:0);
   const bf=+document.getElementById('reporteBarbero').value;const td=hoy();
   let desde,hasta=td;
   if(per==='dia')desde=td;
@@ -2892,7 +2937,10 @@ async function generarReporte(){
   else if(per==='mes')desde=td.slice(0,7)+'-01';
   else{desde=document.getElementById('reporteDesde').value||td;hasta=document.getElementById('reporteHasta').value||td;}
   let cobros=await dbAll('cobros');cobros=cobros.filter(c=>c.fecha>=desde&&c.fecha<=hasta);
-  if(lf>0)cobros=cobros.filter(c=>c.local==lf);if(bf>0)cobros=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(bf));
+  // Aplicar restricción de sucursal: si lf>0 filtrar por ese local, si no filtrar por todos los permitidos
+  if(lf>0){cobros=cobros.filter(c=>Number(c.local)===Number(lf));}
+  else if(permitidos.length<2){cobros=cobros.filter(c=>permitidos.includes(Number(c.local)));}
+  if(bf>0)cobros=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(bf));
   const tot=cobros.reduce((s,c)=>s+c.total,0);
   const tsv=cobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').length,0);
   const cliAt=new Set(cobros.filter(c=>c.clienteId).map(c=>c.clienteId)).size;
@@ -2907,7 +2955,10 @@ async function generarReporte(){
     const v=mMap[m.id]||0;const pct=tot?(v/tot*100).toFixed(1):0;
     return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>${m.icon} ${m.label}</span><span style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(v)} <span style="color:var(--text-muted)">(${pct}%)</span></span></div><div class="comm-bar-wrap"><div class="comm-bar" style="width:${pct}%"></div></div></div>`;
   }).join('');
-  const barbs=await dbAll('barberos');
+  // Filtrar barberos a los locales permitidos para la tabla de comisiones
+  let barbs=await dbAll('barberos');
+  barbs=filtrarPorLocalPermitido(barbs);
+  if(lf>0)barbs=barbs.filter(b=>Number(b.local)===Number(lf)||Number(b.local)===0);
   document.getElementById('rComisionesTbody').innerHTML=barbs.map(b=>{
     const bc=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));const bt=bc.reduce((s,c)=>s+c.total,0);
     const bco=calcComisionLista(bc);const pct=tot?(bt/tot*100).toFixed(1):0;
@@ -2972,7 +3023,9 @@ function resetModalSearches(modalId){
 
 // ══ POPULATE SELECTS ══
 async function populateSels(){
-  const barbs=await dbAll('barberos');const cl=await dbAll('clientes');const svcs=await dbAll('servicios');const prods=await dbAll('productos');
+  const allBarbs=await dbAll('barberos');const cl=await dbAll('clientes');const svcs=await dbAll('servicios');const prods=await dbAll('productos');
+  // Filtrar barberos a los locales permitidos para el usuario actual
+  const barbs=filtrarPorLocalPermitido(allBarbs);
   const bo=[...barbs].sort((a,b)=>(a.nombre+' '+a.apellido).localeCompare(b.nombre+' '+b.apellido,'es')).map(b=>`<option value="${b.id}">${b.nombre} ${b.apellido}</option>`).join('');
   ['turnoBarbero','cobroBarbero'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Seleccionar barbero...</option>'+bo;});
   const co=[...cl].sort((a,b)=>(a.nombre+' '+a.apellido).localeCompare(b.nombre+' '+b.apellido,'es')).map(c=>`<option value="${c.id}">${c.nombre} ${c.apellido} · ${c.celular}</option>`).join('');
@@ -2983,6 +3036,7 @@ async function populateSels(){
   if(cSel)cSel.innerHTML='<option value="">Seleccionar servicio...</option>'+svcs.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(s=>`<option value='${JSON.stringify({id:s.id,nombre:s.nombre,precio:s.precio,comision:s.comision??50})}'>${s.nombre} — ${fmt(s.precio)}</option>`).join('');
   const pSel=document.getElementById('cobroProducto');
   if(pSel)pSel.innerHTML='<option value="">Seleccionar producto...</option>'+[...prods].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(p=>`<option value='${JSON.stringify({id:p.id,nombre:p.nombre,precio:p.precio,comisionable:!!p.comisionable})}'>${p.nombre} — ${fmt(p.precio)} (Stock: ${p.stock||0})${p.comisionable?' ★':''}</option>`).join('');
+  // Reporte: solo barberos de locales permitidos
   const rb=document.getElementById('reporteBarbero');
   if(rb)rb.innerHTML='<option value="0">Todos los barberos</option>'+bo;
   // Pre-cache selects for search filters
@@ -3434,9 +3488,10 @@ async function guardarConsumo(){
 
 async function renderConsumos(){
   const egresos=await dbAll('egresos');
-  const barbs=await dbAll('barberos');
+  const allBarbs=await dbAll('barberos');
+  const barbs=filtrarPorLocalPermitido(allBarbs);
   const bMap={};barbs.forEach(b=>bMap[String(b.id)]=b.nombre+' '+b.apellido);
-  // populate filtro barbero
+  // populate filtro barbero — solo los de locales permitidos
   const filtBarbSel=document.getElementById('consFiltroBarb');
   if(filtBarbSel){
     const cur=filtBarbSel.value;
