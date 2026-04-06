@@ -1258,9 +1258,12 @@ async function dbAdd(store,data){
       const rows=await supaFetch('POST',tbl,null,body);
       if(rows&&rows.length){
         const saved=fromDbObj(rows[0]);
-        _idbPut(store,saved).catch(()=>{});  // upsert: no falla si la clave ya existe
+        // Supabase guardó correctamente — solo actualizar cache local, NO encolar offline
+        _idbAdd(store,saved).catch(()=>{});
         return saved.id;
       }
+      // Supabase respondió OK pero sin datos (no debería pasar con Prefer:return=representation)
+      // En este caso tampoco encolamos para evitar duplicado: relanzar para que caiga al fallback
       throw new Error('Supabase POST returned empty');
     }catch(e){console.warn('dbAdd Supabase error, guardando offline:',e);}
   }
@@ -1299,32 +1302,8 @@ async function dbDel(store,id){
 }
 
 // ══ STATE ══
-const ST={localActivo:1,agendaFecha:new Date(),turnoServTemp:[],cobroItems:[],cobroPagos:[],user:null,_gcAplicada:null,_pendingServCat:null,_pendingProdCat:null,_cobrosCache:null};
+const ST={localActivo:1,agendaFecha:new Date(),turnoServTemp:[],cobroItems:[],cobroPagos:[],user:null,_gcAplicada:null,_pendingServCat:null,_pendingProdCat:null,turnoActivo:null};
 const HORAS=[];for(let h=8;h<=20;h++){HORAS.push(String(h).padStart(2,'0')+':00');if(h<20)HORAS.push(String(h).padStart(2,'0')+':30');}
-
-// ── Cache de cobros: carga una vez y se mantiene actualizado localmente ──
-// Todas las funciones que necesitan cobros deben llamar getCobros() en lugar de dbAll('cobros')
-async function getCobros(){
-  if(ST._cobrosCache!==null)return ST._cobrosCache;
-  const rows=await dbAll('cobros');
-  // Normalizar todos los campos críticos al cargar
-  ST._cobrosCache=rows.map(_normalizarCobro);
-  return ST._cobrosCache;
-}
-function _invalidarCobros(){ST._cobrosCache=null;}
-function _normalizarCobro(c){
-  if(!c)return c;
-  return {
-    ...c,
-    id:Number(c.id),
-    barberoId:Number(c.barberoId||c.barbero_id||0),
-    clienteId:c.clienteId||c.cliente_id||null,
-    local:Number(c.local||0),
-    total:parseFloat(c.total)||0,
-    items:Array.isArray(c.items)?c.items.map(i=>({...i,precio:parseFloat(i.precio)||0})):[],
-    pagos:Array.isArray(c.pagos)?c.pagos.map(p=>({...p,monto:parseFloat(p.monto)||0})):[],
-  };
-}
 // METODOS: fallback hardcodeado con IDs descriptivos (siempre se usan como clave en cobros)
 const METODOS_DEFAULT=[
   {id:'efectivo',     label:'Efectivo',     icon:'💵'},
@@ -1400,7 +1379,10 @@ async function doLogin(){
 }
 
 function showApp(){
+  // Fijar el turno en el momento del login — no cambia por el reloj durante la sesión
+  ST.turnoActivo=new Date().getHours()<14?1:2;
   sessionStorage.setItem('tajos_uid', String(ST.user.id));
+  sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
   document.getElementById('loginScreen').classList.remove('visible');
   document.getElementById('app').classList.add('visible');
   const u=ST.user;
@@ -1434,7 +1416,7 @@ function showApp(){
   setTimeout(mostrarCajaInicialSiNecesario,600);
 }
 
-function getTurnoLabel(){const h=new Date().getHours();return h<14?'Cajero · Turno 1 (8–14h)':'Cajero · Turno 2 (14–20h)';}
+function getTurnoLabel(){const t=getTurnoActual();return t===1?'Cajero · Turno 1 (9–14h)':'Cajero · Turno 2 (14–20h)';}
 
 // Devuelve array de locales permitidos para el usuario actual.
 // Admin → [1,2]. Cajero ambas → [1,2]. Cajero solo central → [1]. Cajero solo superseis → [2].
@@ -1479,7 +1461,9 @@ async function logoutConfirm(){await showRecordatorioBackup();}
 async function doLogout(){
   await logAct('Cierre de sesión');
   ST.user=null;
+  ST.turnoActivo=null;
   sessionStorage.removeItem('tajos_uid');
+  sessionStorage.removeItem('tajos_turno');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('loginScreen').classList.add('visible');
   document.getElementById('loginUser').value='';
@@ -1503,8 +1487,6 @@ function navigate(page){
   pg.classList.add('active');
   const ni=document.querySelector(`.nav-item[data-page="${page}"]`);if(ni)ni.classList.add('active');
   document.getElementById('pageTitle').textContent=TITLES[page]||page;
-  // Invalidar cache de cobros al navegar: garantiza datos frescos de Supabase
-  _invalidarCobros();
   if(page==='dashboard')refreshDash();
   if(page==='agenda')renderAgenda();
   if(page==='caja')refreshCaja();
@@ -1524,7 +1506,6 @@ function closeSidebar(){document.getElementById('sidebar').classList.remove('ope
 
 function selectLocal(n){
   ST.localActivo=n;
-  _invalidarCobros(); // cache de cobros es global — invalidar al cambiar de sucursal
   document.getElementById('localBtn1').classList.toggle('active',n===1);
   document.getElementById('localBtn2').classList.toggle('active',n===2);
   document.getElementById('dashLocalLabel').textContent=localNombre(n)+' · Resumen del día';
@@ -1901,7 +1882,7 @@ async function ingresarStock(){
 }
 // ══ CLIENTES ══
 async function renderClientes(filter=''){
-  let cl=await dbAll('clientes');const cobros=await getCobros();
+  let cl=await dbAll('clientes');const cobros=await dbAll('cobros');
   if(filter){const f=filter.toLowerCase();cl=cl.filter(c=>(c.nombre+' '+c.apellido).toLowerCase().includes(f)||(c.celular||'').includes(f)||(c.documento||'').includes(f));}
   const tbody=document.getElementById('clientesTbody');
   if(!cl.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="icon">👥</div><p>No hay clientes</p></div></td></tr>`;return;}
@@ -1951,7 +1932,7 @@ async function eliminarCliente(id){
 }
 
 async function verHistCliente(id){
-  const c=await dbGet('clientes',id);const cobros=await getCobros();const barbs=await dbAll('barberos');
+  const c=await dbGet('clientes',id);const cobros=await dbAll('cobros');const barbs=await dbAll('barberos');
   const bMap={};barbs.forEach(b=>bMap[String(b.id)]=b.nombre+' '+b.apellido);
   const cc=cobros.filter(co=>Number(co.clienteId||co.cliente_id)===Number(id)).sort((a,b)=>b.fecha>a.fecha?1:-1);
   const total=cc.reduce((s,co)=>s+(co.total||0),0);
@@ -1977,9 +1958,7 @@ async function verHistCliente(id){
 // ══ BARBEROS ══
 async function renderBarberos(){
   let barbs=await dbAll('barberos');
-  barbs=[...barbs].sort((a,b)=>(a.nombre+' '+a.apellido).localeCompare(b.nombre+' '+b.apellido,'es'));
-  const cobros=await getCobros();
-  const td=hoy();
+  barbs=[...barbs].sort((a,b)=>(a.nombre+' '+a.apellido).localeCompare(b.nombre+' '+b.apellido,'es'));const cobros=await dbAll('cobros');const td=hoy();
   const bUsers=await dbAll('barberoUsers');
   const adelantos=await dbAll('adelantos');
   const list=document.getElementById('barberosList');
@@ -2104,7 +2083,7 @@ async function eliminarBarbero(id){
 }
 
 async function verDetBarbero(id){
-  const b=await dbGet('barberos',id);const cobros=await getCobros();
+  const b=await dbGet('barberos',id);const cobros=await dbAll('cobros');
   window._detB={b,cobros:cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(id))};
   document.getElementById('detBarberoTitulo').textContent=`💈 ${b.nombre} ${b.apellido}`;
   document.getElementById('detBarberoContent').innerHTML=`
@@ -2385,116 +2364,62 @@ async function guardarCobro(){
   if(!bId)return toast('Selecciona un barbero','error');
   if(!ST.cobroItems.length)return toast('Agrega al menos un ítem','error');
   if(!ST.cobroPagos.length)return toast('Agrega un método de pago','error');
-
-  const tot=ST.cobroItems.reduce((s,i)=>s+(parseFloat(i.precio)||0),0);
-  const pagos=ST.cobroPagos.map(p=>({metodo:String(p.metodo),monto:parseFloat(p.monto)||0}));
-  const pag=pagos.reduce((s,p)=>s+p.monto,0);
+  const tot=ST.cobroItems.reduce((s,i)=>s+i.precio,0);
+  const pag=ST.cobroPagos.reduce((s,p)=>s+(parseFloat(p.monto)||0),0);
   if(pag<tot&&!confirm(`Pagado (${fmt(pag)}) menor al total (${fmt(tot)}). ¿Registrar de todas formas?`))return;
-
   const now=new Date();
-  const facturaAmt=parseFloat(document.getElementById('cobroFactura')?.value)||0;
-
-  // Descontar stock de productos
+  const cl=await dbAll('clientes');const c=cl.find(x=>x.id===cId);
+  const barbs=await dbAll('barberos');const b=barbs.find(x=>x.id===bId);
   for(const item of ST.cobroItems){
     if(item.tipo==='producto'&&item.id){
-      try{
-        const p=await dbGet('productos',item.id);
-        if(p&&(p.stock||0)>0){p.stock=Math.max(0,(p.stock||0)-1);await dbPut('productos',p);}
-      }catch(e){console.warn('stock update error',e);}
+      const p=await dbGet('productos',item.id);
+      if(p&&(p.stock||0)>0){p.stock=Math.max(0,p.stock-1);await dbPut('productos',p);}
     }
   }
-
+  const facturaAmt=parseFloat(document.getElementById('cobroFactura')?.value)||0;
   // Aplicar giftcard si corresponde
   let gcUsada=null;
   if(ST._gcAplicada){
-    gcUsada={...ST._gcAplicada};
-    gcUsada.saldo=Math.max(0,(gcUsada.saldo??gcUsada.valor)-tot);
+    gcUsada=ST._gcAplicada;
+    gcUsada.saldo=Math.max(0,(gcUsada.saldo||gcUsada.valor)-tot);
     gcUsada.estado=gcUsada.saldo<=0?'canjeada':'vigente';
     gcUsada.ultimoUso=toDS(now);
     await dbPut('giftcards',gcUsada);
+    ST._gcAplicada=null;
   }
-
-  // Construir el objeto cobro con todos los campos normalizados
-  const cobroData={
-    clienteId:cId,
-    barberoId:bId,
-    items:[...ST.cobroItems.map(i=>({...i,precio:parseFloat(i.precio)||0}))],
-    pagos,
-    total:tot,
-    factura:facturaAmt,
-    giftcardId:gcUsada?.id||null,
-    fecha:toDS(now),
-    hora:now.toTimeString().slice(0,5),
-    local:Number(ST.localActivo),
-    registradoPor:ST.user?.login||'?',
-    cajero:ST.user?.login||'?',
-  };
-
-  // Guardar en Supabase/IndexedDB
-  const nuevoId=await dbAdd('cobros',cobroData);
-
-  // Agregar al cache in-memory inmediatamente con id definitivo
-  const cobroGuardado=_normalizarCobro({...cobroData,id:Number(nuevoId)});
-  if(ST._cobrosCache!==null){
-    // Remover si ya existe (evitar duplicados por id local temporal)
-    ST._cobrosCache=ST._cobrosCache.filter(c=>c.id!==cobroGuardado.id);
-    ST._cobrosCache.push(cobroGuardado);
-  }
-
-  // Limpiar estado del modal
-  ST.cobroItems=[];ST.cobroPagos=[];ST._gcAplicada=null;
-
-  // Log y feedback
-  const cl=await dbAll('clientes');const c=cl.find(x=>x.id===cId);
-  const barbs=await dbAll('barberos');const b=barbs.find(x=>x.id===bId);
+  await dbAdd('cobros',{clienteId:cId,barberoId:bId,items:[...ST.cobroItems],pagos:ST.cobroPagos.map(p=>({metodo:p.metodo,monto:parseFloat(p.monto)||0})),total:tot,factura:facturaAmt,giftcardId:gcUsada?.id||null,fecha:toDS(now),hora:now.toTimeString().slice(0,5),local:ST.localActivo,registradoPor:ST.user?.login||'?',cajero:ST.user?.login||'?'});
   await logAct(`Registró cobro de ${fmt(tot)} · Cliente: ${c?c.nombre+' '+c.apellido:'sin registro'} · Barbero: ${b?b.nombre+' '+b.apellido:'?'}`);
-  toast('Cobro registrado','success');
-  closeModal('modalNuevoCobro');
-
-  // Marcar turno como completado si corresponde
+  toast('Cobro registrado','success');closeModal('modalNuevoCobro');
   if(window._turnoACobrar){
-    try{
-      const turno=await dbGet('turnos',window._turnoACobrar);
-      if(turno&&turno.estado!=='completado'){turno.estado='completado';await dbPut('turnos',turno);}
-    }catch(e){}
-    window._turnoACobrar=null;
-    renderAgenda();
+    try{const turno=await dbGet('turnos',window._turnoACobrar);if(turno&&turno.estado!=='completado'){turno.estado='completado';await dbPut('turnos',turno);}}catch(e){}
+    window._turnoACobrar=null;renderAgenda();
   }
-
-  // Refrescar UI — el cache ya tiene el cobro, los refresh son instantáneos
-  await refreshDash();
-  await refreshCaja();
-  if(document.getElementById('page-barberos')?.classList.contains('active')) renderBarberos();
+  ST.cobroItems=[];ST.cobroPagos=[];ST._gcAplicada=null;refreshDash();refreshCaja();
 }
 
 async function refreshCaja(){
-  const cobros=await getCobros();
+  const cobros=await dbAll('cobros');
   const fecha=document.getElementById('cajaFechaFiltro').value||hoy();
   const buscar=(document.getElementById('cajaBuscar').value||'').toLowerCase();
   const barbs=await dbAll('barberos');const cl=await dbAll('clientes');
   const bMap={};barbs.forEach(b=>bMap[String(b.id)]=b.nombre+' '+b.apellido);
   const cMap={};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
-
   const lc=cobros.filter(c=>Number(c.local)===Number(ST.localActivo));
   const hoyC=lc.filter(c=>c.fecha===fecha);
-
-  const tot=hoyC.reduce((s,c)=>s+(c.total||0),0);
-  const ef=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((a,p)=>a+(p.monto||0),0),0);
-  const dig=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>['debito','credito','transferencia'].includes(p.metodo)).reduce((a,p)=>a+(p.monto||0),0),0);
-
+  const tot=hoyC.reduce((s,c)=>s+c.total,0);
+  const ef=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);
+  const dig=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>['debito','credito','transferencia'].includes(p.metodo)).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);
   document.getElementById('cajaTotalDia').textContent=fmt(tot);
   document.getElementById('cajaCantDia').textContent=`${hoyC.length} cobros`;
   document.getElementById('cajaEfectivo').textContent=fmt(ef);
   document.getElementById('cajaDigital').textContent=fmt(dig);
-
-  // Caja inicial desde caja_turnos
+  // Leer caja inicial siempre desde caja_turnos
   const turno=getTurnoActual();
   const ct=await getCajaTurno(fecha,Number(ST.localActivo),Number(turno))||{cajaInicial:0,egresosEfectivo:[]};
-  const cajaIni=Number(ct.cajaInicial||ct.caja_inicial||0);
+  const cajaIni=ct.cajaInicial||ct.caja_inicial||0;
   const egresosEfCt=(ct.egresosEfectivo||[]).reduce((s,e)=>s+(e.monto||0),0);
   document.getElementById('cajaCajaInicial').textContent=fmt(cajaIni);
-
-  // Bloque estado de caja
+  // Renderizar bloque de estado de caja
   const isCajero=ST.user&&ST.user.rol!=='admin';
   const estadoCajaBox=document.getElementById('estadoCajaBox');
   if(estadoCajaBox&&fecha===hoy()){
@@ -2517,23 +2442,16 @@ async function refreshCaja(){
       estadoCajaBox.innerHTML=`<div class="alert alert-warning" style="margin-bottom:0">⚠ Caja inicial no registrada para este turno. <button class="btn btn-outline btn-sm" onclick="openModal('modalArqueo')" style="margin-left:8px">Registrar ahora</button></div>`;
     }else{estadoCajaBox.innerHTML='';}
   }else if(estadoCajaBox){estadoCajaBox.innerHTML='';}
-
-  // Tabla historial de cobros
-  let fl=lc.filter(c=>c.fecha===fecha);
-  if(buscar)fl=fl.filter(c=>
-    (cMap[String(c.clienteId||'')]||'').toLowerCase().includes(buscar)||
-    (bMap[String(c.barberoId||'')]||'').toLowerCase().includes(buscar)
-  );
+  let fl=[...lc];
+  if(fecha)fl=fl.filter(c=>c.fecha===fecha);
+  if(buscar)fl=fl.filter(c=>(cMap[String(c.clienteId||c.cliente_id||'')]||'').toLowerCase().includes(buscar)||(bMap[String(c.barberoId||c.barbero_id||'')]||'').toLowerCase().includes(buscar));
   fl.sort((a,b)=>b.fecha>a.fecha?1:b.fecha<a.fecha?-1:(b.hora||'')>(a.hora||'')?1:-1);
-
   const tbody=document.getElementById('cajaTbody');
   if(!fl.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="icon">💰</div><p>Sin cobros</p></div></td></tr>`;return;}
   tbody.innerHTML=fl.map(co=>{
     const ms=[...new Set((co.pagos||[]).map(p=>METODOS.find(m=>m.id===p.metodo)?.label||p.metodo))].join(', ');
     return `<tr>
-      <td>${co.hora||fmtD(co.fecha)}</td>
-      <td>${cMap[String(co.clienteId||'')]||'—'}</td>
-      <td>${bMap[String(co.barberoId||'')]||'?'}</td>
+      <td>${co.hora||fmtD(co.fecha)}</td><td>${cMap[String(co.clienteId||co.cliente_id||'')]||'—'}</td><td>${bMap[String(co.barberoId||co.barbero_id||'')]||'?'}</td>
       <td style="font-size:.8rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(co.items||[]).map(i=>i.nombre).join(', ')||'—'}</td>
       <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(co.total)}</td>
       <td><span class="badge badge-gold">${ms}</span></td>
@@ -2578,20 +2496,15 @@ async function verDetCobro(id){
 
 async function eliminarCobro(id){
   const co=await dbGet('cobros',id);if(!confirm('¿Eliminar este cobro?'))return;
-  await dbDel('cobros',id);
-  // Remover del cache in-memory inmediatamente
-  if(ST._cobrosCache!==null) ST._cobrosCache=ST._cobrosCache.filter(c=>c.id!==Number(id));
-  await logAct(`Eliminó cobro de ${fmt(co.total)}`);
-  toast('Cobro eliminado','info');
-  await refreshCaja();
-  await refreshDash();
+  await dbDel('cobros',id);await logAct(`Eliminó cobro de ${fmt(co.total)}`);
+  toast('Cobro eliminado','info');refreshCaja();refreshDash();
 }
 // ══ ARQUEO ══
 async function renderArqueo(){
-  const td=hoy();const cobros=await getCobros();
+  const td=hoy();const cobros=await dbAll('cobros');
   const isAdmin=ST.user?.rol==='admin';
   const turno=getTurnoActual();
-  const turnoLabel=turno===1?'Turno 1 (8–14h)':'Turno 2 (14–20h)';
+  const turnoLabel=turno===1?'Turno 1 (9–14h)':'Turno 2 (14–20h)';
   const h=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo));
   const arqs=await dbAll('arqueos');
   const aqActual=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&a.turno==turno)||{notas:'',turno,cerrado:false};
@@ -2622,7 +2535,7 @@ async function renderArqueo(){
         // Leer caja inicial y egresos desde caja_turnos (fuente de verdad)
         const ctA=await getCajaTurno(td,a.local,a.turno)||{cajaInicial:0,egresosEfectivo:[]};
         const ini=ctA.cajaInicial||ctA.caja_inicial||0;
-        const tl=a.turnoLabel||a.turno_label||(a.turno==1?'Turno 1 (8–14h)':'Turno 2 (14–20h)');
+        const tl=a.turnoLabel||a.turno_label||(a.turno==1?'Turno 1 (9–14h)':'Turno 2 (14–20h)');
         const verif=a.verificado;
         const egEf=ctA.egresosEfectivo||[];
         const totEgEf=egEf.reduce((s,e)=>s+(e.monto||0),0);
@@ -2831,7 +2744,7 @@ async function _persistirArqueo(cerrar){
   const ex=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&a.turno==turno);
   const notas=document.getElementById('arqueoNotas')?.value.trim()||ex?.notas||'';
   const efectivoEntregado=parseFloat(document.getElementById('aqEfEntregado')?.value)||ex?.efectivoEntregado||0;
-  const cobros=await getCobros();
+  const cobros=await dbAll('cobros');
   const h=cobros.filter(co=>co.fecha===td&&Number(co.local)===Number(ST.localActivo));
   const total=h.reduce((s,co)=>s+co.total,0);
   const detalle={};METODOS.forEach(m=>{detalle[m.id]=h.reduce((s,co)=>s+(co.pagos||[]).filter(p=>p.metodo===m.id).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);});
@@ -2877,7 +2790,7 @@ async function verificarArqueo(id){
 }
 
 async function renderArqueosAdmin(){
-  const cobros=await getCobros();
+  const cobros=await dbAll('cobros');
   const lf=+document.getElementById('arqueoFiltroLocal')?.value||0;
   const td=hoy();
   // Default: último mes
@@ -2977,14 +2890,11 @@ function calcComisionLista(cobros){
 
 // ══ DASHBOARD ══
 async function refreshDash(){
-  const cobros=await getCobros();
-  const turnos=await dbAll('turnos');
+  const cobros=await dbAll('cobros');const turnos=await dbAll('turnos');
   const cl=await dbAll('clientes');const barbs=await dbAll('barberos');
-  const td=hoy();
-  const lc=cobros.filter(c=>Number(c.local)===Number(ST.localActivo));
-  const hc=lc.filter(c=>c.fecha===td);
-  const tot=hc.reduce((s,c)=>s+(c.total||0),0);const com=calcComisionLista(hc);
-  const th=turnos.filter(t=>t.fecha===td&&Number(t.local||0)===Number(ST.localActivo));
+  const td=hoy();const lc=cobros.filter(c=>c.local==ST.localActivo);const hc=lc.filter(c=>c.fecha===td);
+  const tot=hc.reduce((s,c)=>s+c.total,0);const com=calcComisionLista(hc);
+  const th=turnos.filter(t=>t.fecha===td&&t.local==ST.localActivo);
   const pen=th.filter(t=>t.estado!=='completado'&&t.estado!=='cancelado');
   document.getElementById('statIngresos').textContent=fmt(tot);document.getElementById('statIngSub').textContent=`${hc.length} servicios`;
   document.getElementById('statTurnos').textContent=th.length;document.getElementById('statTurnosSub').textContent=`${pen.length} pendientes`;
@@ -2996,14 +2906,14 @@ async function refreshDash(){
     <div class="history-info"><div class="history-title">${cMap[String(t.clienteId||t.cliente_id||'')]||t.clienteNombre||'Sin nombre'}</div><div class="history-meta">${t.hora} · ${bMap[String(t.barberoId||t.barbero_id||'')]||'?'}</div></div>
     <span class="badge ${t.estado==='completado'?'badge-green':'badge-gold'}">${t.estado||'pendiente'}</span>
   </div>`).join(''):'<div class="empty-state"><div class="icon">📅</div><p>Sin turnos hoy</p></div>';
-  const utx=[...hc].sort((a,b)=>(b.hora||'')>(a.hora||'')?1:-1).slice(0,5);
+  const utx=hc.sort((a,b)=>(b.hora||'')>(a.hora||'')?1:-1).slice(0,5);
   document.getElementById('dashUltimasTx').innerHTML=utx.length?utx.map(co=>`<div class="history-item">
-    <div class="history-dot"></div><div class="history-info"><div class="history-title">${cMap[String(co.clienteId||'')]||'Sin registro'}</div><div class="history-meta">${co.hora||''} · ${bMap[String(co.barberoId||'')]||'?'}</div></div>
+    <div class="history-dot"></div><div class="history-info"><div class="history-title">${cMap[String(co.clienteId||co.cliente_id||'')]||'Sin registro'}</div><div class="history-meta">${co.hora||''} · ${bMap[String(co.barberoId||co.barbero_id||'')]||'?'}</div></div>
     <div class="history-amount">${fmt(co.total)}</div>
   </div>`).join(''):'<div class="empty-state"><div class="icon">💳</div><p>Sin transacciones hoy</p></div>';
-  const lb=filtrarPorLocalPermitido(barbs).filter(b=>Number(b.local)===Number(ST.localActivo)||Number(b.local)===0);
+  const lb=filtrarPorLocalPermitido(barbs).filter(b=>b.local==ST.localActivo||b.local==0);
   document.getElementById('dashBarberos').innerHTML=lb.length?lb.map(b=>{
-    const bh=hc.filter(c=>Number(c.barberoId)===Number(b.id));const bt=bh.reduce((s,c)=>s+(c.total||0),0);
+    const bh=hc.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));const bt=bh.reduce((s,c)=>s+c.total,0);
     return `<div class="card" style="padding:14px;cursor:pointer" onclick="verDetBarbero(${b.id})">
       <div style="font-family:var(--font-cond);font-weight:700;font-size:1rem">${b.nombre} ${b.apellido}</div>
       <div style="font-family:var(--font-display);font-size:1.4rem;color:var(--gold-light);margin:6px 0">${fmt(bt)}</div>
@@ -3032,7 +2942,7 @@ async function generarReporte(){
   else if(per==='semana'){const d=new Date();d.setDate(d.getDate()-d.getDay());desde=toDS(d);}
   else if(per==='mes')desde=td.slice(0,7)+'-01';
   else{desde=document.getElementById('reporteDesde').value||td;hasta=document.getElementById('reporteHasta').value||td;}
-  let cobros=await getCobros();cobros=cobros.filter(c=>c.fecha>=desde&&c.fecha<=hasta);
+  let cobros=await dbAll('cobros');cobros=cobros.filter(c=>c.fecha>=desde&&c.fecha<=hasta);
   // Aplicar restricción de sucursal: si lf>0 filtrar por ese local, si no filtrar por todos los permitidos
   if(lf>0){cobros=cobros.filter(c=>Number(c.local)===Number(lf));}
   else if(permitidos.length<2){cobros=cobros.filter(c=>permitidos.includes(Number(c.local)));}
@@ -3641,7 +3551,7 @@ function switchGCTab(tab,el){
 async function renderGiftcards(){
   const gcs=await dbAll('giftcards');
   const cl=await dbAll('clientes');
-  const cobros=await getCobros();
+  const cobros=await dbAll('cobros');
   const cMap={};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
 
   const disp=gcs.filter(g=>g.estado==='disponible');
@@ -3704,7 +3614,7 @@ async function guardarGiftcard(){
 async function verDetalleGiftcard(id){
   const g=await dbGet('giftcards',id);if(!g)return;
   const cl=await dbAll('clientes');const cMap={};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
-  const cobros=await getCobros();
+  const cobros=await dbAll('cobros');
   const cobrosGC=cobros.filter(co=>Number(co.giftcardId||co.giftcard_id)===Number(id));
   const consumido=g.valor-(g.saldo!==undefined?g.saldo:g.valor);
   document.getElementById('gcDetalleContent').innerHTML=`
@@ -3774,8 +3684,10 @@ async function buscarYAplicarGiftcard(){
 
 // ══ CAJA INICIAL ══
 function getTurnoActual(){
-  const h=new Date().getHours();
-  return h<14?1:2;
+  // El turno se fija al iniciar sesión (ST.turnoActivo) y no cambia por el reloj.
+  // Solo se recalcula si no hay sesión activa (ej: primera carga).
+  if(ST.turnoActivo) return ST.turnoActivo;
+  return new Date().getHours()<14?1:2;
 }
 // ══════════════════════════════════════════════════════════════
 // [31] CAJA INICIAL — tabla caja_turnos separada de arqueos
@@ -3827,7 +3739,7 @@ async function mostrarCajaInicialSiNecesario(){
     localStorage.setItem(key,'done');return;
   }
   const info=document.getElementById('cajaInicialInfo');
-  const turnoLabel=turno===1?'Turno 1 (8–14h)':'Turno 2 (14–20h)';
+  const turnoLabel=turno===1?'Turno 1 (9–14h)':'Turno 2 (14–20h)';
   if(info)info.textContent=localNombre(ST.localActivo)+' · '+turnoLabel+' · '+hoy();
   const el=document.getElementById('modalCajaInicial');
   if(el)el.classList.add('visible');
@@ -3860,9 +3772,15 @@ initDB().then(async()=>{
   if(savedUId){
     try{
       const u=await dbGet('usuarios',savedUId);
-      if(u&&u.estado==='activo'){ST.user=u;showApp();}
-      else{sessionStorage.removeItem('tajos_uid');}
-    }catch(e){sessionStorage.removeItem('tajos_uid');}
+      if(u&&u.estado==='activo'){
+        ST.user=u;
+        // Restaurar el turno que estaba activo al hacer login (no recalcular por hora)
+        const savedTurno=sessionStorage.getItem('tajos_turno');
+        if(savedTurno) ST.turnoActivo=Number(savedTurno);
+        showApp();
+      }
+      else{sessionStorage.removeItem('tajos_uid');sessionStorage.removeItem('tajos_turno');}
+    }catch(e){sessionStorage.removeItem('tajos_uid');sessionStorage.removeItem('tajos_turno');}
   }
 }).catch(err=>{
   console.error('DB Error:',err);
