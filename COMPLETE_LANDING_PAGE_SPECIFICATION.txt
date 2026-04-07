@@ -1,0 +1,1157 @@
+# COMPLETE LANDING PAGE SPECIFICATION FOR TAJOS BARBEROS
+## Comprehensive Visual and Functional Description
+
+---
+
+## OVERVIEW
+
+This is a multi-page website for "TAJOS BARBEROS," a premium barbershop brand with locations in Paraguay. The website serves as a landing page for potential clients to learn about the brand, view services, explore locations, and book appointments. The design emphasizes a sophisticated, elegant aesthetic with warm, professional lighting.
+
+---
+
+## GLOBAL DESIGN SYSTEM
+
+### Color Palette
+**Primary Color (Accent/Highlight):** #fdd835 (Warm yellow/gold)
+- Used for: Logo text, headings, buttons, highlights, hover states, icons, active navigation states
+
+**Background Color:** #0d1421 (Deep dark blue, almost black)
+- Main page background with an overlay of warm office lighting photograph
+- Creates an elegant, premium atmosphere
+
+**Card Background:** #1a2332 (Slightly lighter dark blue)
+- Used for cards, navigation bar, location cards, testimonial cards, and dialog backgrounds
+- Has subtle transparency (80-95%) with backdrop blur for glassmorphic effect
+
+**Text Colors:**
+- Primary headings: #fdd835 (yellow/gold)
+- Body text: #ffffff (white)
+- Secondary/muted text: #e0e0e0 to #808080 (light gray to medium gray)
+
+**Border Colors:**
+- rgba(255, 221, 53, 0.2) - semi-transparent yellow borders
+- Subtle borders that complement the dark theme
+
+### Typography
+**Font Size Base:** 16px (1rem)
+
+**Heading Hierarchy:**
+- H1: Very large (6xl to 8xl on mobile to desktop), thin weight, wide letter spacing, all caps for logo
+- H2: 4xl, medium weight, used for section titles
+- H3: xl to 2xl, medium weight, used for card titles and subsection headings
+- Body text: Base size (16px), normal weight, line height 1.5
+
+**Font Styling:**
+- Logo: Thin (font-weight 100), extremely wide tracking, uppercase
+- Buttons: Medium weight
+- All text: Smooth rendering, good readability against dark backgrounds
+
+### Background Treatment
+- Fixed background image: Warm office environment with ambient lighting (desk lamp, soft indirect lighting)
+- Image URL reference: Dark office with warm lighting and lamps aesthetic
+- Semi-transparent dark blue overlay (rgba(13, 20, 33, 0.85)) over the background image
+- Creates depth and ensures text readability
+- Background is fixed (doesn't scroll with content)
+
+### Spacing & Layout
+- Sections: 16px vertical padding (py-16)
+- Containers: Max width of 6xl (72rem/1152px) centered
+- Gap between elements: Typically 4-8px for tight groupings, 12-24px for related content
+- Rounded corners: Generally 8-10px (0.625rem) for cards and buttons
+
+### Interactive Elements
+**Buttons:**
+- Primary button: Yellow background (#fdd835), dark blue text (#0d1421)
+- Outline button: Transparent background, yellow border, white/yellow text
+- Rounded corners (lg radius)
+- Hover: Slightly darker/lighter shade (90% opacity)
+- Smooth transitions (300ms duration)
+
+**Hover States:**
+- Images: Scale 105% on hover with smooth transition
+- Cards: Border changes from semi-transparent to visible yellow
+- Buttons: Background opacity changes
+- Links: Text color changes to yellow
+- All transitions: 300ms ease
+
+**Navigation Active States:**
+- Active section: Yellow background with dark blue text
+- Inactive: White text with transparent background
+- Hover: Yellow text with light yellow background (10% opacity)
+
+---
+
+## NAVIGATION SYSTEM
+
+### Fixed Top Navigation Bar
+**Position:** Fixed at top of viewport, 6px from top edge, horizontally centered
+**Styling:** 
+- Rounded-full shape (pill-shaped)
+- Dark card background (#1a2332) with 90% opacity
+- Backdrop blur effect (glassmorphic)
+- Subtle yellow border with 50% opacity
+- Padding: 6px horizontal, 3px vertical
+- Z-index: 50 (stays on top)
+
+**Desktop Navigation (>= md breakpoint):**
+Shows 5 main navigation items in a horizontal list:
+1. "Inicio" (Home)
+2. "Galería" (Gallery)
+3. "Testimonios" (Testimonials) 
+4. "Ubicaciones" (Locations)
+5. "Eventos" (Events)
+
+Each button:
+- Rounded-full shape
+- 4px padding horizontal, 2px vertical
+- Small text size
+- Active state: Yellow background with dark text
+- Inactive: White text, transparent background
+- Hover: Yellow text with light yellow background
+
+**Mobile Navigation (<= md breakpoint):**
+Shows only first 3 navigation items:
+1. "Inicio"
+2. "Galería"
+3. "Testimonios"
+
+Each button:
+- Smaller padding (3px horizontal, 2px vertical)
+- Extra small text (text-xs)
+- Same color states as desktop
+
+**Menu Button (Right Side):**
+- Circle shape with yellow background
+- Dark blue icon (hamburger menu when closed, X when open)
+- 2px padding
+- Always visible on all screen sizes
+- Placed 4px to the left of navigation items
+
+### Dropdown Menu (When Menu Button Clicked)
+**Position:** Fixed position, top-right corner (top: 80px, right: 24px)
+**Styling:**
+- Rounded-lg shape
+- Dark card background with 95% opacity
+- Backdrop blur
+- Subtle yellow border with 50% opacity
+- Minimum width: 256px (64rem)
+- Padding: 16px all around
+- Z-index: 40
+
+**Menu Title:**
+"Menú" in yellow text, margin bottom 16px
+
+**Menu Items (7 options):**
+Listed vertically with 8px gap between each:
+
+1. **Contáctanos** - Message circle icon
+   Action: Opens WhatsApp with pre-filled message
+
+2. **TAJOS Academy** - Graduation cap icon
+   Action: Navigates to Academy page
+
+3. **Eventos y Promociones** - Calendar icon
+   Action: Scrolls to Events section
+
+4. **Media** - Camera icon
+   Action: Navigates to Media page
+
+5. **Acerca de nosotros** - Users icon
+   Action: Navigates to About page
+
+6. **FAQ** - Help circle icon
+   Action: Navigates to FAQ page
+
+7. **Nuestro equipo** - Users icon
+   Action: Navigates to Team page
+
+Each menu item:
+- Full width button
+- Flexbox layout (icon + text, horizontally aligned, 12px gap)
+- 16px padding horizontal, 12px vertical
+- White text
+- Rounded-lg corners
+- Hover: Light yellow background (10% opacity) + yellow text
+- Icon size: 16px x 16px
+- Smooth transition (200ms)
+
+**Menu Overlay:**
+When menu is open, semi-transparent black overlay (20% opacity) covers entire viewport behind the menu. Clicking overlay closes the menu.
+
+**Smooth Scroll Behavior:**
+All anchor links scroll smoothly to their target sections.
+
+---
+
+## HOME PAGE STRUCTURE
+
+The home page consists of these sections in order:
+
+### 1. HERO SECTION (Header)
+**ID:** "home"
+**Layout:** Full viewport height, centered content, vertical flex
+
+**Logo Image:**
+- Placeholder for logo at top
+- Height: 96px (24rem) on mobile, 128px (32rem) on desktop
+- Auto width, centered
+- Object-fit: contain
+
+**Main Title:**
+Two separate headings stacked:
+1. "TAJOS"
+2. "BARBEROS"
+
+**Title Styling:**
+- Text size: 6xl (mobile) to 8xl (desktop)
+- Font weight: Thin (100)
+- Letter spacing: Widest (0.1em or more)
+- Color: Yellow (#fdd835)
+- Margin bottom: 24px between title and tagline
+
+**Tagline:**
+"Forjando al caballero perfecto desde 2015."
+- Text size: xl (mobile) to 2xl (desktop)
+- Color: White
+- Max width: 2xl (672px)
+- Centered
+- Leading: Relaxed (1.625)
+
+**Padding:**
+- Vertical: 64px (16rem)
+- Horizontal: 16px (4rem)
+
+---
+
+### 2. BRANDS CAROUSEL SECTION
+**Styling:** 
+- Background: Card color with 30% opacity
+- Backdrop blur effect
+- Vertical padding: 64px
+- Horizontal padding: 16px
+
+**Section Title:**
+"Nuestras marcas de confianza"
+- Text size: 4xl
+- Color: Yellow
+- Centered
+- Margin bottom: 48px
+
+**Carousel Container:**
+- Horizontal auto-scrolling animation
+- Infinite loop
+- Smooth linear animation (30 seconds duration)
+- Moves from right to left continuously
+- Overflow hidden
+
+**Brand Items:**
+5 brands displayed, duplicated for seamless loop:
+1. BaByliss
+2. American Crew
+3. Wahl
+4. Andis
+5. Oster
+
+Each brand card:
+- Width: 128px (32rem)
+- Height: 80px (20rem)
+- White background with 10% opacity
+- Backdrop blur
+- Rounded-lg corners
+- Subtle yellow border with 30% opacity
+- 16px padding
+- Gap between items: 48px
+
+**Brand Logo Images:**
+- Full width and height of container
+- Object-fit: contain
+- Filter: brightness(0) and inverted colors (creates white silhouette effect)
+- Hover: Full color (removes filters), smooth transition (300ms)
+
+**Description Text:**
+"Trabajamos con las mejores marcas del sector para garantizar resultados excepcionales"
+- Centered below carousel
+- Gray muted color
+- Margin top: 32px
+
+---
+
+### 3. GALLERY CAROUSEL SECTION
+**ID:** "gallery"
+**Padding:** Vertical 64px, horizontal 16px
+
+**Section Title:**
+"Nuestro arte"
+- Text size: 4xl
+- Color: Yellow
+- Centered
+- Margin bottom: 48px
+
+**Carousel:**
+- Max width: 6xl (1152px), centered
+- Shows multiple slides visible at once
+- Responsive columns:
+  - Mobile: 1 column
+  - Medium (md): 2 columns (basis-1/2)
+  - Large (lg): 3 columns (basis-1/3)
+
+**Gallery Items (5 items):**
+Each item consists of:
+1. Image in 4:3 aspect ratio container
+2. Gradient overlay (black to transparent, bottom to top, 80% opacity)
+3. Text content positioned at bottom
+
+**Item 1:**
+- Image: Modern barber haircut scene
+- Title: "Cortes modernos y con máxima precisión"
+- Description: "Líneas nítidas y elegantes, hechas a la medida de tu estilo de vida."
+
+**Item 2:**
+- Image: Beard grooming/trimming scene
+- Title: "Máximo detalle"
+- Description: "Técnicas consagradas con herramientas clásicas."
+
+**Item 3:**
+- Image: Vintage barbershop tools
+- Title: "Excelencia en el cuidado de la barba"
+- Description: "Perfilado y acondicionamiento experto para la barba moderna."
+
+**Item 4:**
+- Image: Barbershop interior with warm lighting
+- Title: "Atmósfera inigualable"
+- Description: "Relájese en nuestros espacios cómodos y entorno confortable."
+
+**Item 5:**
+- Image: Hot towel ritual
+- Title: "Ritual de barba completo"
+- Description: "La máxima experiencia de relajación"
+
+**Card Styling:**
+- Group hover effect
+- Rounded-lg corners
+- Card background
+- Border: Subtle yellow border
+- Image: Scale 105% on group hover
+- Transition: 300ms
+
+**Text Content:**
+- Position: Absolute, bottom of card
+- Padding: 24px all sides
+- Title: xl size, yellow color, margin bottom 8px
+- Description: White color, small size, relaxed leading
+
+**Navigation Arrows:**
+- Left and right arrows outside carousel
+- Yellow background
+- Dark blue icon
+- Circle shape
+- Hover: 90% opacity
+- Position: Left 16px and right 16px from edges
+
+---
+
+### 4. TESTIMONIALS SECTION
+**ID:** "testimonials"
+**Padding:** Vertical 64px, horizontal 16px
+**Max Width:** 6xl, centered
+
+**Section Title:**
+"Algunos de nuestros clientes"
+- Text size: 4xl
+- Color: Yellow
+- Centered
+- Margin bottom: 16px
+
+**Subtitle:**
+"Descubra por qué cada vez más clientes exigentes confían en TAJOS para el cuidado y estilo personal"
+- Centered
+- Gray muted color
+- Max width: 2xl
+- Margin bottom: 48px
+
+**Grid Layout:**
+- Desktop: 3 columns
+- Mobile: 1 column
+- Gap: 32px between cards
+
+**Testimonial Cards (3 cards):**
+
+**Card 1 - Carlos Rodríguez:**
+- Rating: 5 stars (filled yellow stars)
+- Quote: "Servicios excelentes a un precio razonable. He venido 3 veces en 3 años y siempre he tenido una experiencia excepcional."
+- Avatar: Professional man portrait
+- Name: Carlos Rodríguez (yellow color)
+- Role: Cliente (gray muted color)
+
+**Card 2 - David Martínez:**
+- Rating: 5 stars
+- Quote: "Solo el ritual de la toalla caliente vale la pena la visita. La atmósfera, la artesanía, la atención personal - es como volver en el tiempo cuando la barbería era una forma de arte. Servicio excepcional siempre."
+- Avatar: Business man portrait
+- Name: David Martínez (yellow color)
+- Role: Cliente (gray muted color)
+
+**Card 3 - Walter Riveros:**
+- Rating: 5 stars
+- Quote: "Excelentes profesionales, muy buen ambiente, buena atención, entorno cómodo y un trabajo con puro detalle. Recomendado al 100%."
+- Avatar: Professional man smiling
+- Name: Walter Riveros (yellow color)
+- Role: Cliente (gray muted color)
+
+**Card Styling:**
+- Background: Card color with 80% opacity
+- Backdrop blur
+- Rounded-lg corners
+- Padding: 24px
+- Border: Subtle yellow border with 50% opacity
+
+**Star Rating:**
+- 5 stars per testimonial
+- Size: 16px x 16px each
+- Color: Yellow fill and stroke
+- Gap: 4px between stars
+- Margin bottom: 16px
+
+**Quote:**
+- White text
+- Italic style
+- Margin bottom: 24px
+- Leading: Relaxed
+- Wrapped in quotation marks
+
+**Client Info:**
+- Flexbox layout (horizontal)
+- Gap: 12px
+- Avatar: 48px circle, image cover
+- Name and role stacked vertically
+
+---
+
+### 5. LOCATIONS GRID SECTION
+**ID:** "locations"
+**Padding:** Vertical 64px, horizontal 16px
+
+**Section Title:**
+"Nuestras ubicaciones"
+- Text size: 4xl
+- Color: Yellow
+- Centered
+- Margin bottom: 48px
+
+**Grid Layout:**
+- Max width: 6xl, centered
+- Mobile: 1 column
+- Medium (md): 2 columns
+- Large (lg): 3 columns
+- Gap: 32px
+
+**Location Cards (3 locations):**
+
+**Location 1 - TAJOS Denis Roa:**
+- Main image: Barbershop facade/exterior
+- Address: "Denis Roa 673, Bo. Herrera - Asunción Py"
+- Description: "Nuestra sede principal en el corazón de Herrera. Esta barbería combina la calidez vintage con modernas amenities, donde además ofrecemos bebidas frescas y café de primera calidad."
+- Hours: "Lun-Sáb: 9:00 AM - 7:30 PM, Dom: CERRADO"
+- Phone: "(+595) 982-473-078"
+- Gallery: 3 interior images
+
+**Location 2 - TAJOS Cottage:**
+- Main image: Modern barbershop storefront
+- Address: "Denis Roa 673, Bo. Herrera - Asunción Py"
+- Description: "Ambientado como una acogedora cabaña, combina la calidez de la madera rústica con un diseño refinado. Un espacio privado, pensado para quienes buscan tranquilidad, discreción y un servicio de barbería de primer nivel, en un entorno que invita a relajarse lejos del bullicio de la ciudad."
+- Hours: "Lun-Sáb: 9:00 AM - 7:30 PM, Dom: CERRADO"
+- Phone: "(+595) 982-473-078"
+- Gallery: 3 interior images
+
+**Location 3 - TAJOS CIT:**
+- Main image: Modern barbershop storefront
+- Address: "Spa Caballeros, CIT (Tte. 2° Benigno Cáceres y Sinforiano Buzó, Asunción Py)"
+- Description: "Ubicado en el prestigioso Club Internacional de Tenis, redefine la barbería como un servicio de élite. Diseñada para socios exigentes, combina elegancia y discreción en un ambiente reservado. Con atención personalizada y el más alto nivel de detalle, ofrece a los miembros del club la comodidad de un espacio exclusivo."
+- Hours: "Lun-Sab: 13:00 PM - 9:00 PM, Dom: CERRADO"
+- Phone: "(555) 987-6543"
+- Gallery: 3 interior images
+
+**Card Styling (Preview):**
+- Card background, rounded-lg
+- Cursor pointer (clickable)
+- Group hover effect
+- Image: 16:9 aspect ratio, scale 105% on hover
+- Padding: 24px in text area
+- Title: xl size, yellow, margin bottom 8px
+- Address: White, small, with map pin icon (yellow, 16px)
+- Hover: Shadow-xl transition
+
+**Dialog/Modal (When Clicked):**
+Opens a large dialog with:
+- Max width: 2xl (672px)
+- Max height: 80vh (scrollable)
+- Dark card background
+- White text
+
+**Modal Header:**
+- Location name as title (2xl size, yellow)
+
+**Modal Content:**
+- Gallery: 2x2 grid of images
+  - Each image: 4:3 aspect ratio
+  - Rounded-lg corners
+  - Gap: 16px
+
+- Description paragraph (gray text, relaxed leading)
+
+- Info section with icons:
+  - Map pin icon + full address
+  - Clock icon + hours
+  - Phone icon + phone number
+  - Each row: Small text, gap 8px, icon 16px yellow
+
+- "Agende su cita" button at bottom:
+  - Full width
+  - Yellow background
+  - Dark blue text
+  - Hover: 90% opacity
+
+---
+
+### 6. EVENTS AND PROMOTIONS SECTION
+**ID:** "events"
+**Padding:** Vertical 64px, horizontal 16px
+**Max Width:** 6xl, centered
+
+**Section Title:**
+"Eventos y Promociones"
+- Text size: 4xl
+- Color: Yellow
+- Centered
+- Margin bottom: 48px
+
+**Grid Layout:**
+- Mobile: 1 column
+- Medium: 2 columns
+- Large: 3 columns
+- Gap: 32px
+
+**Items (3 items):**
+
+**Item 1 - Promotion:**
+- Type badge: "Promoción" with gift icon, green background
+- Image: Barbershop special offer scene
+- Title: "Descuento del 20% en servicios de barba"
+- Description: "Todo el mes de enero, disfruta de un 20% de descuento en todos nuestros servicios de barba y perfilado."
+- Date: "Todo enero 2025"
+- Time: "Horario regular"
+
+**Item 2 - Event:**
+- Type badge: "Evento" with calendar icon, yellow background
+- Image: Barber workshop/training scene
+- Title: "Taller de Barbería Clásica"
+- Description: "Aprende las técnicas tradicionales de barbería en nuestro taller exclusivo. Cupos limitados."
+- Date: "15 de febrero, 2025"
+- Time: "10:00 AM - 2:00 PM"
+
+**Item 3 - Promotion:**
+- Type badge: "Promoción" with gift icon, green background
+- Image: Barbershop special offer scene
+- Title: "Paquete Padre e Hijo"
+- Description: "Disfruten juntos de la experiencia TAJOS con un descuento especial del 15% en servicios combinados."
+- Date: "Válido hasta marzo 2025"
+- Time: "Cualquier horario"
+
+**Card Styling:**
+- Group relative positioning
+- Rounded-lg corners
+- Card background
+- Border: Subtle yellow with 50% opacity
+- Overflow hidden
+
+**Image:**
+- 4:3 aspect ratio container
+- Full width/height object-cover
+- Scale 105% on group hover
+- Transition: 300ms
+
+**Type Badge:**
+- Position: Absolute top-left (16px from edges)
+- Small pill shape (rounded-full)
+- Padding: 12px horizontal, 4px vertical
+- Extra small text
+- Icon + text layout
+- Event: Yellow background, dark text
+- Promotion: Green background (#059669), white text
+
+**Gradient Overlay:**
+- Absolute position covering entire image
+- Gradient: Black 90% at bottom to 20% at middle to transparent at top
+- Creates readable text area at bottom
+
+**Text Content:**
+- Position: Absolute bottom
+- Padding: 24px all sides
+- Title: xl size, yellow, margin bottom 12px
+- Description: White, small, relaxed leading, margin bottom 16px
+- Date and time info: Extra small, gray muted, with icons (12px)
+
+**Newsletter CTA (Below Grid):**
+- Text centered
+- Margin top: 48px
+
+Text: "¿Quieres estar al día con nuestras últimas promociones y eventos?"
+- Gray muted color
+- Margin bottom: 16px
+
+Button: "Suscríbete a nuestro newsletter"
+- Yellow background
+- Dark text
+- Padding: 32px horizontal, 12px vertical
+- Rounded-lg
+- Hover: 90% opacity
+
+---
+
+### 7. FOOTER SECTION
+**Background:** Card color
+**Border:** Yellow border at top
+**Padding:** Vertical 48px, horizontal 16px
+**Max Width:** 6xl, centered
+
+**Layout:** Centered text alignment
+
+**Section Title:**
+"Síguenos"
+- Text size: 2xl
+- Color: Yellow
+- Margin bottom: 24px
+
+**Social Media Links (4 icons):**
+Horizontal flex layout, centered, gap 24px:
+
+1. **Instagram** - Instagram icon
+   URL: https://instagram.com/tajosbarberos
+
+2. **TikTok** - TikTok icon (custom SVG)
+   URL: https://tiktok.com/@barberos
+
+3. **Facebook** - Facebook icon
+   URL: https://facebook.com/tajosdenisroa2
+
+4. **LinkedIn** - LinkedIn icon
+   URL: https://linkedin.com/company/barberos
+
+**Icon Styling:**
+- Group effect
+- Circle container (rounded-full)
+- Padding: 12px
+- Background: Yellow with 10% opacity
+- Icon: 20px x 20px, yellow color
+- Hover: Yellow background, dark icon color
+- Transition: 300ms
+- Opens in new tab
+
+**Copyright Section:**
+- Border top: Yellow border
+- Padding top: 24px
+- Margin top: 32px
+
+Text: "© 2025 TAJOS BARBEROS. Todos los derechos reservados. | Forjando caballeros desde 2015."
+- Gray muted color
+- Small text size
+- Centered
+
+---
+
+## FLOATING APPOINTMENT BUTTON
+
+**Position:** Fixed bottom-right corner (24px from bottom, 24px from right)
+**Z-index:** 50 (stays on top of everything)
+
+**Main Button:**
+- Circle shape (64px diameter)
+- Yellow background
+- Dark blue icon
+- Shadow: Large shadow with glow effect
+- Hover: Scale 110%, shadow increases
+- Transition: 300ms
+- Contains calendar icon (24px)
+- Has red pulse dot indicator (top-right, 12px circle, animated pulse)
+
+**Tooltip (on hover):**
+- Appears above button
+- Text: "Agendar cita"
+- Dark card background with 95% opacity
+- Backdrop blur
+- Extra small text, white color
+- Rounded-lg
+- Padding: 8px horizontal, 12px vertical
+- Fade in/out transition
+
+**Expanded Service Menu (when clicked):**
+**Position:** Above the main button, 16px margin
+**Styling:**
+- Dark card background with 95% opacity
+- Backdrop blur
+- Rounded-2xl corners
+- Subtle yellow border with 50% opacity
+- Large shadow
+- Slide in from bottom animation (300ms)
+- Padding: 16px
+- Overflow hidden
+
+**Menu Header:**
+- Flex layout: Title on left, close button on right
+- Title: "Selecciona un servicio" (yellow, medium weight)
+- Close button: X icon, circle hover background (light yellow 10%)
+- Margin bottom: 12px
+
+**Service Options (4 options):**
+Vertical list, 8px gap:
+
+1. **Corte de cabello** - ✂️ emoji icon
+2. **Arreglo de barba** - 💈 emoji icon
+3. **Corte + Barba** - 🔥 emoji icon
+4. **Ritual completo** - ⭐ emoji icon
+
+**Each Service Button:**
+- Full width
+- Flex layout: Icon (28px emoji) + text (small size)
+- Horizontal alignment, 12px gap
+- Padding: 16px horizontal, 12px vertical
+- White text
+- Rounded-xl corners
+- Transparent border
+- Hover: Light yellow background (10%), yellow text, yellow border (20% opacity)
+- Transition: 200ms
+- Click action: Opens WhatsApp with pre-filled message including service name
+
+**WhatsApp Integration:**
+- Opens in new tab
+- Phone number: 1234567890
+- Message template: "Hola, me gustaría agendar una cita para: [Service Name]"
+
+---
+
+## ALTERNATIVE PAGES
+
+All alternative pages share a common structure:
+- Dark background with same overlay effect
+- Back button (arrow left icon) in top-left area
+- Scrollable content
+- Same color system and typography
+- Same navigation bar (but hidden or minimal)
+
+### ABOUT PAGE
+
+**Header Section:**
+- Back button (outline style, icon only)
+- Title: "Acerca de TAJOS" (3xl, yellow)
+- Subtitle: "Conoce nuestra historia, misión y valores" (gray)
+
+**Hero Card:**
+- Two-column layout (desktop)
+- Left: Team photo image (Barbershop team)
+- Right: Content with padding
+  - Title: "Nuestra Historia" (2xl, yellow)
+  - Two paragraphs about company history
+  - Clock icon + "Más de 8 años perfeccionando nuestro arte" (yellow)
+
+**Stats Grid:**
+- 4 columns (2 on mobile)
+- Cards with centered content:
+  - "8+" - "Años de experiencia"
+  - "15K+" - "Clientes satisfechos"
+  - "2" - "Ubicaciones"
+  - "25+" - "Barberos certificados"
+- Large numbers in yellow (3xl)
+- Label text in gray
+
+**Mission & Vision:**
+- 2-column grid
+- Card 1: Target icon + "Nuestra Misión" + description
+- Card 2: Star icon + "Nuestra Visión" + description
+- Icons: 48px, yellow
+- Padding: 32px
+
+**Values Section:**
+- Title centered: "Nuestros Valores"
+- 4 columns (responsive)
+- Each card:
+  - Icon (Heart, Target, Users, Star) - 32px
+  - Title (Pasión, Precisión, Comunidad, Excelencia)
+  - Description paragraph
+- Hover: Border changes to yellow
+
+**Timeline Section:**
+- Title: "Nuestro Recorrido"
+- Vertical list of milestone cards
+- Each card: Year badge on left (yellow background) + content on right
+- 5 milestones from 2015 to 2023
+
+**Awards Section:**
+- Award icon (64px) centered
+- Title: "Reconocimientos"
+- 3-column grid:
+  - "Mejor Barbería 2021"
+  - "Excelencia en Servicio"
+  - "5 Estrellas Promedio"
+- Each: Icon in circle + title + description
+
+**Location Info Card:**
+- 2-column layout
+- Left: Text with two locations listed
+- Right: Location image
+- Map pin icons for each location
+
+**CTA Card:**
+- Yellow/primary background with 10% opacity
+- Title: "¿Listo para ser parte de la familia TAJOS?"
+- Description paragraph
+- Two buttons: "Agendar Cita" (primary) + "Ver Ubicaciones" (outline)
+
+---
+
+### ACADEMY PAGE
+
+**Header:**
+- Back button
+- Title: "TAJOS Academy" (3xl, yellow)
+- Subtitle: "Formación profesional en barbería de excelencia"
+
+**Hero Banner:**
+- Large image: Barber training/school scene
+- Gradient overlay (dark left to transparent right)
+- Content overlay:
+  - Title: "Convierte tu pasión en profesión" (3xl, white)
+  - Description paragraph
+  - "Inscríbete Ahora" button (primary yellow)
+
+**Programs Section:**
+- Title: "Nuestros Programas"
+- 3-column grid of course cards
+
+**Course 1 - Barbería Clásica:**
+- Graduation cap icon + title
+- Duration: "3 meses" with clock icon
+- Students: "12 estudiantes máx." with users icon
+- Price: "$2,500" (large, yellow)
+- Description paragraph
+- "Incluye:" list with 4 bullet points:
+  - Cortes clásicos
+  - Afeitado con navaja
+  - Técnicas de peinado
+  - Atención al cliente
+- "Más información" button (full width, primary)
+
+**Course 2 - Barbería Moderna:**
+- Same structure as Course 1
+- Duration: "4 meses"
+- Students: "10 estudiantes máx."
+- Price: "$3,200"
+- 4 different skills listed
+
+**Course 3 - Programa Completo:**
+- Same structure
+- Duration: "6 meses"
+- Students: "8 estudiantes máx."
+- Price: "$4,500"
+- 4 comprehensive skills
+
+**Instructors Section:**
+- Title: "Nuestros Instructores"
+- 3-column grid
+- Each card:
+  - Circle icon container (scissors icon, 80px)
+  - Name (xl, white)
+  - Experience (yellow)
+  - Specialty (gray)
+- Names: Miguel Rodriguez, Carlos Mendoza, Fernando Silva
+
+**Benefits Section:**
+- Title: "¿Por qué elegir TAJOS Academy?"
+- 4-column grid:
+  - "Certificación Oficial" - Award icon
+  - "Material Incluido" - Book icon
+  - "Grupos Pequeños" - Users icon
+  - "Bolsa de Trabajo" - Graduation cap icon
+- Icons: 48px, yellow, centered
+- Title + description format
+
+**CTA Card:**
+- Yellow background with 10% opacity
+- Title: "¿Listo para comenzar tu carrera?"
+- Description
+- Two buttons: "Agendar Visita" + "Descargar Brochure"
+
+---
+
+### MEDIA PAGE (Pattern)
+- Back button + page title
+- Grid of media content (photos/videos)
+- Large images in masonry or grid layout
+- Filter/category options
+- Social media embed sections
+- Similar card and color system
+
+---
+
+### FAQ PAGE (Pattern)
+- Back button + page title
+- Accordion/collapsible sections
+- Question and answer pairs
+- Categories: Services, Pricing, Appointments, etc.
+- Search functionality
+- Contact CTA at bottom
+
+---
+
+### TEAM PAGE (Pattern)
+- Back button + page title
+- Grid of team member cards
+- Each card:
+  - Photo (circular or square)
+  - Name
+  - Role/specialty
+  - Years of experience
+  - Short bio
+- Barbersspecializations highlighted
+- "Join our team" CTA section
+
+---
+
+## RESPONSIVE BEHAVIOR
+
+### Breakpoints:
+- Mobile: < 768px (md)
+- Tablet: 768px - 1024px (md to lg)
+- Desktop: >= 1024px (lg)
+
+### Navigation:
+- Desktop: Full 5-item navigation visible
+- Mobile: Only 3 items visible + menu button
+
+### Grid Layouts:
+- Testimonials: 1 col (mobile) → 3 cols (desktop)
+- Locations: 1 col (mobile) → 2 cols (md) → 3 cols (lg)
+- Events: 1 col (mobile) → 2 cols (md) → 3 cols (lg)
+- Gallery carousel: 1 item (mobile) → 2 items (md) → 3 items (lg)
+
+### Text Sizes:
+- Headings scale down on mobile (6xl → 4xl for hero)
+- Body text remains readable at base size
+- Buttons maintain minimum touch target size (44px)
+
+### Spacing:
+- Padding reduces slightly on mobile
+- Gaps between elements reduce proportionally
+- Maintains visual hierarchy across all sizes
+
+### Images:
+- Maintain aspect ratios
+- Use object-cover for consistency
+- Load appropriate sizes for device
+- Always include alt text for accessibility
+
+---
+
+## ANIMATIONS AND TRANSITIONS
+
+### On Scroll:
+- Smooth scroll behavior (CSS: scroll-behavior: smooth)
+- Navigation highlights active section based on scroll position
+- No parallax effects (background is fixed)
+
+### On Hover:
+- Images: Scale 105%, duration 300ms
+- Buttons: Opacity change to 90%, duration 300ms
+- Cards: Border color change, duration 300ms
+- Links: Color change to yellow, duration 300ms
+
+### On Load:
+- Brands carousel: Continuous auto-scroll
+- Duration: 30 seconds for full cycle
+- Linear easing (no acceleration)
+
+### On Click/Interaction:
+- Floating button expands menu: Slide in from bottom, duration 300ms
+- Menu toggle: Fade in overlay (200ms), slide in menu (300ms)
+- Dialog/Modal open: Fade in backdrop + scale in content (200ms)
+
+### Micro-interactions:
+- Red pulse dot on appointment button (continuous animation)
+- Button press: Slight scale down (98%)
+- Form focus: Border color change + subtle glow
+
+---
+
+## DIALOGS/MODALS
+
+### Location Modal:
+- Triggered by clicking location card
+- Centered on screen
+- Max width: 672px (2xl)
+- Max height: 80% viewport height
+- Scrollable content
+- Dark backdrop (50% opacity black)
+- Click backdrop to close
+- ESC key to close
+- Close button (X) in top-right
+
+### Potential Booking Modal:
+- Similar structure to location modal
+- Form fields for:
+  - Name
+  - Phone number
+  - Preferred location (dropdown)
+  - Service type (dropdown)
+  - Date picker
+  - Time slot selection
+  - Additional comments (textarea)
+- Submit button at bottom
+- Validation messages
+
+---
+
+## LANGUAGE AND TEXT
+
+All text is in **Spanish (Latin American Spanish)**.
+
+### Tone:
+- Professional yet welcoming
+- Emphasizes craftsmanship and tradition
+- Modern and sophisticated
+- Customer-focused
+
+### Key Terms:
+- "Barberos" (Barbers)
+- "Forjando" (Forging/Crafting)
+- "Caballero" (Gentleman)
+- "Ritual" (Ritual)
+- "Ubicaciones" (Locations)
+- "Agendar cita" (Book appointment)
+- "Testimonios" (Testimonials)
+
+---
+
+## CONTENT STRATEGY
+
+### Photography Style:
+- Professional barbershop environments
+- Warm, ambient lighting (golden hour aesthetic)
+- Close-ups of haircuts and grooming
+- Vintage tools and equipment
+- Modern interior design
+- Professional barbers at work
+- Satisfied customers
+- High contrast, moody atmosphere
+
+### Image Requirements:
+- High resolution (minimum 1080px width)
+- Aspect ratios: 16:9, 4:3, 1:1 (depending on context)
+- Consistent color grading (warm tones)
+- All images from Unsplash with proper attribution
+
+---
+
+## ACCESSIBILITY CONSIDERATIONS
+
+### Color Contrast:
+- Yellow (#fdd835) on dark background meets WCAG AA standards
+- White text on dark background provides excellent contrast
+- Interactive elements have clear visual states
+
+### Keyboard Navigation:
+- All interactive elements are keyboard accessible
+- Focus states visible (outline)
+- Tab order follows logical content flow
+- Skip links for main content
+
+### Screen Readers:
+- Semantic HTML structure
+- Proper heading hierarchy (h1 → h2 → h3)
+- Alt text for all images
+- ARIA labels for icon-only buttons
+- ARIA-expanded for menu toggles
+
+### Touch Targets:
+- Minimum 44px × 44px for all buttons
+- Adequate spacing between clickable elements
+- Mobile-friendly tap areas
+
+---
+
+## INTEGRATION POINTS
+
+### WhatsApp:
+- Contact button opens WhatsApp Web
+- Phone: 1234567890
+- Pre-filled messages for different services
+- Opens in new browser tab
+
+### Social Media:
+- Instagram: https://instagram.com/tajosbarberos
+- TikTok: https://tiktok.com/@barberos
+- Facebook: https://facebook.com/tajosdenisroa2
+- LinkedIn: https://linkedin.com/company/barberos
+- All links open in new tabs
+
+### Potential Booking System:
+- Backend integration ready
+- Real-time availability checking
+- Email/SMS confirmations
+- Calendar sync
+- Barber selection
+- Service duration calculation
+
+---
+
+## TECHNICAL SPECIFICATIONS FOR IMPLEMENTATION
+
+### Framework Suggestions:
+- React for component-based architecture
+- Tailwind CSS for styling (with custom color system)
+- Framer Motion or Motion library for animations
+- React Router for page navigation
+- Unsplash API for dynamic images
+
+### Performance:
+- Lazy load images below fold
+- Optimize image sizes
+- Minimize CSS/JS bundle size
+- Use web fonts with font-display: swap
+- Cache static assets
+- Compress images (WebP format when possible)
+
+### SEO:
+- Semantic HTML5 structure
+- Meta tags for title, description, keywords
+- Open Graph tags for social sharing
+- Structured data (JSON-LD) for local business
+- Sitemap.xml
+- Robots.txt
+- Fast loading time (< 3 seconds)
+
+### Browser Support:
+- Modern browsers (last 2 versions)
+- Chrome, Firefox, Safari, Edge
+- Mobile browsers (iOS Safari, Chrome)
+- Graceful degradation for older browsers
+
+---
+
+## FINAL NOTES
+
+This specification describes the complete visual and functional experience of the TAJOS BARBEROS landing page from a user's perspective. The design emphasizes:
+
+1. **Elegance**: Dark, sophisticated color scheme with premium yellow accents
+2. **Atmosphere**: Warm, inviting feeling through imagery and lighting
+3. **Professionalism**: Clean layout, organized content, clear hierarchy
+4. **Accessibility**: Easy navigation, clear call-to-actions, multiple booking options
+5. **Responsiveness**: Seamless experience across all devices
+6. **Brand Consistency**: Unified visual language throughout all pages
+
+The page successfully converts visitors into customers by:
+- Showcasing quality through high-quality imagery
+- Building trust through testimonials
+- Providing easy access to locations and contact info
+- Offering multiple ways to book appointments
+- Highlighting expertise through academy and team sections
+- Creating urgency through events and promotions
+
+Every element works together to communicate the core message: TAJOS BARBEROS is a premium, professional barbershop that combines traditional craftsmanship with modern techniques to deliver exceptional grooming experiences.
