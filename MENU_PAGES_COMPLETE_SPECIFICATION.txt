@@ -1,0 +1,1574 @@
+# MENU PAGES COMPLETE SPECIFICATION FOR TAJOS BARBEROS
+## Detailed Description of All Alternative Pages from Navigation Menu
+
+---
+
+## OVERVIEW
+
+This document describes all the pages accessible from the dropdown navigation menu (the "pill menu" with hamburger icon) on the TAJOS BARBEROS website. Each page shares the same design system as the main landing page but serves different informational purposes. All pages are in Spanish.
+
+---
+
+## GLOBAL PAGE STRUCTURE
+
+All menu pages share these common elements:
+
+### Header Section
+**Back Button:**
+- Position: Top-left corner
+- Style: Outline button with icon only
+- Icon: Arrow left (pointing left)
+- Size: Icon size (square button)
+- Border: Subtle yellow border
+- Hover: Light yellow background
+- Action: Returns to home page, scrolls to top
+
+**Page Title Area:**
+- Adjacent to back button (12px gap)
+- Main title: 3xl size, yellow color (#fdd835), margin bottom 8px
+- Subtitle: Gray color (#d1d5db), normal size
+- Layout: Vertical stack
+
+### Container
+- Full viewport height minimum
+- Dark background (#0d1421) with same overlay as home
+- Container: Max width, centered, padding 16px horizontal, 32px vertical
+- Scrollable content
+
+### Design Consistency
+- Same color system as landing page
+- Same typography
+- Same card styling (dark cards with subtle borders)
+- Same button styles
+- Same hover effects and transitions
+
+---
+
+## MENU OPTION 1: CONTÁCTANOS (Contact Us)
+
+**Note:** This is NOT a separate page. It's a direct action button.
+
+**Behavior:**
+- Opens WhatsApp in a new browser tab
+- Phone number: 1234567890 (format: +1234567890)
+- Pre-filled message: "Hola, me gustaría agendar una cita en TAJOS BARBEROS"
+- URL format: https://wa.me/1234567890?text=[encoded message]
+
+**Visual Indicator:**
+- Menu item has message circle icon (16px)
+- White text
+- Hover: Yellow text with light yellow background
+
+---
+
+## MENU OPTION 2: TAJOS ACADEMY
+
+### Page Header
+**Title:** "TAJOS Academy"
+**Subtitle:** "Formación profesional en barbería de excelencia"
+
+### Hero Banner Section
+**Layout:** Large banner with image and text overlay
+
+**Image:**
+- Full width banner
+- Height: 256px (mobile) to 320px (desktop)
+- Scene: Barber training/school environment
+- Rounded corners (2xl)
+- Overflow hidden
+
+**Overlay:**
+- Gradient: Dark left (background 90% opacity) to transparent right
+- Creates readable area on left side
+- Position: Absolute covering entire image
+
+**Content (Overlaid on Left):**
+- Padding: 32px (mobile) to 48px (desktop)
+- Max width: 2xl (672px)
+- Vertical alignment: Centered
+
+**Title:** "Convierte tu pasión en profesión"
+- Size: 2xl (mobile) to 3xl (desktop)
+- Color: White
+- Margin bottom: 16px
+
+**Description:**
+"Únete a la academia de barbería más prestigiosa de la región. Aprende de maestros barberos con décadas de experiencia."
+- Color: Gray (#d1d5db)
+- Margin bottom: 24px
+
+**CTA Button:** "Inscríbete Ahora"
+- Yellow background
+- Dark blue text
+- Padding: 12px vertical, 32px horizontal
+- Rounded-lg
+- Hover: 90% opacity
+
+### Programs Section
+**Section Title:** "Nuestros Programas"
+**Subtitle:** "Ofrecemos programas diseñados para diferentes niveles, desde principiantes hasta barberos que quieren perfeccionar sus técnicas."
+- Centered text
+- Max width: 2xl
+- Margin bottom: 32px
+
+**Grid Layout:**
+- 3 columns on desktop (lg)
+- 1 column on mobile
+- Gap: 24px
+
+**Course Cards (3 total):**
+
+#### CARD 1: BARBERÍA CLÁSICA
+**Header:**
+- Graduation cap icon (24px, yellow) + title
+- Flex horizontal layout, gap 12px
+- Margin bottom: 16px
+
+**Info Rows:**
+Each row: icon (16px) + text, gray color, 12px gap
+
+- Clock icon + "3 meses"
+- Users icon + "12 estudiantes máx."
+- Price: "$2,500" (2xl size, yellow, standalone)
+
+**Description:**
+"Aprende las técnicas fundamentales de la barbería tradicional, desde el manejo de herramientas hasta cortes clásicos."
+- Gray text
+- Margin bottom: 16px
+
+**Skills List - "Incluye:"**
+Title in white, margin bottom 8px
+Bullet points (yellow dots, 6px circles):
+- "Cortes clásicos"
+- "Afeitado con navaja"
+- "Técnicas de peinado"
+- "Atención al cliente"
+
+**Button:** "Más información"
+- Full width
+- Yellow background
+- Dark text
+- Margin top: 24px
+
+#### CARD 2: BARBERÍA MODERNA
+Same structure as Card 1, but with:
+- Duration: "4 meses"
+- Students: "10 estudiantes máx."
+- Price: "$3,200"
+- Description: "Domina las tendencias actuales en barbería, incluyendo fades, texturas y técnicas contemporáneas."
+- Skills:
+  - "Fades y degradados"
+  - "Cortes modernos"
+  - "Texturizado"
+  - "Uso de máquinas profesionales"
+
+#### CARD 3: PROGRAMA COMPLETO
+Same structure, but with:
+- Duration: "6 meses"
+- Students: "8 estudiantes máx."
+- Price: "$4,500"
+- Description: "Formación integral que combina técnicas clásicas y modernas, más módulos de gestión empresarial."
+- Skills:
+  - "Todas las técnicas"
+  - "Gestión de negocio"
+  - "Marketing personal"
+  - "Certificación profesional"
+
+**Card Styling (All Cards):**
+- Dark card background
+- Subtle yellow border
+- Padding: 24px
+- Rounded-lg
+- Hover: Border changes to more visible yellow (50% opacity)
+- Transition: 300ms
+
+### Instructors Section
+**Section Title:** "Nuestros Instructores"
+**Subtitle:** "Aprende de los mejores profesionales de la industria"
+- Centered, margin bottom 32px
+
+**Grid Layout:**
+- 3 columns on desktop (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Instructor Cards (3 total):**
+
+#### INSTRUCTOR 1: MIGUEL RODRIGUEZ
+- Icon: Circle container (80px diameter, yellow 20% background)
+  - Scissors icon inside (32px, yellow)
+- Name: "Miguel Rodriguez" (xl size, white)
+- Experience: "15 años de experiencia" (yellow)
+- Specialty: "Barbería Clásica y Tradicional" (gray)
+- All centered text
+
+#### INSTRUCTOR 2: CARLOS MENDOZA
+- Same structure
+- Experience: "12 años de experiencia"
+- Specialty: "Técnicas Modernas y Fades"
+
+#### INSTRUCTOR 3: FERNANDO SILVA
+- Same structure
+- Experience: "20 años de experiencia"
+- Specialty: "Gestión y Emprendimiento"
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Padding: 24px
+- Rounded-lg
+- Centered alignment
+
+### Benefits Section
+**Container:** Full-width card with padding 32px
+
+**Section Title:** "¿Por qué elegir TAJOS Academy?"
+- Centered, 2xl size, yellow
+- Margin bottom: 32px
+
+**Grid Layout:**
+- 4 columns on large screens (lg)
+- 2 columns on medium (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Benefit Items (4 total):**
+
+1. **Certificación Oficial**
+   - Award icon (48px, yellow, centered)
+   - Title: "Certificación Oficial" (white)
+   - Description: "Diploma reconocido en la industria" (gray)
+
+2. **Material Incluido**
+   - Book open icon (48px, yellow)
+   - Title: "Material Incluido"
+   - Description: "Kit completo de herramientas profesionales"
+
+3. **Grupos Pequeños**
+   - Users icon (48px, yellow)
+   - Title: "Grupos Pequeños"
+   - Description: "Atención personalizada para cada estudiante"
+
+4. **Bolsa de Trabajo**
+   - Graduation cap icon (48px, yellow)
+   - Title: "Bolsa de Trabajo"
+   - Description: "Apoyo para encontrar empleo"
+
+All centered, icons margin bottom 16px, title margin bottom 12px
+
+### CTA Section
+**Card Styling:**
+- Yellow background with 10% opacity
+- Yellow border with 20% opacity
+- Padding: 32px
+- Centered text
+
+**Title:** "¿Listo para comenzar tu carrera?"
+- 2xl size, yellow
+- Margin bottom: 16px
+
+**Description:**
+"Únete a nuestra próxima generación de barberos profesionales. Las inscripciones están abiertas para el siguiente ciclo escolar."
+- Gray text
+- Max width: 2xl, centered
+- Margin bottom: 24px
+
+**Button Group:**
+Two buttons, horizontal flex (vertical stack on mobile), centered, gap 16px:
+1. "Agendar Visita" - Primary (yellow background)
+2. "Descargar Brochure" - Outline style
+
+---
+
+## MENU OPTION 3: EVENTOS Y PROMOCIONES
+
+**Note:** This is NOT a separate page. It's a scroll action.
+
+**Behavior:**
+- Scrolls smoothly to the "Eventos y Promociones" section on the home page
+- Section ID: "events"
+- Smooth scroll animation (300ms)
+- Closes the dropdown menu after click
+
+**Visual Indicator:**
+- Menu item has calendar icon (16px)
+- White text
+- Hover: Yellow text with light yellow background
+
+---
+
+## MENU OPTION 4: MEDIA
+
+### Page Header
+**Title:** "Media Center"
+**Subtitle:** "Galería, videos y contenido exclusivo de TAJOS"
+
+### Social Stats Section
+**Grid Layout:**
+- 3 columns on desktop (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Stat Cards (3 cards):**
+
+#### INSTAGRAM CARD
+**Icon & Platform:**
+- Instagram icon (24px) + "Instagram" text
+- Horizontal flex, centered, gap 12px
+- Color: Yellow for icon, white for text
+- Margin bottom: 8px
+
+**Follower Count:** "45.2K"
+- Size: 2xl
+- Color: Yellow
+- Centered
+
+**Label:** "seguidores"
+- Gray color
+- Small text
+- Centered
+
+#### YOUTUBE CARD
+Same structure:
+- YouTube icon + "YouTube"
+- Count: "12.8K"
+- Label: "seguidores"
+
+#### TIKTOK CARD
+Same structure:
+- Video icon (for TikTok) + "TikTok"
+- Count: "28.5K"
+- Label: "seguidores"
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Padding: 24px
+- Centered text
+- Hover: Border brightens to 50% opacity
+- Transition: 300ms
+
+### Featured Videos Section
+**Header:**
+- Left: "Videos Destacados" (2xl, yellow)
+- Right: "Ver todos en YouTube" button (outline style)
+- Flex layout, space between
+- Margin bottom: 32px
+
+**Grid Layout:**
+- 3 columns on desktop (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Video Cards (3 cards):**
+
+#### VIDEO 1: TRANSFORMACIÓN COMPLETA
+**Thumbnail Container:**
+- Aspect ratio: 16:9 (height 192px)
+- Image: Barber cut scene
+- Rounded top corners only
+- Overflow hidden
+- Position: Relative
+
+**Overlay (on thumbnail):**
+- Black overlay with 40% opacity
+- Hover: Changes to 20% opacity
+- Transition: 300ms
+- Position: Absolute, full coverage
+
+**Play Button (Centered on Overlay):**
+- Circle: 64px diameter
+- Yellow background with 90% opacity
+- Video/play icon (24px, dark blue)
+- Slightly offset to right (margin-left: 4px for visual centering)
+- Centered using flex
+
+**Duration Badge:**
+- Position: Absolute, bottom-right (8px from edges)
+- Background: Black with 80% opacity
+- Text: White, small size
+- Padding: 4px horizontal, 8px vertical
+- Rounded corners
+- Content: "12:34"
+
+**Card Content (Below Image):**
+Padding: 16px
+
+**Title:** "Transformación Completa - Corte Clásico"
+- White text
+- Margin bottom: 8px
+- Group hover: Changes to yellow
+- Transition: 300ms
+
+**Metadata Row:**
+Flex layout, space between, small text, gray color:
+- Left: Eye icon (16px) + "25K" views
+- Right: "Hace 3 días"
+
+#### VIDEO 2: TÉCNICA DE FADE
+Same structure:
+- Title: "Técnica de Fade Perfecto"
+- Duration: "8:22"
+- Views: "18K"
+- Date: "Hace 1 semana"
+
+#### VIDEO 3: AFEITADO TRADICIONAL
+Same structure:
+- Title: "Afeitado Tradicional con Navaja"
+- Duration: "15:45"
+- Views: "32K"
+- Date: "Hace 2 semanas"
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Overflow: Hidden (for rounded corners)
+- Hover: Border brightens
+- Cursor: Pointer
+- Group effect for coordinated hover states
+
+### Gallery Section
+**Header:**
+- Left: "Galería Fotográfica" (2xl, yellow)
+- Right: Filter badges
+  - "Todos" (secondary style - filled)
+  - "Instalaciones" (outline)
+  - "En Acción" (outline)
+  - "Resultados" (outline)
+- Flex layout, space between
+- Margin bottom: 32px
+
+**Grid Layout:**
+- 2 columns on mobile
+- 3 columns on medium (md)
+- 4 columns on large (lg)
+- Gap: 16px
+
+**Gallery Items (6+ images):**
+
+Each item is a card with:
+
+**Image Container:**
+- Position: Relative
+- Aspect ratio: Square or 4:3
+- Height: 192px
+- Overflow: Hidden
+
+**Image:**
+- Full width/height, object-cover
+- Group hover: Scale 105%
+- Transition: 300ms
+
+**Bottom Gradient Overlay:**
+- Position: Absolute, full coverage
+- Gradient: Black 60% at bottom to transparent at top
+- Opacity: 0 initially
+- Group hover: Opacity 100%
+- Transition: 300ms
+
+**Category Badge (Appears on Hover):**
+- Position: Absolute, bottom-left (16px from edges)
+- Yellow background
+- Dark text
+- Small padding
+- Rounded
+- Shows category name (e.g., "Instalaciones", "En Acción", "Resultados")
+
+**Camera Button (Top-Right, Appears on Hover):**
+- Position: Absolute, top-right (16px from edges)
+- Small square button (32px)
+- Secondary style (gray background)
+- Camera icon (16px)
+- Opacity: 0 initially
+- Group hover: Opacity 100%
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Hover: Border brightens
+- Cursor: Pointer
+- Overflow: Hidden
+
+**Sample Images:**
+1. "Interior de barbería TAJOS" - Category: Instalaciones
+2. "Barbero trabajando" - Category: En Acción
+3. "Herramientas de barbería" - Category: Herramientas
+4. "Cliente satisfecho" - Category: Resultados
+5. "Silla de barbería vintage" - Category: Instalaciones
+6. "Fade perfecto" - Category: Resultados
+
+**Load More Section:**
+- Centered below grid
+- Margin top: 32px
+- Button: "Ver más fotos" (outline style)
+
+### Behind the Scenes Section
+**Layout:** Two-column card (one column on mobile)
+
+**Left Column:**
+- Image: Behind the scenes/team working
+- Height: 256px (mobile) or full height (desktop)
+- Object-cover
+
+**Right Column:**
+Padding: 32px
+
+**Title:** "Detrás de Cámaras"
+- 2xl size, yellow
+- Margin bottom: 16px
+
+**Description (2 paragraphs):**
+"Descubre el proceso creativo detrás de cada corte. Nuestro equipo de barberos no solo crea estilos increíbles, sino que también documentamos cada paso para compartir técnicas y inspirar a otros profesionales."
+- Gray text
+- Margin bottom: 24px
+
+**Feature List:**
+Vertical stack, gap 16px:
+- Video icon (20px, yellow) + "Videos tutoriales semanales"
+- Camera icon (20px, yellow) + "Sesiones fotográficas profesionales"
+- Calendar icon (20px, yellow) + "Contenido exclusivo cada mes"
+
+Each item: Flex horizontal, gap 12px, white text
+
+**CTA Button:** "Suscribirse para contenido exclusivo"
+- Yellow background
+- Dark text
+- Margin top: 24px
+- Hover: 90% opacity
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Overflow: Hidden
+
+### Newsletter Section
+**Card Styling:**
+- Yellow background with 10% opacity
+- Yellow border with 20% opacity
+- Padding: 32px
+- Centered text
+
+**Title:** "Mantente Conectado"
+- 2xl size, yellow
+- Margin bottom: 16px
+
+**Description:**
+"Sé el primero en ver nuestro contenido más reciente. Suscríbete a nuestras redes sociales y no te pierdas ninguna actualización."
+- Gray text
+- Max width: 2xl, centered
+- Margin bottom: 24px
+
+**Button Group:**
+Three buttons, horizontal flex (stack on mobile), centered, gap 16px:
+
+1. "Seguir en Instagram"
+   - Gradient background: Pink to purple (from-pink-500 to-purple-600)
+   - White text
+
+2. "Suscribirse a YouTube"
+   - Red background (#dc2626)
+   - White text
+   - Hover: Darker red
+
+3. "Seguir en TikTok"
+   - Outline style
+
+---
+
+## MENU OPTION 5: ACERCA DE NOSOTROS (About Us)
+
+### Page Header
+**Title:** "Acerca de TAJOS"
+**Subtitle:** "Conoce nuestra historia, misión y valores"
+
+### Hero Section - Our Story
+**Card Layout:** Two columns (one column on mobile)
+
+**Left Column:**
+- Image: Barbershop team photo
+- Height: 256px (mobile) or full height (desktop)
+- Object-cover
+
+**Right Column:**
+Padding: 32px (mobile) to 48px (desktop)
+
+**Title:** "Nuestra Historia"
+- 2xl size, yellow
+- Margin bottom: 24px
+
+**Paragraph 1:**
+"TAJOS nació en 2015 de la pasión de un grupo de barberos que soñaban con crear un espacio donde la tradición se encontrara con la innovación. Comenzamos como una pequeña barbería con una gran visión: ofrecer no solo un corte de cabello, sino una experiencia completa."
+- Gray text
+- Margin bottom: 16px
+
+**Paragraph 2:**
+"Lo que nos distingue es nuestra dedicación a la artesanía, el trato personalizado y la atmósfera única que hemos creado. Cada cliente que entra por nuestras puertas no es solo un cliente, es parte de la familia TAJOS."
+- Gray text
+- Margin bottom: 24px
+
+**Icon Row:**
+- Clock icon (20px, yellow) + "Más de 8 años perfeccionando nuestro arte"
+- Flex horizontal, gap 16px
+- Yellow text
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Overflow: Hidden
+
+### Stats Section
+**Grid Layout:**
+- 4 columns on desktop (md)
+- 2 columns on mobile
+- Gap: 24px
+
+**Stat Cards (4 cards):**
+
+1. **Years of Experience**
+   - Number: "8+" (3xl, yellow)
+   - Label: "Años de experiencia" (gray)
+
+2. **Satisfied Clients**
+   - Number: "15K+"
+   - Label: "Clientes satisfechos"
+
+3. **Locations**
+   - Number: "2"
+   - Label: "Ubicaciones"
+
+4. **Certified Barbers**
+   - Number: "25+"
+   - Label: "Barberos certificados"
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Padding: 24px
+- Centered text
+- Number margin bottom: 8px
+
+### Mission & Vision Section
+**Grid Layout:**
+- 2 columns on desktop (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Card 1 - Mission:**
+- Target icon (48px, yellow, margin bottom 16px)
+- Title: "Nuestra Misión" (xl, white, margin bottom 16px)
+- Description: "Brindar servicios de barbería de la más alta calidad, combinando técnicas tradicionales con tendencias modernas, en un ambiente acogedor donde cada cliente se sienta valorado y transformado."
+- Gray text
+
+**Card 2 - Vision:**
+- Star icon (48px, yellow, margin bottom 16px)
+- Title: "Nuestra Visión" (xl, white, margin bottom 16px)
+- Description: "Ser la barbería de referencia en la región, reconocida por la excelencia en nuestros servicios, la innovación constante y la formación de nuevas generaciones de barberos profesionales."
+- Gray text
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Padding: 32px
+
+### Values Section
+**Section Header:**
+Title: "Nuestros Valores" (2xl, yellow)
+Subtitle: "Los principios fundamentales que guían cada decisión y acción en TAJOS"
+- Centered text
+- Max width: 2xl
+- Margin bottom: 32px
+
+**Grid Layout:**
+- 4 columns on large (lg)
+- 2 columns on medium (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Value Cards (4 cards):**
+
+1. **Pasión**
+   - Heart icon (32px, yellow, centered, margin bottom 16px)
+   - Title: "Pasión" (white, centered, margin bottom 12px)
+   - Description: "Cada corte es una obra de arte creada con dedicación y amor por nuestro oficio."
+
+2. **Precisión**
+   - Target icon (32px, yellow)
+   - Title: "Precisión"
+   - Description: "Atención meticulosa a cada detalle para lograr resultados perfectos."
+
+3. **Comunidad**
+   - Users icon (32px, yellow)
+   - Title: "Comunidad"
+   - Description: "Construimos relaciones duraderas con nuestros clientes y la comunidad."
+
+4. **Excelencia**
+   - Star icon (32px, yellow)
+   - Title: "Excelencia"
+   - Description: "Compromiso constante con la calidad y la mejora continua."
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Padding: 24px
+- Centered text
+- Hover: Border changes to brighter yellow
+- Transition: 300ms
+
+### Timeline Section
+**Section Header:**
+Title: "Nuestro Recorrido" (2xl, yellow)
+Subtitle: "Los momentos más importantes en la historia de TAJOS"
+- Centered
+- Margin bottom: 32px
+
+**Milestone Cards (5 cards in vertical list):**
+Vertical stack, gap 24px
+
+**Card Structure:**
+Two-column flex layout:
+
+**Left Column (Year Badge):**
+- Width: 96px
+- Yellow background with 20% opacity
+- Centered content
+- Year in yellow text (xl size)
+- Examples: "2015", "2017", "2019", "2021", "2023"
+
+**Right Column (Content):**
+- Flex: 1 (takes remaining space)
+- Padding: 24px
+
+**Milestones:**
+
+1. **2015 - Fundación**
+   "TAJOS abre sus puertas con la visión de revolucionar la barbería tradicional."
+
+2. **2017 - Primera Expansión**
+   "Abrimos nuestra segunda ubicación debido a la gran demanda de nuestros servicios."
+
+3. **2019 - TAJOS Academy**
+   "Lanzamos nuestro programa de formación para nuevos barberos profesionales."
+
+4. **2021 - Reconocimiento Nacional**
+   "Recibimos el premio a 'Mejor Barbería del Año' por la Asociación Nacional de Barberos."
+
+5. **2023 - Comunidad Digital**
+   "Alcanzamos más de 50K seguidores en redes sociales, compartiendo nuestra pasión."
+
+Each has:
+- Title in white
+- Description in gray
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Overflow: Hidden (no padding, flush edges)
+
+### Awards Section
+**Container Card:**
+Dark card with padding 32px
+
+**Header (Centered):**
+- Award icon (64px, yellow, margin bottom 16px)
+- Title: "Reconocimientos" (2xl, yellow, margin bottom 16px)
+- Description: "Orgullosos de los reconocimientos que hemos recibido por nuestro trabajo y dedicación"
+- Gray text, max width 2xl
+- Margin bottom: 32px
+
+**Grid Layout:**
+- 3 columns on desktop (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Award Items (3 items, centered text):**
+
+1. **Best Barbershop 2021**
+   - Circle container (64px, yellow 20% background)
+   - Award icon inside (32px, yellow)
+   - Title: "Mejor Barbería 2021" (white)
+   - Organization: "Asociación Nacional de Barberos" (gray)
+
+2. **Excellence in Service**
+   - Users icon in circle
+   - Title: "Excelencia en Servicio"
+   - Organization: "Cámara de Comercio Local"
+
+3. **5 Star Average**
+   - Star icon in circle
+   - Title: "5 Estrellas Promedio"
+   - Organization: "Reseñas de clientes"
+
+Margin between elements: 16px
+
+### Location Info Section
+**Card Layout:** Two columns (one column on mobile)
+
+**Left Column:**
+Padding: 32px
+
+**Title:** "¿Dónde Encontrarnos?" (xl, yellow, margin bottom 16px)
+
+**Description:**
+"Contamos con dos ubicaciones estratégicamente ubicadas para servir mejor a nuestra comunidad. Cada ubicación mantiene nuestros altos estándares de calidad y servicio."
+- Gray text
+- Margin bottom: 24px
+
+**Location List:**
+Vertical stack, gap 16px
+
+**Location 1:**
+- Map pin icon (20px, yellow)
+- Name: "TAJOS Centro" (white)
+- Address: "Av. Principal 123, Centro Histórico" (gray)
+- Flex horizontal, gap 12px
+
+**Location 2:**
+- Map pin icon
+- Name: "TAJOS Norte"
+- Address: "Plaza Norte, Local 45, Zona Norte"
+
+**Right Column:**
+- Image: Location/map scene
+- Height: 192px
+- Object-cover
+- Rounded-lg
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Overflow: Hidden
+
+### CTA Section
+**Card Styling:**
+- Yellow background with 10% opacity
+- Yellow border with 20% opacity
+- Padding: 32px
+- Centered text
+
+**Title:** "¿Listo para ser parte de la familia TAJOS?"
+- 2xl size, yellow
+- Margin bottom: 16px
+
+**Description:**
+"Ven y descubre por qué miles de clientes confían en nosotros para verse y sentirse mejor. Tu próximo corte perfecto te está esperando."
+- Gray text
+- Max width: 2xl, centered
+- Margin bottom: 24px
+
+**Button Group:**
+Two buttons, horizontal flex (stack on mobile), centered, gap 16px:
+1. "Agendar Cita" - Primary (yellow background)
+2. "Ver Ubicaciones" - Outline style
+
+---
+
+## MENU OPTION 6: FAQ (Preguntas Frecuentes)
+
+### Page Header
+**Title:** "Preguntas Frecuentes"
+**Subtitle:** "Encuentra respuestas a las dudas más comunes sobre TAJOS"
+
+### Quick Answers Section
+**Section Title:** "Respuestas Rápidas" (2xl, yellow, margin bottom 24px)
+
+**Grid Layout:**
+- 3 columns on desktop (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Quick Answer Cards (3 cards):**
+
+1. **Hours Card**
+   - Clock icon (32px, yellow, centered, margin bottom 16px)
+   - Question: "¿Cuáles son sus horarios?" (white, centered, margin bottom 12px)
+   - Answer (gray, centered, preserves line breaks):
+     "Lun-Vie: 9:00-20:00
+     Sáb: 8:00-21:00
+     Dom: 10:00-18:00"
+
+2. **Contact Card**
+   - Phone icon (32px, yellow)
+   - Question: "¿Cómo los contacto?"
+   - Answer:
+     "Teléfono: (555) 123-4567
+     WhatsApp: (555) 987-6543
+     O visítanos en persona"
+
+3. **Duration Card**
+   - Calendar icon (32px, yellow)
+   - Question: "¿Cuánto dura una cita?"
+   - Answer:
+     "Corte básico: 30-45 min
+     Corte + barba: 60-75 min
+     Servicios especiales: 90+ min"
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Padding: 24px
+- Centered text
+
+### FAQ Categories (4 categories)
+
+Each category is a separate card section with:
+
+**Category Card Structure:**
+
+**Header (Category Banner):**
+- Yellow background with 10% opacity
+- Border bottom: Subtle yellow
+- Padding: 24px
+- Flex layout: Icon + Title
+- Gap: 12px
+
+Icon (24px, yellow) + Category title (xl, yellow)
+
+**Content Area:**
+- Padding: 24px
+- Accordion component for questions
+
+**Accordion Items:**
+Each question is an accordion item:
+- Border: Subtle yellow, rounded-lg
+- Padding horizontal: 16px
+- Margin between items: 16px
+
+**Accordion Trigger (Question):**
+- White text
+- Hover: Yellow text
+- Left aligned
+- Clickable to expand/collapse
+- Chevron icon on right (rotates when expanded)
+
+**Accordion Content (Answer):**
+- Gray text
+- Padding top: 16px
+- Line height: Relaxed
+- Only visible when expanded
+- Smooth expand/collapse animation
+
+---
+
+#### CATEGORY 1: CITAS Y RESERVAS (Appointments & Reservations)
+**Icon:** Calendar
+
+**Questions (4 total):**
+
+**Q1:** "¿Cómo puedo agendar una cita?"
+**A:** "Puedes agendar tu cita de varias formas: llamando directamente a cualquiera de nuestras sucursales, enviando un mensaje por WhatsApp, o visitándonos en persona. También estamos desarrollando un sistema de reservas en línea que estará disponible próximamente."
+
+**Q2:** "¿Con cuánta anticipación debo reservar?"
+**A:** "Recomendamos reservar con al menos 2-3 días de anticipación, especialmente para fines de semana. Para servicios especiales como afeitado tradicional o tratamientos capilares, te sugerimos reservar con una semana de anticipación."
+
+**Q3:** "¿Puedo cambiar o cancelar mi cita?"
+**A:** "Sí, puedes modificar o cancelar tu cita. Te pedimos que nos avises con al menos 4 horas de anticipación para poder ofrecer el horario a otros clientes. Las cancelaciones de último minuto pueden estar sujetas a una penalización."
+
+**Q4:** "¿Qué pasa si llego tarde a mi cita?"
+**A:** "Entendemos que a veces surgen imprevistos. Si llegas con menos de 15 minutos de retraso, haremos nuestro mejor esfuerzo para atenderte. Con más de 15 minutos de retraso, es posible que tengamos que reprogramar tu cita."
+
+---
+
+#### CATEGORY 2: SERVICIOS Y PRECIOS (Services & Pricing)
+**Icon:** Scissors
+
+**Questions (4 total):**
+
+**Q1:** "¿Qué servicios ofrecen?"
+**A:** "Ofrecemos una amplia gama de servicios: cortes clásicos y modernos, afeitado tradicional con navaja, arreglo de barba y bigote, tratamientos capilares, lavado y peinado, y servicios especiales para eventos. Cada servicio incluye consulta personalizada."
+
+**Q2:** "¿Cuáles son sus precios?"
+**A:** "Nuestros precios varían según el servicio: Corte básico desde $250, Corte premium $350, Afeitado tradicional $200, Combo corte + barba $450. Los precios pueden variar según la complejidad del servicio y el barbero seleccionado."
+
+**Q3:** "¿Ofrecen paquetes o promociones?"
+**A:** "Sí, tenemos varios paquetes disponibles: membresías mensuales con descuentos, paquetes para novios, promociones especiales en temporadas, y descuentos para estudiantes y adultos mayores. Pregunta por nuestras ofertas actuales."
+
+**Q4:** "¿Incluyen productos en el servicio?"
+**A:** "Todos nuestros servicios incluyen productos premium de marcas como American Crew, Babyliss y otros. Si deseas llevarte productos a casa, ofrecemos descuentos especiales para clientes."
+
+---
+
+#### CATEGORY 3: POLÍTICAS Y NORMAS (Policies & Standards)
+**Icon:** Users
+
+**Questions (4 total):**
+
+**Q1:** "¿Atienden a niños?"
+**A:** "¡Por supuesto! Damos la bienvenida a clientes de todas las edades. Tenemos barberos especializados en cortes para niños y creamos un ambiente cómodo y divertido para los más pequeños. Recomendamos citas en horarios menos concurridos para mayor comodidad."
+
+**Q2:** "¿Necesito llevar algo específico?"
+**A:** "No necesitas traer nada especial. Proporcionamos todas las herramientas, productos y toallas necesarias. Solo ven con el cabello limpio y listo para tu transformación. Si tienes alguna alergia, por favor infórmanos al hacer la reserva."
+
+**Q3:** "¿Qué medidas de higiene manejan?"
+**A:** "Mantenemos los más altos estándares de higiene: esterilización de todas las herramientas después de cada uso, uso de implementos desechables cuando es necesario, limpieza constante de superficies, y todos nuestros barberos siguen protocolos estrictos de sanidad."
+
+**Q4:** "¿Puedo elegir a mi barbero?"
+**A:** "Absolutamente. Puedes solicitar un barbero específico al hacer tu reserva. Cada uno de nuestros barberos tiene especialidades diferentes, y estaremos encantados de ayudarte a elegir el que mejor se adapte a lo que buscas."
+
+---
+
+#### CATEGORY 4: PAGOS Y FACTURACIÓN (Payments & Billing)
+**Icon:** Credit Card
+
+**Questions (4 total):**
+
+**Q1:** "¿Qué métodos de pago aceptan?"
+**A:** "Aceptamos efectivo, tarjetas de débito y crédito (Visa, Mastercard, American Express), transferencias bancarias, y pagos móviles. También aceptamos vales de despensa y tarjetas de regalo."
+
+**Q2:** "¿Manejan facturación?"
+**A:** "Sí, podemos generar facturas fiscales. Solo necesitamos tus datos fiscales al momento del pago. También podemos enviar la factura por correo electrónico si lo prefieres."
+
+**Q3:** "¿Tienen programa de lealtad?"
+**A:** "¡Sí! Nuestro programa 'TAJOS VIP' te ofrece descuentos acumulativos, servicios gratuitos después de cierto número de visitas, acceso prioritario a promociones especiales, y invitaciones exclusivas a eventos."
+
+**Q4:** "¿Dan propinas los barberos?"
+**A:** "Las propinas son completamente opcionales y a discreción del cliente. Si quedas satisfecho con el servicio, cualquier propina es muy apreciada por nuestros barberos."
+
+---
+
+### Contact Section
+**Card Styling:**
+- Yellow background with 10% opacity
+- Yellow border with 20% opacity
+- Padding: 32px
+- Centered text
+
+**Icon:** Help circle (64px, yellow, centered, margin bottom 16px)
+
+**Title:** "¿No encontraste lo que buscabas?"
+- 2xl size, yellow
+- Margin bottom: 16px
+
+**Description:**
+"Nuestro equipo está aquí para ayudarte. Si tienes alguna pregunta específica que no aparece en esta lista, no dudes en contactarnos directamente."
+- Gray text
+- Max width: 2xl, centered
+- Margin bottom: 24px
+
+**Button Group:**
+Three buttons, horizontal flex (stack on mobile), centered, gap 16px:
+1. "Contactar por WhatsApp" - Primary (yellow background)
+2. "Llamar Ahora" - Outline
+3. "Enviar Email" - Outline
+
+### Additional Resources Section
+**Section Title:** "Recursos Adicionales" (2xl, yellow, margin bottom 24px)
+
+**Grid Layout:**
+- 3 columns on large (lg)
+- 2 columns on medium (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Resource Cards (3 cards):**
+
+1. **Services Guide**
+   - Calendar icon (32px, yellow, margin bottom 16px)
+   - Title: "Guía de Servicios" (white, margin bottom 8px)
+   - Description: "Conoce todos nuestros servicios en detalle, tiempos y precios." (gray, margin bottom 16px)
+   - Button: "Ver Guía" (outline, small size)
+
+2. **Meet the Team**
+   - Users icon (32px, yellow)
+   - Title: "Conoce al Equipo"
+   - Description: "Descubre las especialidades y experiencia de nuestros barberos."
+   - Button: "Ver Equipo"
+
+3. **Home Care Tips**
+   - Help circle icon (32px, yellow)
+   - Title: "Cuidado en Casa"
+   - Description: "Tips y consejos para mantener tu corte perfecto por más tiempo."
+   - Button: "Ver Tips"
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Padding: 24px
+- Hover: Border brightens
+- Transition: 300ms
+
+---
+
+## MENU OPTION 7: NUESTRO EQUIPO (Our Team)
+
+### Page Header
+**Title:** "Nuestro Equipo"
+**Subtitle:** "Conoce a los maestros barberos que hacen la magia en TAJOS"
+
+### Team Introduction Section
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Padding: 32px
+- Centered text
+- Max width: 3xl (768px) centered within card
+
+**Title:** "Maestros de su Arte" (2xl, yellow, margin bottom 24px)
+
+**Paragraph 1:**
+"En TAJOS, cada barbero es más que un profesional: es un artista dedicado a su craft. Nuestro equipo combina años de experiencia, pasión genuina y técnicas tanto tradicionales como modernas para ofrecerte una experiencia única."
+- Gray text
+- Margin bottom: 24px
+
+**Paragraph 2:**
+"Cada miembro ha sido cuidadosamente seleccionado no solo por sus habilidades técnicas, sino también por su capacidad de crear conexiones auténticas con nuestros clientes."
+- Gray text
+
+### Team Members Section
+**Grid Layout:**
+- 2 columns on large (lg)
+- 1 column on mobile
+- Gap: 32px
+
+**Member Cards (6 total):**
+
+Each card has a two-column layout (one column on mobile):
+
+**Left Column (Photo):**
+- Width: 1/3 of card (full width on mobile)
+- Portrait image
+- Height: 256px (mobile) or full card height (desktop)
+- Object-cover
+
+**Right Column (Info):**
+- Width: 2/3 of card (full width on mobile)
+- Padding: 24px
+
+**Card Content Structure:**
+
+**Header Row:**
+Flex layout, space between
+
+**Left Side:**
+- Name (xl, white, margin bottom 4px)
+- Role (yellow, margin bottom 8px)
+- Info badges (small text, gray, flex horizontal, gap 16px):
+  - Calendar icon (16px) + Experience
+  - Map pin icon (16px) + Location
+
+**Right Side (Aligned Right):**
+- Star rating: Star icon (16px, yellow fill) + number (white)
+- Clients count: Number (small, gray)
+
+Example: 4.9 ⭐, 2,500+
+
+**Description:**
+- Gray text
+- Small size
+- Margin top/bottom: 16px
+
+**Specialties Section:**
+- Title: "Especialidades:" (white, margin bottom 8px)
+- Badge list: Flex wrap, gap 8px
+- Each specialty in a small badge (secondary style, extra small text)
+
+**Footer Row:**
+Flex layout, space between, align center
+
+**Left Side:**
+- Instagram icon (16px) + username
+- Small text, gray
+- Example: "@miguel_tajos"
+
+**Right Side:**
+- Button: "Reservar con [First Name]"
+- Small size
+- Yellow background
+- Dark text
+
+---
+
+#### TEAM MEMBER 1: MIGUEL RODRIGUEZ
+- Name: "Miguel Rodriguez"
+- Role: "Maestro Barbero & Fundador"
+- Experience: "15 años"
+- Location: "TAJOS Centro"
+- Description: "Fundador de TAJOS y maestro de la barbería tradicional. Miguel comenzó su carrera a los 16 años y ha perfeccionado el arte del afeitado con navaja y los cortes clásicos."
+- Rating: 4.9
+- Clients: "2,500+"
+- Instagram: "@miguel_tajos"
+- Specialties:
+  - "Barbería Clásica"
+  - "Afeitado Tradicional"
+  - "Cortes Vintage"
+- Image: Professional barber portrait
+
+#### TEAM MEMBER 2: CARLOS MENDOZA
+- Role: "Especialista en Técnicas Modernas"
+- Experience: "12 años"
+- Location: "TAJOS Norte"
+- Description: "Experto en técnicas contemporáneas y tendencias actuales. Carlos se mantiene siempre actualizado con las últimas técnicas y estilos que dominan las redes sociales."
+- Rating: 4.8
+- Clients: "2,100+"
+- Instagram: "@carlos_cuts"
+- Specialties:
+  - "Fades"
+  - "Degradados"
+  - "Cortes Modernos"
+  - "Texturizado"
+
+#### TEAM MEMBER 3: FERNANDO SILVA
+- Role: "Barbero Senior & Instructor"
+- Experience: "20 años"
+- Location: "TAJOS Centro"
+- Description: "Veterano de la industria y líder de nuestro programa de capacitación. Fernando combina décadas de experiencia con pasión por enseñar a las nuevas generaciones."
+- Rating: 5.0
+- Clients: "3,000+"
+- Instagram: "@fernando_master"
+- Specialties:
+  - "Enseñanza"
+  - "Cortes Ejecutivos"
+  - "Tratamientos Capilares"
+
+#### TEAM MEMBER 4: DIEGO MORALES
+- Role: "Especialista en Barba"
+- Experience: "8 años"
+- Location: "TAJOS Norte"
+- Description: "Artista del diseño de barba y experto en cuidado facial masculino. Diego transforma rostros con precisión milimétrica y técnicas de cuidado premium."
+- Rating: 4.9
+- Clients: "1,800+"
+- Instagram: "@diego_beard"
+- Specialties:
+  - "Diseño de Barba"
+  - "Afeitado Preciso"
+  - "Cuidado Facial"
+
+#### TEAM MEMBER 5: ALEJANDRO VEGA
+- Role: "Barbero Creativo"
+- Experience: "6 años"
+- Location: "TAJOS Centro"
+- Description: "El artista del equipo, especializado en diseños únicos y cortes creativos. Alejandro convierte ideas audaces en realidades capilares impresionantes."
+- Rating: 4.7
+- Clients: "1,500+"
+- Instagram: "@alex_artcuts"
+- Specialties:
+  - "Diseños Artísticos"
+  - "Cortes Creativos"
+  - "Arte Capilar"
+
+#### TEAM MEMBER 6: ROBERTO JIMÉNEZ
+- Role: "Barbero Especialista"
+- Experience: "10 años"
+- Location: "TAJOS Norte"
+- Description: "Nuestro especialista en clientes jóvenes y servicios familiares. Roberto tiene el don especial de hacer que los niños se sientan cómodos y disfruten su visita."
+- Rating: 4.8
+- Clients: "2,200+"
+- Instagram: "@roberto_kids"
+- Specialties:
+  - "Cortes Infantiles"
+  - "Servicios Familiares"
+  - "Paciencia Infinita"
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Overflow: Hidden
+- Hover: Border brightens to 50% opacity
+- Transition: 300ms
+
+### Team Achievements Section
+**Container Card:**
+Dark card, padding 32px
+
+**Header (Centered):**
+- Award icon (64px, yellow, margin bottom 16px)
+- Title: "Excelencia Reconocida" (2xl, yellow, margin bottom 16px)
+- Description: "Nuestro compromiso con la calidad se refleja en los logros y reconocimientos de nuestro equipo"
+- Gray text, max width 2xl
+- Margin bottom: 32px
+
+**Grid Layout:**
+- 3 columns on desktop (md)
+- 1 column on mobile
+- Gap: 24px
+
+**Achievement Items (3 items):**
+
+1. **Professional Certifications**
+   - Circle container (64px, yellow 20% background)
+   - Award icon inside (32px, yellow)
+   - Title: "Certificaciones Profesionales" (white, margin bottom 12px)
+   - Description: "Todo nuestro equipo cuenta con certificaciones oficiales y capacitación continua" (gray)
+
+2. **Excellence Awards**
+   - Title: "Premios de Excelencia"
+   - Description: "Múltiples reconocimientos por calidad en servicio y técnicas innovadoras"
+
+3. **Continuous Training**
+   - Title: "Formación Continua"
+   - Description: "Participación regular en cursos y workshops de las mejores academias"
+
+All centered text
+
+### Behind the Scenes Section
+**Card Layout:** Two columns (one column on mobile)
+
+**Left Column:**
+- Image: Team working together
+- Height: 256px (mobile) or full height (desktop)
+- Object-cover
+
+**Right Column:**
+Padding: 32px
+
+**Title:** "Más que Compañeros, una Familia"
+- 2xl size, yellow
+- Margin bottom: 16px
+
+**Paragraph 1:**
+"En TAJOS, fomentamos un ambiente de colaboración y aprendizaje continuo. Nuestros barberos no solo trabajan juntos, sino que se apoyan mutuamente para ofrecer siempre el mejor servicio."
+- Gray text
+- Margin bottom: 16px
+
+**Paragraph 2:**
+"Realizamos entrenamientos regulares, compartimos técnicas y celebramos los éxitos de cada miembro del equipo. Esta mentalidad de crecimiento conjunto se refleja en la calidad excepcional de nuestros servicios."
+- Gray text
+- Margin bottom: 24px
+
+**Feature List:**
+Vertical stack, gap 12px:
+- Scissors icon (20px, yellow) + "Entrenamientos mensuales"
+- Award icon (20px, yellow) + "Certificaciones continuas"
+- Star icon (20px, yellow) + "Evaluaciones de calidad"
+
+Each item: Flex horizontal, gap 12px, white text
+
+**Card Styling:**
+- Dark card background
+- Border: Subtle yellow
+- Overflow: Hidden
+
+### Join Our Team Section
+**Card Styling:**
+- Yellow background with 10% opacity
+- Yellow border with 20% opacity
+- Padding: 32px
+- Centered text
+
+**Icon:** Scissors (64px, yellow, centered, margin bottom 16px)
+
+**Title:** "¿Quieres unirte a nuestro equipo?"
+- 2xl size, yellow
+- Margin bottom: 16px
+
+**Description:**
+"Siempre estamos buscando barberos talentosos y apasionados que compartan nuestra visión de excelencia. Si crees que tienes lo necesario para ser parte de TAJOS, nos encantaría conocerte."
+- Gray text
+- Max width: 2xl, centered
+- Margin bottom: 24px
+
+**Button Group:**
+Two buttons, horizontal flex (stack on mobile), centered, gap 16px:
+1. "Enviar CV" - Primary (yellow background)
+2. "Más Información" - Outline
+
+---
+
+## NAVIGATION FLOW BETWEEN PAGES
+
+### From Home to Menu Pages:
+1. User clicks hamburger menu icon in navigation bar
+2. Dropdown menu appears
+3. User clicks any menu item
+4. Menu closes
+5. Page transitions (instant, no animation)
+6. New page loads with scroll position at top
+7. User sees back button to return home
+
+### From Menu Page to Home:
+1. User clicks back button (arrow left)
+2. Returns to home page
+3. Scroll position resets to top
+4. All sections visible as normal
+
+### Between Menu Pages:
+- Must return to home first
+- No direct navigation between menu pages
+- Use back button → home → menu → select new page
+
+### Same-Page Scrolling (Events):
+- "Eventos y Promociones" menu item
+- Closes dropdown
+- Scrolls smoothly to events section
+- Stays on home page
+
+### External Links (WhatsApp):
+- "Contáctanos" menu item
+- Opens new browser tab
+- WhatsApp Web interface loads
+- Original page stays in background
+
+---
+
+## RESPONSIVE BEHAVIOR FOR ALL PAGES
+
+### Mobile (< 768px):
+- Back button and title stack properly
+- Grid layouts collapse to 1 column
+- Images stack vertically
+- Buttons stack vertically
+- Text sizes slightly reduced
+- Padding reduced proportionally
+- Hamburger menu already visible
+- Touch-friendly spacing (44px minimum)
+
+### Tablet (768px - 1024px):
+- 2-column layouts common
+- Some grids show 2-3 columns
+- Images side-by-side where applicable
+- Comfortable reading widths
+- Balanced white space
+
+### Desktop (>= 1024px):
+- Full grid layouts (3-4 columns)
+- Side-by-side content maximized
+- Larger images
+- More generous spacing
+- Max content width prevents over-stretching
+
+---
+
+## ACCESSIBILITY FEATURES
+
+All pages include:
+
+### Keyboard Navigation:
+- Tab through all interactive elements
+- Enter/Space to activate buttons
+- Escape to close modals/accordions
+- Arrow keys in accordions (optional)
+
+### Focus States:
+- Visible outline on focused elements
+- Yellow ring color (matches brand)
+- Clear visual indicator
+
+### Screen Reader Support:
+- Semantic HTML (header, section, article)
+- Proper heading hierarchy
+- Alt text for all images
+- ARIA labels for icons
+- Button descriptions
+
+### Color Contrast:
+- Yellow on dark: 4.5:1+ ratio
+- White on dark: 14:1+ ratio
+- Gray on dark: 7:1+ ratio
+- All meet WCAG AA standards
+
+### Touch Targets:
+- Minimum 44px × 44px
+- Adequate spacing between elements
+- Large enough for finger taps
+
+---
+
+## CONTENT GUIDELINES
+
+### Photography Style:
+- Professional quality
+- Warm, inviting lighting
+- Dark/moody atmosphere
+- High contrast
+- Barbershop themed
+- People-focused when applicable
+- Action shots (barbers working)
+- Product/tool details
+
+### Tone of Voice:
+- Professional yet approachable
+- Confident but not arrogant
+- Welcoming and inclusive
+- Passionate about the craft
+- Expert without being condescending
+- Community-oriented
+
+### Text Formatting:
+- Short paragraphs (2-4 sentences)
+- Bullet points for lists
+- Bold for emphasis (sparingly)
+- Consistent terminology
+- Active voice preferred
+- Clear, direct language
+
+---
+
+## PERFORMANCE CONSIDERATIONS
+
+### Image Optimization:
+- Lazy load images below fold
+- Appropriate sizes for viewports
+- WebP format with fallbacks
+- Compressed without quality loss
+- Alt text for all images
+
+### Loading States:
+- Skeleton screens while loading
+- Smooth transitions
+- No jarring layout shifts
+- Progressive enhancement
+
+### Caching:
+- Static assets cached
+- Images cached locally
+- API responses cached when appropriate
+
+---
+
+## TECHNICAL NOTES
+
+### Animation Timing:
+- Page transitions: Instant (0ms)
+- Hover effects: 300ms
+- Accordion expand: 200-300ms
+- Scroll animations: Smooth (CSS)
+- Button press: 100ms
+
+### Z-Index Layers:
+- Navigation bar: 50
+- Dropdown menu: 40
+- Overlays: 30
+- Modals: 40
+- Floating buttons: 50
+- Content: 1 (default)
+
+### Spacing System:
+Based on 4px increments:
+- xs: 4px
+- sm: 8px
+- md: 16px
+- lg: 24px
+- xl: 32px
+- 2xl: 48px
+- 3xl: 64px
+
+### Border Radius:
+- Small: 4px
+- Medium: 8px
+- Large: 10px (default)
+- XL: 16px
+- 2XL: 24px
+- Full: 9999px (circles/pills)
+
+---
+
+## FINAL SUMMARY
+
+These menu pages form a comprehensive information architecture for TAJOS BARBEROS:
+
+1. **Contáctanos** - Direct WhatsApp contact
+2. **TAJOS Academy** - Educational programs and instructor profiles
+3. **Eventos y Promociones** - Scroll to home page section
+4. **Media** - Photo gallery, videos, social media content
+5. **Acerca de nosotros** - Company history, mission, values, timeline
+6. **FAQ** - Comprehensive Q&A organized by category
+7. **Nuestro Equipo** - Team member profiles and achievements
+
+Each page maintains brand consistency while serving its unique purpose. The navigation system is intuitive, the content is well-organized, and the visual design reinforces the premium, professional barbershop brand identity.
+
+All pages work together to:
+- Build trust through transparency
+- Showcase expertise and quality
+- Provide comprehensive information
+- Facilitate easy booking
+- Create emotional connection
+- Establish TAJOS as the premier barbershop choice
