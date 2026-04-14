@@ -1038,6 +1038,8 @@ const FIELD_TO_DB = {
   giftcardId:'giftcard_id',
   // Arqueos
   turnoLabel:'turno_label',
+  totalEfectivo:'total_efectivo',
+  efectivoEsperado:'efectivo_esperado',
   cajaInicial:'caja_inicial',
   verificadoPor:'verificado_por',
   verificadoAt:'verificado_at',
@@ -1045,13 +1047,11 @@ const FIELD_TO_DB = {
   efectivoEntregado:'efectivo_entregado',
   // Caja turnos
   cajaInicialConfirmada:'caja_inicial_confirmada',
-  horaInicio:'hora_inicio',
-  horaCierre:'hora_cierre',
 };
 const FIELD_FROM_DB = Object.fromEntries(Object.entries(FIELD_TO_DB).map(([k,v])=>[v,k]));
 
 const SUPA_COLS={
-  cobros:new Set(['id','cliente_id','barbero_id','fecha','hora','local','turno','items','pagos','total','factura','giftcard_id','registrado_por','cajero','created_at']),
+  cobros:new Set(['id','cliente_id','barbero_id','fecha','hora','local','items','pagos','total','factura','giftcard_id','registrado_por','cajero','created_at']),
   barberos:new Set(['id','nombre','apellido','fecha_ingreso','local','comision','celular','email','activo','created_at','updated_at']),
   barbero_users:new Set(['id','barbero_id','login','pin','activo','ultimo_acceso','created_at']),
   clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
@@ -1060,8 +1060,8 @@ const SUPA_COLS={
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','created_at','updated_at']),
   usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
   historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
-  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','cerrado','created_at']),
-  caja_turnos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','caja_inicial_confirmada','egresos_efectivo','hora_inicio','hora_cierre','created_at','updated_at']),
+  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','total_efectivo','efectivo_esperado','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','cerrado','created_at']),
+  caja_turnos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','caja_inicial_confirmada','egresos_efectivo','created_at','updated_at']),
   adelantos:new Set(['id','barbero_id','barbero_nombre','monto_solicitado','monto_aprobado','estado','fecha_solicitud','nota_solicitud','nota_admin','fecha_aprobacion','ts']),
   egresos:new Set(['id','barbero_id','barbero_nombre','producto_id','producto','cantidad','monto','nota','registrado_por','fecha','created_at']),
   giftcards:new Set(['id','codigo','cliente_id','valor','saldo','metodo_pago','nota','estado','fecha','ultimo_uso','created_at']),
@@ -1088,8 +1088,6 @@ function fromDbObj(obj){
   }
   // asegurar que 'id' siempre sea número
   if(r.id!==undefined)r.id=Number(r.id);
-  // Normalizar fecha: Supabase puede devolver 'YYYY-MM-DDT00:00:00' si la columna es timestamp
-  if(r.fecha&&typeof r.fecha==='string'&&r.fecha.length>10)r.fecha=r.fecha.slice(0,10);
   // Supabase puede devolver columnas JSONB como string — parsear si es necesario
   const jsonCols=['pagos','items','detalle','egresosEfectivo','egresos_efectivo','acceso'];
   jsonCols.forEach(col=>{
@@ -1259,13 +1257,14 @@ async function dbAdd(store,data){
       const rows=await supaFetch('POST',tbl,null,body);
       if(rows&&rows.length){
         const saved=fromDbObj(rows[0]);
-        _idbPut(store,saved).catch(()=>{});
+        // Supabase guardó correctamente — solo actualizar cache local, NO encolar offline
+        _idbAdd(store,saved).catch(()=>{});
         return saved.id;
       }
+      // Supabase respondió OK pero sin datos (no debería pasar con Prefer:return=representation)
+      // En este caso tampoco encolamos para evitar duplicado: relanzar para que caiga al fallback
       throw new Error('Supabase POST returned empty');
-    }catch(e){
-      console.error(`[dbAdd] Supabase error ${tbl}:`,e.message);
-    }
+    }catch(e){console.warn('dbAdd Supabase error, guardando offline:',e);}
   }
   // Solo llegar aquí si estamos offline O si Supabase falló antes de confirmar el guardado
   const localId=await _idbAdd(store,{...data});
@@ -1302,7 +1301,7 @@ async function dbDel(store,id){
 }
 
 // ══ STATE ══
-const ST={localActivo:1,agendaFecha:new Date(),turnoServTemp:[],cobroItems:[],cobroPagos:[],user:null,_gcAplicada:null,_pendingServCat:null,_pendingProdCat:null,turnoActivo:null};
+const ST={localActivo:1,agendaFecha:new Date(),turnoServTemp:[],cobroItems:[],cobroPagos:[],user:null,_gcAplicada:null,_pendingServCat:null,_pendingProdCat:null};
 const HORAS=[];for(let h=8;h<=20;h++){HORAS.push(String(h).padStart(2,'0')+':00');if(h<20)HORAS.push(String(h).padStart(2,'0')+':30');}
 // METODOS: fallback hardcodeado con IDs descriptivos (siempre se usan como clave en cobros)
 const METODOS_DEFAULT=[
@@ -1379,15 +1378,7 @@ async function doLogin(){
 }
 
 function showApp(){
-  // Fijar el turno en el momento exacto del login
-  if(!ST.turnoActivo) ST.turnoActivo=new Date().getHours()<14?1:2;
-  sessionStorage.setItem('tajos_uid',   String(ST.user.id));
-  sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
-  // Registrar hora de inicio del turno en background
-  if(ST.user.rol!=='admin'){
-    const _hi=new Date().toTimeString().slice(0,5);
-    saveCajaTurno({horaInicio:_hi}).catch(()=>{});
-  }
+  sessionStorage.setItem('tajos_uid', String(ST.user.id));
   document.getElementById('loginScreen').classList.remove('visible');
   document.getElementById('app').classList.add('visible');
   const u=ST.user;
@@ -1418,10 +1409,10 @@ function showApp(){
   _aplicarRestriccionReporteLocal();
   navigate('dashboard');
   populateSels();
-  // Popup de caja inicial deshabilitado — se registra desde el arqueo
+  setTimeout(mostrarCajaInicialSiNecesario,600);
 }
 
-// getTurnoLabel definida junto a getTurnoActual
+function getTurnoLabel(){const h=new Date().getHours();return h<14?'Cajero · Turno 1 (8–14h)':'Cajero · Turno 2 (14–20h)';}
 
 // Devuelve array de locales permitidos para el usuario actual.
 // Admin → [1,2]. Cajero ambas → [1,2]. Cajero solo central → [1]. Cajero solo superseis → [2].
@@ -1466,9 +1457,7 @@ async function logoutConfirm(){await showRecordatorioBackup();}
 async function doLogout(){
   await logAct('Cierre de sesión');
   ST.user=null;
-  ST.turnoActivo=null;
   sessionStorage.removeItem('tajos_uid');
-  sessionStorage.removeItem('tajos_turno');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('loginScreen').classList.add('visible');
   document.getElementById('loginUser').value='';
@@ -1478,9 +1467,7 @@ async function doLogout(){
 async function logAct(accion){
   if(!ST.user)return;
   const u=ST.user;const n=new Date();
-  await dbAdd('historial',{usuario:u.login,nombre:u.nombre+' '+u.apellido,
-    rol:u.rol,accion,fecha:toDS(n),hora:n.toTimeString().slice(0,5),ts:n.toISOString()})
-    .catch(e=>console.warn('logAct:',e));
+  await dbAdd('historial',{usuario:u.login,nombre:u.nombre+' '+u.apellido,rol:u.rol,accion,fecha:toDS(n),hora:n.toTimeString().slice(0,5)});
 }
 
 // ══ NAVIGATION ══
@@ -2394,17 +2381,14 @@ async function guardarCobro(){
     await dbPut('giftcards',gcUsada);
     ST._gcAplicada=null;
   }
-  await dbAdd('cobros',{clienteId:cId,barberoId:bId,items:[...ST.cobroItems],pagos:ST.cobroPagos.map(p=>({metodo:p.metodo,monto:parseFloat(p.monto)||0})),total:tot,factura:facturaAmt,giftcardId:gcUsada?.id||null,fecha:toDS(now),hora:now.toTimeString().slice(0,5),local:ST.localActivo,turno:getTurnoActual(),registradoPor:ST.user?.login||'?',cajero:ST.user?.login||'?'});
+  await dbAdd('cobros',{clienteId:cId,barberoId:bId,items:[...ST.cobroItems],pagos:ST.cobroPagos.map(p=>({metodo:p.metodo,monto:parseFloat(p.monto)||0})),total:tot,factura:facturaAmt,giftcardId:gcUsada?.id||null,fecha:toDS(now),hora:now.toTimeString().slice(0,5),local:ST.localActivo,registradoPor:ST.user?.login||'?',cajero:ST.user?.login||'?'});
   await logAct(`Registró cobro de ${fmt(tot)} · Cliente: ${c?c.nombre+' '+c.apellido:'sin registro'} · Barbero: ${b?b.nombre+' '+b.apellido:'?'}`);
   toast('Cobro registrado','success');closeModal('modalNuevoCobro');
   if(window._turnoACobrar){
     try{const turno=await dbGet('turnos',window._turnoACobrar);if(turno&&turno.estado!=='completado'){turno.estado='completado';await dbPut('turnos',turno);}}catch(e){}
     window._turnoACobrar=null;renderAgenda();
   }
-  ST.cobroItems=[];ST.cobroPagos=[];ST._gcAplicada=null;
-  await refreshDash();
-  await refreshCaja();
-  if(document.getElementById('page-barberos')?.classList.contains('active')) renderBarberos();
+  ST.cobroItems=[];ST.cobroPagos=[];ST._gcAplicada=null;refreshDash();refreshCaja();
 }
 
 async function refreshCaja(){
@@ -2414,23 +2398,18 @@ async function refreshCaja(){
   const barbs=await dbAll('barberos');const cl=await dbAll('clientes');
   const bMap={};barbs.forEach(b=>bMap[String(b.id)]=b.nombre+' '+b.apellido);
   const cMap={};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
-  const isCajeroView=ST.user&&ST.user.rol!=='admin';
-  const turnoActivo=await getTurnoDeRegistro();
   const lc=cobros.filter(c=>Number(c.local)===Number(ST.localActivo));
-  // Para el cajero: en la fecha de hoy solo muestra cobros de su turno.
-  // Para fechas históricas o admin: muestra todos los cobros del día.
-  const esFechaHoy=fecha===hoy();
-  const hoyC=lc.filter(c=>c.fecha===fecha&&
-    (!isCajeroView||!esFechaHoy||Number(c.turno||0)===Number(turnoActivo)));
-  const tot=hoyC.reduce((s,c)=>s+(c.total||0),0);
-  const ef=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((a,p)=>a+(p.monto||0),0),0);
-  const dig=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>['debito','credito','transferencia'].includes(p.metodo)).reduce((a,p)=>a+(p.monto||0),0),0);
+  const hoyC=lc.filter(c=>c.fecha===fecha);
+  const tot=hoyC.reduce((s,c)=>s+c.total,0);
+  const ef=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);
+  const dig=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>['debito','credito','transferencia'].includes(p.metodo)).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);
   document.getElementById('cajaTotalDia').textContent=fmt(tot);
   document.getElementById('cajaCantDia').textContent=`${hoyC.length} cobros`;
   document.getElementById('cajaEfectivo').textContent=fmt(ef);
   document.getElementById('cajaDigital').textContent=fmt(dig);
-  // Leer caja inicial del turno activo desde caja_turnos
-  const ct=await getCajaTurno(esFechaHoy?hoy():fecha,Number(ST.localActivo),Number(turnoActivo))||{cajaInicial:0,egresosEfectivo:[]};
+  // Leer caja inicial siempre desde caja_turnos
+  const turno=getTurnoActual();
+  const ct=await getCajaTurno(fecha,Number(ST.localActivo),Number(turno))||{cajaInicial:0,egresosEfectivo:[]};
   const cajaIni=ct.cajaInicial||ct.caja_inicial||0;
   const egresosEfCt=(ct.egresosEfectivo||[]).reduce((s,e)=>s+(e.monto||0),0);
   document.getElementById('cajaCajaInicial').textContent=fmt(cajaIni);
@@ -2457,9 +2436,8 @@ async function refreshCaja(){
       estadoCajaBox.innerHTML=`<div class="alert alert-warning" style="margin-bottom:0">⚠ Caja inicial no registrada para este turno. <button class="btn btn-outline btn-sm" onclick="openModal('modalArqueo')" style="margin-left:8px">Registrar ahora</button></div>`;
     }else{estadoCajaBox.innerHTML='';}
   }else if(estadoCajaBox){estadoCajaBox.innerHTML='';}
-  // Historial: cajero ve solo su turno en fecha de hoy; admin y fechas históricas ven todo
-  let fl=lc.filter(c=>c.fecha===fecha&&
-    (!isCajeroView||!esFechaHoy||Number(c.turno||0)===Number(turnoActivo)));
+  let fl=[...lc];
+  if(fecha)fl=fl.filter(c=>c.fecha===fecha);
   if(buscar)fl=fl.filter(c=>(cMap[String(c.clienteId||c.cliente_id||'')]||'').toLowerCase().includes(buscar)||(bMap[String(c.barberoId||c.barbero_id||'')]||'').toLowerCase().includes(buscar));
   fl.sort((a,b)=>b.fecha>a.fecha?1:b.fecha<a.fecha?-1:(b.hora||'')>(a.hora||'')?1:-1);
   const tbody=document.getElementById('cajaTbody');
@@ -2513,18 +2491,15 @@ async function verDetCobro(id){
 async function eliminarCobro(id){
   const co=await dbGet('cobros',id);if(!confirm('¿Eliminar este cobro?'))return;
   await dbDel('cobros',id);await logAct(`Eliminó cobro de ${fmt(co.total)}`);
-  toast('Cobro eliminado','info');await refreshCaja();await refreshDash();
+  toast('Cobro eliminado','info');refreshCaja();refreshDash();
 }
 // ══ ARQUEO ══
 async function renderArqueo(){
   const td=hoy();const cobros=await dbAll('cobros');
   const isAdmin=ST.user?.rol==='admin';
-  // Usar getTurnoDeRegistro para garantizar el turno correcto aunque sean las 15h
-  const turno=await getTurnoDeRegistro();
-  const turnoLabel=`Turno ${turno}`;
-  // Cajero: solo cobros de su turno. Admin: todos los del día.
-  const h=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo)
-    &&(isAdmin||Number(c.turno||0)===Number(turno)));
+  const turno=getTurnoActual();
+  const turnoLabel=turno===1?'Turno 1 (8–14h)':'Turno 2 (14–20h)';
+  const h=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo));
   const arqs=await dbAll('arqueos');
   const aqActual=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&a.turno==turno)||{notas:'',turno,cerrado:false};
   // Leer caja inicial y egresos SIEMPRE desde caja_turnos (fuente de verdad)
@@ -2554,16 +2529,20 @@ async function renderArqueo(){
         // Leer caja inicial y egresos desde caja_turnos (fuente de verdad)
         const ctA=await getCajaTurno(td,a.local,a.turno)||{cajaInicial:0,egresosEfectivo:[]};
         const ini=ctA.cajaInicial||ctA.caja_inicial||0;
-        const tl=a.turnoLabel||a.turno_label||`Turno ${a.turno}`;
+        const tl=a.turnoLabel||a.turno_label||(a.turno==1?'Turno 1 (8–14h)':'Turno 2 (14–20h)');
         const verif=a.verificado;
         const egEf=ctA.egresosEfectivo||[];
         const totEgEf=egEf.reduce((s,e)=>s+(e.monto||0),0);
         const efEnt=a.efectivoEntregado||0;
-        // Cobros del turno específico de este arqueo
-        const cobsTurno=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo)
-          &&Number(c.turno||0)===Number(a.turno));
-        const efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
-        const efEsperado=ini+efCobros-totEgEf;
+        let efCobros, efEsperado;
+        if(a.totalEfectivo!=null||a.total_efectivo!=null){
+          efCobros=a.totalEfectivo||a.total_efectivo||0;
+          efEsperado=a.efectivoEsperado||a.efectivo_esperado||0;
+        }else{
+          const cobsTurno=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo)&&Number(c.turno||0)===Number(a.turno));
+          efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
+          efEsperado=ini+efCobros-totEgEf;
+        }
         const diferencia=efEnt-efEsperado;
         return `<div class="arqueo-box" style="margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
@@ -2696,7 +2675,8 @@ async function confirmarCajaInicial(){
   if(monto<0)return toast('El monto no puede ser negativo','error');
   await saveCajaTurno({cajaInicial:monto,cajaInicialConfirmada:true});
   localStorage.setItem(getCajaKey(),'done');
-  await logAct(`Registró caja inicial: ${fmt(monto)} · Turno ${getTurnoActual()}`);
+  const turnoLabel=getTurnoActual()===1?'Turno 1':'Turno 2';
+  await logAct(`Registró caja inicial: ${fmt(monto)} · ${turnoLabel}`);
   toast(`Caja inicial confirmada: ${fmt(monto)}`,'success');
   renderArqueo();refreshCaja();
 }
@@ -2707,7 +2687,7 @@ async function agregarEgresoEf(){
   const monto=parseFloat(document.getElementById('aqEgresoMonto')?.value)||0;
   if(!concepto)return toast('Ingresá un concepto para el egreso','error');
   if(monto<=0)return toast('El monto debe ser mayor a 0','error');
-  const ct=await getCajaTurno(hoy(),ST.localActivo,await getTurnoDeRegistro());
+  const ct=await getCajaTurno(hoy(),ST.localActivo,getTurnoActual());
   const lista=(ct?.egresosEfectivo||[]);
   lista.push({concepto,monto,hora:new Date().toTimeString().slice(0,5)});
   await saveCajaTurno({egresosEfectivo:lista});
@@ -2720,7 +2700,7 @@ async function agregarEgresoEf(){
 
 // Quitar egreso de efectivo por índice
 async function quitarEgresoEf(idx){
-  const ct=await getCajaTurno(hoy(),ST.localActivo,await getTurnoDeRegistro());
+  const ct=await getCajaTurno(hoy(),ST.localActivo,getTurnoActual());
   if(!ct)return;
   const lista=(ct.egresosEfectivo||[]);
   lista.splice(idx,1);
@@ -2753,26 +2733,30 @@ function updDiferenciaEntrega(){
 // Función base que persiste el arqueo — usada por actualizar y cerrar
 async function _persistirArqueo(cerrar){
   const td=hoy();
-  const turno=await getTurnoDeRegistro();
-  const turnoLabel=`Turno ${turno}`;
+  const turno=getTurnoActual();
+  const turnoLabel=turno===1?'Turno 1':'Turno 2';
   // Leer caja_turnos — fuente de verdad para cajaInicial y egresos
   const ct=await getCajaTurno(td,Number(ST.localActivo),Number(turno))||{cajaInicial:0,egresosEfectivo:[]};
   const cajaInicial=ct.cajaInicial||ct.caja_inicial||0;
   const egresosEfectivo=ct.egresosEfectivo||[];
   // Leer arqueo existente para preservar campos de verificación
   const arqs=await dbAll('arqueos');
-  const ex=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&Number(a.turno)===Number(turno));
+  const ex=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&a.turno==turno);
   const notas=document.getElementById('arqueoNotas')?.value.trim()||ex?.notas||'';
   const efectivoEntregado=parseFloat(document.getElementById('aqEfEntregado')?.value)||ex?.efectivoEntregado||0;
   const cobros=await dbAll('cobros');
-  // Solo cobros del turno activo
-  const h=cobros.filter(co=>co.fecha===td&&Number(co.local)===Number(ST.localActivo)
-    &&Number(co.turno||0)===Number(turno));
+  const h=cobros.filter(co=>co.fecha===td&&Number(co.local)===Number(ST.localActivo));
+  // total: suma de todos los métodos de pago (facturación total del turno)
   const total=h.reduce((s,co)=>s+(co.total||0),0);
-  const detalle={};METODOS.forEach(m=>{detalle[m.id]=h.reduce((s,co)=>s+(co.pagos||[]).filter(p=>p.metodo===m.id).reduce((a,p)=>a+(p.monto||0),0),0);});
+  const detalle={};METODOS.forEach(m=>{detalle[m.id]=h.reduce((s,co)=>s+(co.pagos||[]).filter(p=>p.metodo===m.id).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);});
+  // totalEfectivo: solo cobros en efectivo del turno
+  const totalEfectivo=h.reduce((s,co)=>s+(co.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);
+  // efectivoEsperado = caja_inicial + efectivo_cobrado - egresos_efectivo
+  const totalEgresos=egresosEfectivo.reduce((s,e)=>s+(e.monto||0),0);
+  const efectivoEsperado=cajaInicial+totalEfectivo-totalEgresos;
   const data={
     fecha:td,local:ST.localActivo,turno,turnoLabel,
-    cajaInicial,total,detalle,notas,
+    cajaInicial,total,totalEfectivo,efectivoEsperado,detalle,notas,
     cajero:ex?.cajero||ct?.cajero||ST.user?.login,
     verificado:ex?.verificado||false,
     cerrado:cerrar?true:(ex?.cerrado||false),
@@ -2781,7 +2765,7 @@ async function _persistirArqueo(cerrar){
   if(ex){data.id=ex.id;await dbPut('arqueos',data);}
   else{await dbAdd('arqueos',data);}
   localStorage.setItem(getCajaKey(),'done');
-  return {cajaInicial,efectivoEntregado};
+  return {cajaInicial,totalEfectivo,efectivoEsperado,efectivoEntregado};
 }
 
 async function actualizarEstadoCaja(){
@@ -2795,10 +2779,8 @@ async function actualizarEstadoCaja(){
 
 async function guardarArqueo(){
   try{
-    const {cajaInicial,efectivoEntregado}=await _persistirArqueo(true);
-    const _hc=new Date().toTimeString().slice(0,5);
-    await saveCajaTurno({horaCierre:_hc});
-    await logAct(`Guardó cierre de caja · ${localNombre(ST.localActivo)} · Turno ${getTurnoActual()} · Caja: ${fmt(cajaInicial)} · Entregado: ${fmt(efectivoEntregado)} · Cierre: ${_hc}`);
+    const {cajaInicial,totalEfectivo,efectivoEsperado,efectivoEntregado}=await _persistirArqueo(true);
+    await logAct(`Guardó cierre de caja · ${localNombre(ST.localActivo)} · Turno ${getTurnoActual()} · Ef.Esperado: ${fmt(efectivoEsperado)} · Entregado: ${fmt(efectivoEntregado)}`);
     toast('Cierre de caja enviado al administrador','success');
     closeModal('modalArqueo');refreshCaja();
   }catch(e){toast('Error al guardar: '+e.message,'error');}
@@ -2854,9 +2836,18 @@ async function renderArqueosAdmin(){
     const egEf=ctA.egresosEfectivo||[];
     const totEgEf=egEf.reduce((s,e)=>s+(e.monto||0),0);
     const efEnt=a.efectivoEntregado||0;
-    const cobsTurno=cobros.filter(c=>c.fecha===a.fecha&&Number(c.local)===Number(a.local));
-    const efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
-    const efEsperado=ini+efCobros-totEgEf;
+    // Leer desde el registro si ya fue guardado con los nuevos campos;
+    // fallback a cálculo sobre cobros filtrados por turno (datos históricos)
+    let efCobros, efEsperado;
+    if(a.totalEfectivo!=null||a.total_efectivo!=null){
+      efCobros=a.totalEfectivo||a.total_efectivo||0;
+      efEsperado=a.efectivoEsperado||a.efectivo_esperado||0;
+    }else{
+      // fallback: calcular desde cobros, filtrando por turno
+      const cobsTurno=cobros.filter(c=>c.fecha===a.fecha&&Number(c.local)===Number(a.local)&&Number(c.turno||0)===Number(a.turno));
+      efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
+      efEsperado=ini+efCobros-totEgEf;
+    }
     const diff=efEnt>0?efEnt-efEsperado:null;
     const diffColor=diff===null?'var(--text-dim)':diff===0?'var(--success)':diff>0?'#f1c40f':'var(--danger)';
     const diffStr=diff===null?'—':diff===0?'✅ 0':diff>0?`+${fmt(diff)}`:`${fmt(diff)}`;
@@ -2916,7 +2907,7 @@ function calcComisionLista(cobros){
 async function refreshDash(){
   const cobros=await dbAll('cobros');const turnos=await dbAll('turnos');
   const cl=await dbAll('clientes');const barbs=await dbAll('barberos');
-  const td=hoy();const lc=cobros.filter(c=>Number(c.local)===Number(ST.localActivo));const hc=lc.filter(c=>c.fecha===td);
+  const td=hoy();const lc=cobros.filter(c=>c.local==ST.localActivo);const hc=lc.filter(c=>c.fecha===td);
   const tot=hc.reduce((s,c)=>s+c.total,0);const com=calcComisionLista(hc);
   const th=turnos.filter(t=>t.fecha===td&&t.local==ST.localActivo);
   const pen=th.filter(t=>t.estado!=='completado'&&t.estado!=='cancelado');
@@ -3708,32 +3699,8 @@ async function buscarYAplicarGiftcard(){
 
 // ══ CAJA INICIAL ══
 function getTurnoActual(){
-  // Fijado al login en ST.turnoActivo; fallback a hora solo si no hay sesión
-  return ST.turnoActivo||(new Date().getHours()<14?1:2);
-}
-
-// Versión async: cuando ST.turnoActivo es null busca el registro abierto
-// en caja_turnos antes de caer al reloj. Esto garantiza que el cajero del
-// turno 1 que sigue trabajando después de las 14h siempre vea sus propios datos.
-async function getTurnoDeRegistro(){
-  if(ST.turnoActivo) return ST.turnoActivo;
-  const rows=await dbAll('cajaTurnos');
-  const hoyStr=hoy();
-  const local=Number(ST.localActivo);
-  // 1. Turno abierto (sin hora de cierre) — el cajero sigue en turno
-  const abierto=rows.find(r=>r.fecha===hoyStr&&Number(r.local)===local
-    &&!(r.horaCierre||r.hora_cierre));
-  if(abierto) return Number(abierto.turno);
-  // 2. Último turno cerrado del día — para lectura histórica del mismo día
-  const cerrado=[...rows].filter(r=>r.fecha===hoyStr&&Number(r.local)===local)
-    .sort((a,b)=>Number(b.turno)-Number(a.turno))[0];
-  if(cerrado) return Number(cerrado.turno);
-  // 3. Fallback al reloj
-  return new Date().getHours()<14?1:2;
-}
-
-function getTurnoLabel(){
-  return `Cajero · Turno ${getTurnoActual()}`;
+  const h=new Date().getHours();
+  return h<14?1:2;
 }
 // ══════════════════════════════════════════════════════════════
 // [31] CAJA INICIAL — tabla caja_turnos separada de arqueos
@@ -3754,7 +3721,7 @@ async function saveCajaTurno(updates){
   const td=updates.fecha||hoy();
   const local=updates.local!=null?updates.local:ST.localActivo;
   const turno=updates.turno!=null?updates.turno:getTurnoActual();
-  const turnoLabel=`Turno ${turno}`;
+  const turnoLabel=turno===1?'Turno 1':'Turno 2';
   const ex=await getCajaTurno(td,local,turno);
   const merged={
     fecha:td,local,turno,turnoLabel,
@@ -3762,24 +3729,41 @@ async function saveCajaTurno(updates){
     cajaInicial:updates.cajaInicial!=null?updates.cajaInicial:(ex?.cajaInicial||ex?.caja_inicial||0),
     cajaInicialConfirmada:updates.cajaInicialConfirmada!=null?updates.cajaInicialConfirmada:(ex?.cajaInicialConfirmada||ex?.caja_inicial_confirmada||false),
     egresosEfectivo:updates.egresosEfectivo!=null?updates.egresosEfectivo:(ex?.egresosEfectivo||[]),
-    horaInicio:updates.horaInicio!=null?updates.horaInicio:(ex?.horaInicio||ex?.hora_inicio||""),
-    horaCierre:updates.horaCierre!=null?updates.horaCierre:(ex?.horaCierre||ex?.hora_cierre||""),
   };
   if(ex){merged.id=ex.id;await dbPut('cajaTurnos',merged);}
   else{await dbAdd('cajaTurnos',merged);}
   return merged;
 }
 
-// Popup automático de caja inicial deshabilitado
-async function mostrarCajaInicialSiNecesario(){ /* no-op */ }
-
+async function mostrarCajaInicialSiNecesario(){
+  if(!ST.user||ST.user.rol==='admin')return;
+  const key=getCajaKey();
+  if(localStorage.getItem(key)==='done')return;
+  // Verificar si ya existe en caja_turnos
+  const ct=await getCajaTurno(hoy(),ST.localActivo,getTurnoActual());
+  if(ct&&ct.cajaInicialConfirmada){localStorage.setItem(key,'done');return;}
+  // Si ya tenía caja inicial en arqueos (migración), usar ese valor
+  const arqs=await dbAll('arqueos');
+  const td=hoy();const turno=getTurnoActual();
+  const exArq=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&a.turno==turno);
+  if(exArq&&(exArq.cajaInicial||exArq.caja_inicial)){
+    // Migrar a caja_turnos
+    await saveCajaTurno({cajaInicial:exArq.cajaInicial||exArq.caja_inicial||0,cajaInicialConfirmada:true});
+    localStorage.setItem(key,'done');return;
+  }
+  const info=document.getElementById('cajaInicialInfo');
+  const turnoLabel=turno===1?'Turno 1 (8–14h)':'Turno 2 (14–20h)';
+  if(info)info.textContent=localNombre(ST.localActivo)+' · '+turnoLabel+' · '+hoy();
+  const el=document.getElementById('modalCajaInicial');
+  if(el)el.classList.add('visible');
+}
 
 async function guardarCajaInicial(){
   const monto=parseFloat(document.getElementById('cajaInicialMonto').value)||0;
   const nota=document.getElementById('cajaInicialNota').value.trim();
   await saveCajaTurno({cajaInicial:monto,cajaInicialConfirmada:true});
   localStorage.setItem(getCajaKey(),'done');
-  await logAct(`Registró caja inicial: ${fmt(monto)} · Turno ${getTurnoActual()}`);
+  await logAct('Registró caja inicial: '+fmt(monto)+' · '+(getTurnoActual()===1?'Turno 1':'Turno 2'));
   toast('Caja inicial registrada: '+fmt(monto),'success');
   document.getElementById('modalCajaInicial').classList.remove('visible');
   refreshCaja();
@@ -3801,20 +3785,9 @@ initDB().then(async()=>{
   if(savedUId){
     try{
       const u=await dbGet('usuarios',savedUId);
-      if(u&&u.estado==='activo'){
-        ST.user=u;
-        const _st=sessionStorage.getItem('tajos_turno');
-        if(_st) ST.turnoActivo=Number(_st);
-        showApp();
-      }
-      else{
-        sessionStorage.removeItem('tajos_uid');
-        sessionStorage.removeItem('tajos_turno');
-      }
-    }catch(e){
-      sessionStorage.removeItem('tajos_uid');
-      sessionStorage.removeItem('tajos_turno');
-    }
+      if(u&&u.estado==='activo'){ST.user=u;showApp();}
+      else{sessionStorage.removeItem('tajos_uid');}
+    }catch(e){sessionStorage.removeItem('tajos_uid');}
   }
 }).catch(err=>{
   console.error('DB Error:',err);
