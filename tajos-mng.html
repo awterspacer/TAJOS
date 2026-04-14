@@ -905,29 +905,29 @@ tbody tr:last-child td{border-bottom:none;}
             <div style="font-family:var(--font-cond);font-weight:700">JSON</div>
             <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px">Liviano · Recomendado</div>
           </div>
-          <div class="pay-method" id="fmtXML" onclick="selFmt('XML')" style="flex:1">
-            <span style="font-size:1.4rem;display:block;margin-bottom:4px">&lt;/&gt;</span>
-            <div style="font-family:var(--font-cond);font-weight:700">XML</div>
-            <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px">Legible · Compatible</div>
+          <div class="pay-method" id="fmtXLSX" onclick="selFmt('XLSX')" style="flex:1">
+            <span style="font-size:1.4rem;display:block;margin-bottom:4px">📊</span>
+            <div style="font-family:var(--font-cond);font-weight:700">XLSX</div>
+            <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px">Excel · Multi-hoja</div>
           </div>
         </div>
         <div id="backupResumen" style="background:var(--bg-raised);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:.85rem;color:var(--text-muted)">Cargando...</div>
         <button class="btn btn-gold" style="width:100%;padding:12px" onclick="exportarBackup()">⬇ Descargar Backup</button>
         <div class="divider" style="margin:14px 0"></div>
         <div style="font-family:var(--font-cond);font-size:.8rem;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">🗂 Archivado de Historial</div>
-        <div class="alert alert-warning" style="margin-bottom:10px;font-size:.82rem">Exporta como XML y elimina de la base de datos todos los registros del historial con más de 30 días.</div>
+        <div class="alert alert-warning" style="margin-bottom:10px;font-size:.82rem">Exporta como XLSX y elimina de la base de datos todos los registros del historial con más de 30 días.</div>
         <button class="btn btn-outline" style="width:100%" onclick="archivarHistorialAntiguo()">📦 Archivar historial &gt;30 días</button>
       </div>
       <div id="backupTabImportar" style="display:none">
         <div class="alert alert-danger" style="margin-bottom:14px">⚠ <strong>Atención:</strong> Importar un backup <strong>reemplazará todos los datos actuales</strong>.</div>
-        <div class="form-group"><label class="form-label">Seleccionar archivo de backup</label><input type="file" class="form-control" id="backupFileInput" accept=".json,.xml" onchange="previewBackup(this)"></div>
+        <div class="form-group"><label class="form-label">Seleccionar archivo de backup</label><input type="file" class="form-control" id="backupFileInput" accept=".json" onchange="previewBackup(this)"></div>
         <div id="backupPreview" style="display:none;background:var(--bg-raised);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:.85rem"></div>
         <button class="btn btn-danger" style="width:100%;padding:12px" id="btnImportar" disabled onclick="importarBackup()">⬆ Restaurar desde Backup</button>
       </div>
       <div id="backupTabInfo" style="display:none">
         <div class="card" style="margin-bottom:14px"><div class="card-title">☁ ¿Cómo funciona el almacenamiento?</div><p style="font-size:.88rem;color:var(--text-muted);line-height:1.6">Los datos se guardan en <strong style="color:var(--gold-light)">Supabase (nube)</strong> como fuente principal. El navegador mantiene una copia local en <strong style="color:var(--text-main)">IndexedDB</strong> como caché y fallback offline. Cuando la conexión vuelve, las operaciones pendientes se sincronizan automáticamente.</p></div>
         <div class="card" style="margin-bottom:14px"><div class="card-title">⚠ Consideraciones</div><div style="font-size:.85rem;color:var(--text-muted);line-height:1.8">• Sin conexión a internet, los datos se guardan <strong style="color:var(--gold-light)">localmente y se sincronizan al reconectar</strong><br>• La caché local se actualiza automáticamente al abrir cada sección<br>• Si limpiás la caché del navegador, los datos en Supabase no se pierden</div></div>
-        <div class="card"><div class="card-title">✅ Buenas prácticas</div><div style="font-size:.85rem;color:var(--text-muted);line-height:1.8">• Aún se recomienda exportar un backup <strong style="color:var(--text-main)">al final de cada jornada</strong> como respaldo adicional<br>• Usa JSON para uso general, XML si necesitas abrir en Excel<br>• El indicador verde/rojo en la esquina inferior derecha muestra el estado de conexión con Supabase</div></div>
+        <div class="card"><div class="card-title">✅ Buenas prácticas</div><div style="font-size:.85rem;color:var(--text-muted);line-height:1.8">• Aún se recomienda exportar un backup <strong style="color:var(--text-main)">al final de cada jornada</strong> como respaldo adicional<br>• Usa JSON para respaldo técnico, XLSX para abrir en Excel con múltiples hojas<br>• El indicador verde/rojo en la esquina inferior derecha muestra el estado de conexión con Supabase</div></div>
       </div>
     </div>
   </div>
@@ -947,7 +947,7 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="modal-footer" style="justify-content:space-between">
       <button class="btn btn-ghost" onclick="salirSinBackup()">Salir sin backup</button>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" onclick="exportarRapido('XML')">⬇ XML</button>
+        <button class="btn btn-outline" onclick="exportarRapido('XLSX')">⬇ XLSX</button>
         <button class="btn btn-gold" onclick="exportarRapido('JSON')">⬇ JSON y Salir</button>
       </div>
     </div>
@@ -1038,8 +1038,6 @@ const FIELD_TO_DB = {
   giftcardId:'giftcard_id',
   // Arqueos
   turnoLabel:'turno_label',
-  totalEfectivo:'total_efectivo',
-  efectivoEsperado:'efectivo_esperado',
   cajaInicial:'caja_inicial',
   verificadoPor:'verificado_por',
   verificadoAt:'verificado_at',
@@ -1060,7 +1058,7 @@ const SUPA_COLS={
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','created_at','updated_at']),
   usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
   historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
-  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','total_efectivo','efectivo_esperado','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','cerrado','created_at']),
+  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','cerrado','created_at']),
   caja_turnos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','caja_inicial_confirmada','egresos_efectivo','created_at','updated_at']),
   adelantos:new Set(['id','barbero_id','barbero_nombre','monto_solicitado','monto_aprobado','estado','fecha_solicitud','nota_solicitud','nota_admin','fecha_aprobacion','ts']),
   egresos:new Set(['id','barbero_id','barbero_nombre','producto_id','producto','cantidad','monto','nota','registrado_por','fecha','created_at']),
@@ -2534,15 +2532,9 @@ async function renderArqueo(){
         const egEf=ctA.egresosEfectivo||[];
         const totEgEf=egEf.reduce((s,e)=>s+(e.monto||0),0);
         const efEnt=a.efectivoEntregado||0;
-        let efCobros, efEsperado;
-        if(a.totalEfectivo!=null||a.total_efectivo!=null){
-          efCobros=a.totalEfectivo||a.total_efectivo||0;
-          efEsperado=a.efectivoEsperado||a.efectivo_esperado||0;
-        }else{
-          const cobsTurno=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo)&&Number(c.turno||0)===Number(a.turno));
-          efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
-          efEsperado=ini+efCobros-totEgEf;
-        }
+        const cobsTurno=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo));
+        const efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
+        const efEsperado=ini+efCobros-totEgEf;
         const diferencia=efEnt-efEsperado;
         return `<div class="arqueo-box" style="margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
@@ -2746,17 +2738,11 @@ async function _persistirArqueo(cerrar){
   const efectivoEntregado=parseFloat(document.getElementById('aqEfEntregado')?.value)||ex?.efectivoEntregado||0;
   const cobros=await dbAll('cobros');
   const h=cobros.filter(co=>co.fecha===td&&Number(co.local)===Number(ST.localActivo));
-  // total: suma de todos los métodos de pago (facturación total del turno)
-  const total=h.reduce((s,co)=>s+(co.total||0),0);
+  const total=h.reduce((s,co)=>s+co.total,0);
   const detalle={};METODOS.forEach(m=>{detalle[m.id]=h.reduce((s,co)=>s+(co.pagos||[]).filter(p=>p.metodo===m.id).reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);});
-  // totalEfectivo: solo cobros en efectivo del turno
-  const totalEfectivo=h.reduce((s,co)=>s+(co.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);
-  // efectivoEsperado = caja_inicial + efectivo_cobrado - egresos_efectivo
-  const totalEgresos=egresosEfectivo.reduce((s,e)=>s+(e.monto||0),0);
-  const efectivoEsperado=cajaInicial+totalEfectivo-totalEgresos;
   const data={
     fecha:td,local:ST.localActivo,turno,turnoLabel,
-    cajaInicial,total,totalEfectivo,efectivoEsperado,detalle,notas,
+    cajaInicial,total,detalle,notas,
     cajero:ex?.cajero||ct?.cajero||ST.user?.login,
     verificado:ex?.verificado||false,
     cerrado:cerrar?true:(ex?.cerrado||false),
@@ -2765,7 +2751,7 @@ async function _persistirArqueo(cerrar){
   if(ex){data.id=ex.id;await dbPut('arqueos',data);}
   else{await dbAdd('arqueos',data);}
   localStorage.setItem(getCajaKey(),'done');
-  return {cajaInicial,totalEfectivo,efectivoEsperado,efectivoEntregado};
+  return {cajaInicial,efectivoEntregado};
 }
 
 async function actualizarEstadoCaja(){
@@ -2779,8 +2765,8 @@ async function actualizarEstadoCaja(){
 
 async function guardarArqueo(){
   try{
-    const {cajaInicial,totalEfectivo,efectivoEsperado,efectivoEntregado}=await _persistirArqueo(true);
-    await logAct(`Guardó cierre de caja · ${localNombre(ST.localActivo)} · Turno ${getTurnoActual()} · Ef.Esperado: ${fmt(efectivoEsperado)} · Entregado: ${fmt(efectivoEntregado)}`);
+    const {cajaInicial,efectivoEntregado}=await _persistirArqueo(true);
+    await logAct(`Guardó cierre de caja · ${localNombre(ST.localActivo)} · Caja: ${fmt(cajaInicial)} · Entregado: ${fmt(efectivoEntregado)}`);
     toast('Cierre de caja enviado al administrador','success');
     closeModal('modalArqueo');refreshCaja();
   }catch(e){toast('Error al guardar: '+e.message,'error');}
@@ -2836,18 +2822,9 @@ async function renderArqueosAdmin(){
     const egEf=ctA.egresosEfectivo||[];
     const totEgEf=egEf.reduce((s,e)=>s+(e.monto||0),0);
     const efEnt=a.efectivoEntregado||0;
-    // Leer desde el registro si ya fue guardado con los nuevos campos;
-    // fallback a cálculo sobre cobros filtrados por turno (datos históricos)
-    let efCobros, efEsperado;
-    if(a.totalEfectivo!=null||a.total_efectivo!=null){
-      efCobros=a.totalEfectivo||a.total_efectivo||0;
-      efEsperado=a.efectivoEsperado||a.efectivo_esperado||0;
-    }else{
-      // fallback: calcular desde cobros, filtrando por turno
-      const cobsTurno=cobros.filter(c=>c.fecha===a.fecha&&Number(c.local)===Number(a.local)&&Number(c.turno||0)===Number(a.turno));
-      efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
-      efEsperado=ini+efCobros-totEgEf;
-    }
+    const cobsTurno=cobros.filter(c=>c.fecha===a.fecha&&Number(c.local)===Number(a.local));
+    const efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
+    const efEsperado=ini+efCobros-totEgEf;
     const diff=efEnt>0?efEnt-efEsperado:null;
     const diffColor=diff===null?'var(--text-dim)':diff===0?'var(--success)':diff>0?'#f1c40f':'var(--danger)';
     const diffStr=diff===null?'—':diff===0?'✅ 0':diff>0?`+${fmt(diff)}`:`${fmt(diff)}`;
@@ -3078,7 +3055,7 @@ function switchBackupTab(tab,el){
   if(tab==='exportar')cargarResumenBackup();
 }
 
-function selFmt(fmt){_bkpFmt=fmt;document.getElementById('fmtJSON').classList.toggle('active',fmt==='JSON');document.getElementById('fmtXML').classList.toggle('active',fmt==='XML');}
+function selFmt(fmt){_bkpFmt=fmt;document.getElementById('fmtJSON').classList.toggle('active',fmt==='JSON');const xEl=document.getElementById('fmtXLSX');if(xEl)xEl.classList.toggle('active',fmt==='XLSX');}
 
 async function cargarResumenBackup(){
   const labels={barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',productos:'Productos',turnos:'Turnos',cobros:'Cobros',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',barberoUsers:'Accesos Portal Barberos',adelantos:'Adelantos',egresos:'Egresos/Consumos',giftcards:'Giftcards'};
@@ -3101,12 +3078,12 @@ async function exportarBackup(){
     descargar(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`tajos_backup_${ts}_${user}.json`);
     await logAct('Exportó backup en formato JSON');toast('Backup JSON descargado','success');
   }else{
-    descargar(new Blob([jsonAXML(data)],{type:'application/xml'}),`tajos_backup_${ts}_${user}.xml`);
-    await logAct('Exportó backup en formato XML');toast('Backup XML descargado','success');
+    await exportarBackupXLSX(data,ts,user);
+    await logAct('Exportó backup en formato XLSX');toast('Backup XLSX descargado','success');
   }
 }
 
-async function exportarRapido(f){_bkpFmt=f;await exportarBackup();closeModal('modalRecordatorioBackup');await doLogout();}
+async function exportarRapido(f){_bkpFmt=(f==='XML'?'XLSX':f);await exportarBackup();closeModal('modalRecordatorioBackup');await doLogout();}
 
 async function archivarHistorialAntiguo(){
   // Exporta historial >30 días como XML y lo elimina de la DB
@@ -3115,16 +3092,10 @@ async function archivarHistorialAntiguo(){
   const viejos=logs.filter(l=>l.fecha<limDS);
   if(!viejos.length){toast('No hay registros de historial con más de 30 días','info');return;}
   // Generar XML del archivo
-  const esc=v=>v==null?'':String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TajosHistorialArchivo fecha="${new Date().toISOString()}" registros="${viejos.length}">\n`;
-  viejos.forEach(l=>{
-    xml+=`  <registro id="${esc(l.id)}">\n`;
-    Object.entries(l).filter(([k])=>k!=='id').forEach(([k,v])=>{xml+=`    <${k}>${esc(v)}</${k}>\n`;});
-    xml+=`  </registro>\n`;
-  });
-  xml+=`</TajosHistorialArchivo>`;
   const ts=hoy();
-  descargar(new Blob([xml],{type:'application/xml'}),`tajos_historial_archivo_${ts}.xml`);
+  // Generar XLSX del archivo de historial
+  const cols=viejos.length?Object.keys(viejos[0]):['id','usuario','nombre','rol','accion','fecha','hora'];
+  _xlsxDescargar([{nombre:'Historial Archivado',filas:viejos,cols}],`tajos_historial_archivo_${ts}`);
   // Eliminar de la DB
   for(const l of viejos)await dbDel('historial',l.id);
   await logAct(`Archivó y eliminó ${viejos.length} registros de historial anteriores a ${limDS}`);
@@ -3152,23 +3123,97 @@ async function verificarAlertaMensual(){
 
 function descargar(blob,nombre){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nombre;a.click();URL.revokeObjectURL(a.href);}
 
-function jsonAXML(data){
-  const esc=v=>v==null?'':String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TAJOS version="2.0" fecha="${esc(data._meta?.fecha)}">\n`;
-  for(const store of STORES){
-    const arr=data[store]||[];xml+=`  <${store} total="${arr.length}">\n`;
-    arr.forEach(item=>{
-      xml+=`    <registro id="${esc(item.id)}">\n`;
-      Object.entries(item).filter(([k])=>k!=='id').forEach(([k,v])=>{
-        if(Array.isArray(v))xml+=`      <${k}>${v.map(x=>typeof x==='object'&&x?`<item>${Object.entries(x).map(([ek,ev])=>`<${ek}>${esc(ev)}</${ek}>`).join('')}</item>`:`<item>${esc(x)}</item>`).join('')}</${k}>\n`;
-        else if(typeof v==='object'&&v)xml+=`      <${k}>${Object.entries(v).map(([ek,ev])=>`<${ek}>${esc(ev)}</${ek}>`).join('')}</${k}>\n`;
-        else xml+=`      <${k}>${esc(v)}</${k}>\n`;
-      });
-      xml+=`    </registro>\n`;
+// ══ XLSX BACKUP (SheetJS) ══
+// Convierte un valor a string seguro para celda
+function _xlsxVal(v){
+  if(v==null)return '';
+  if(typeof v==='object')return JSON.stringify(v);
+  return v;
+}
+
+// Genera y descarga un .xlsx real con SheetJS.
+// hojas: [{nombre, filas:[], cols:[]}]
+async function _xlsxDescargar(hojas, nombreArchivo){
+  // Cargar SheetJS dinámicamente si no está disponible
+  if(!window.XLSX){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload=res;s.onerror=rej;
+      document.head.appendChild(s);
     });
-    xml+=`  </${store}>\n`;
   }
-  return xml+`</TAJOS>`;
+  const wb=window.XLSX.utils.book_new();
+
+  hojas.forEach(({nombre,filas,cols})=>{
+    if(!filas||!filas.length){
+      // Hoja vacía con cabecera
+      const ws=window.XLSX.utils.aoa_to_sheet([cols||[]]);
+      window.XLSX.utils.book_append_sheet(wb,ws,nombre.slice(0,31));
+      return;
+    }
+    // Cabeceras + filas
+    const cabecera=cols||Object.keys(filas[0]||{});
+    const aoa=[cabecera,...filas.map(row=>cabecera.map(k=>_xlsxVal(row[k])))];
+    const ws=window.XLSX.utils.aoa_to_sheet(aoa);
+
+    // Estilo de cabecera: negrita + fondo oscuro dorado
+    const range=window.XLSX.utils.decode_range(ws['!ref']||'A1');
+    for(let c=range.s.c;c<=range.e.c;c++){
+      const addr=window.XLSX.utils.encode_cell({r:0,c});
+      if(!ws[addr])continue;
+      ws[addr].s={
+        font:{bold:true,color:{rgb:'FFFFFF'}},
+        fill:{fgColor:{rgb:'1A2744'}},
+        alignment:{horizontal:'center'},
+        border:{bottom:{style:'thin',color:{rgb:'C9940A'}}}
+      };
+    }
+    // Ancho automático por columna (máx 40 chars)
+    ws['!cols']=cabecera.map((k,ci)=>{
+      const maxLen=Math.min(40,Math.max(
+        String(k).length,
+        ...filas.slice(0,50).map(r=>String(_xlsxVal(r[k])).length)
+      ));
+      return {wch:maxLen+2};
+    });
+    // Filtros automáticos en la fila de cabecera
+    ws['!autofilter']={ref:`A1:${window.XLSX.utils.encode_col(cabecera.length-1)}1`};
+
+    window.XLSX.utils.book_append_sheet(wb,ws,nombre.slice(0,31));
+  });
+
+  const buf=window.XLSX.write(wb,{type:'array',bookType:'xlsx',cellStyles:true});
+  descargar(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${nombreArchivo}.xlsx`);
+}
+
+// Genera el backup completo como XLSX multi-hoja
+async function exportarBackupXLSX(data, ts, user){
+  const labels={
+    barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',
+    productos:'Productos',turnos:'Turnos',cobros:'Cobros',
+    usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',
+    barberoUsers:'Accesos Portal',adelantos:'Adelantos',
+    egresos:'Consumos',giftcards:'Giftcards',cajaTurnos:'Caja Turnos'
+  };
+  // Hoja de portada
+  const portada=[
+    ['TAJOS · Backup completo'],
+    [`Generado: ${new Date().toLocaleString('es-PY')}`],
+    [`Usuario: ${user}`],
+    [],
+    ['Tabla','Registros'],
+    ...STORES.map(s=>[labels[s]||s,(data[s]||[]).length])
+  ];
+
+  const hojas=[{nombre:'📋 Resumen',filas:portada.slice(4),cols:['Tabla','Registros']}];
+  // Una hoja por tabla
+  for(const store of STORES){
+    const filas=data[store]||[];
+    const nombre=(labels[store]||store).slice(0,31);
+    hojas.push({nombre,filas});
+  }
+  await _xlsxDescargar(hojas,`tajos_backup_${ts}_${user}`);
 }
 
 async function previewBackup(input){
@@ -3177,8 +3222,7 @@ async function previewBackup(input){
   try{
     const text=await file.text();let data;
     if(file.name.endsWith('.json'))data=JSON.parse(text);
-    else if(file.name.endsWith('.xml'))data=xmlAJSON(text);
-    else{prev.innerHTML='<span style="color:#e74c3c">Formato no soportado (.json o .xml)</span>';prev.style.display='block';btn.disabled=true;return;}
+    else{prev.innerHTML='<span style="color:#e74c3c">Solo se restaura desde .json (el .xlsx es solo lectura en Excel)</span>';prev.style.display='block';btn.disabled=true;return;}
     const labels={barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',productos:'Productos',turnos:'Turnos',cobros:'Cobros',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',barberoUsers:'Accesos Portal Barberos',adelantos:'Adelantos',egresos:'Egresos/Consumos',giftcards:'Giftcards'};
     prev.innerHTML=`<div style="font-family:var(--font-cond);font-size:.8rem;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">✅ Archivo válido — ${file.name}</div>`+
       STORES.map(s=>`<div style="display:flex;justify-content:space-between;padding:3px 0"><span>${labels[s]||s}</span><span style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${(data[s]||[]).length}</span></div>`).join('')+
