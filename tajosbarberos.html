@@ -3,2149 +3,1064 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TAJOS BARBEROS — Forjando al caballero perfecto</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Cinzel:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<title>TAJOS · Portal Barberos</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --gold: #fdd835;
-    --gold-dim: rgba(253,216,53,0.15);
-    --gold-border: rgba(253,216,53,0.25);
-    --bg: #0d1421;
-    --card: #1a2332;
-    --card-80: rgba(26,35,50,0.85);
-    --card-95: rgba(26,35,50,0.97);
-    --text: #ffffff;
-    --muted: #9aa3b2;
-    --green: #059669;
-  }
+:root{
+  --bg-deep:#0a0e1a;--bg-dark:#0f1525;--bg-card:#141b2d;--bg-raised:#1a2338;--bg-hover:#1f2a42;
+  --gold:#c9940a;--gold-light:#e8b020;--gold-pale:#f5cc60;--gold-dim:#6e500a;--gold-glow:rgba(201,148,10,0.18);
+  --text-main:#e8d9b0;--text-muted:#7a8aaa;--text-dim:#4a5570;
+  --danger:#c0392b;--danger-dim:rgba(192,57,43,0.15);
+  --success:#27ae60;--success-dim:rgba(39,174,96,0.15);
+  --border:rgba(201,148,10,0.18);--border-strong:rgba(201,148,10,0.4);
+  --radius:10px;--radius-lg:16px;
+  --shadow:0 4px 24px rgba(0,0,0,0.5);--shadow-gold:0 0 32px rgba(201,148,10,0.15);
+  --font-display:'Bebas Neue',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--font-body:'Barlow',sans-serif;
+  --topbar-h:60px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:15px;}
+body{background:var(--bg-deep);color:var(--text-main);font-family:var(--font-body);min-height:100vh;}
+::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:var(--bg-dark);}::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:3px;}
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    background-color: var(--bg);
-    color: var(--text);
-    font-family: 'Lato', sans-serif;
-    font-size: 16px;
-    line-height: 1.6;
-    overflow-x: hidden;
-  }
+/* LOGIN */
+#loginScreen{position:fixed;inset:0;background:var(--bg-deep);z-index:9000;display:flex;align-items:center;justify-content:center;}
+#loginScreen.hidden{display:none;}
+.login-box{background:var(--bg-card);border:1px solid var(--border-strong);border-radius:var(--radius-lg);padding:48px 40px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.7),var(--shadow-gold);animation:popIn .4s cubic-bezier(.34,1.56,.64,1);}
+.login-logo{text-align:center;margin-bottom:32px;}
+.login-logo .scissors{font-size:3rem;display:block;margin-bottom:8px;}
+.login-logo .brand{font-family:var(--font-display);font-size:2.6rem;color:var(--gold-light);letter-spacing:5px;}
+.login-logo .sub{font-size:.72rem;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+.login-error{background:var(--danger-dim);border:1px solid rgba(192,57,43,.4);border-radius:var(--radius);padding:10px 14px;font-size:.85rem;color:#e74c3c;margin-bottom:14px;display:none;align-items:center;gap:8px;}
+.login-error.show{display:flex;}
 
-  /* ── BG ── */
-  .bg-fixed {
-    position: fixed; inset: 0; z-index: -1;
-    background: url('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1800&q=80') center/cover no-repeat;
-  }
-  .bg-fixed::after {
-    content:''; position:absolute; inset:0;
-    background: rgba(13,20,33,0.88);
-  }
+/* APP */
+#app{display:none;flex-direction:column;min-height:100vh;}
+#app.show{display:flex;}
 
-  /* ── NAV ── */
-  .nav {
-    position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-    z-index: 50; display: flex; align-items: center; gap: 6px;
-    background: var(--card-80); backdrop-filter: blur(12px);
-    border: 1px solid rgba(253,216,53,0.45);
-    border-radius: 999px; padding: 6px 8px;
-    white-space: nowrap;
-  }
-  .nav-items { display: flex; gap: 4px; }
-  .nav-btn {
-    background: none; border: none; cursor: pointer;
-    color: var(--text); font-family: 'Lato', sans-serif;
-    font-size: 13px; padding: 6px 14px; border-radius: 999px;
-    transition: all .25s; letter-spacing: .04em;
-  }
-  .nav-btn:hover, .nav-btn.active { background: var(--gold); color: var(--bg); font-weight: 700; }
-  .nav-menu-btn {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: var(--gold); border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; transition: transform .2s;
-  }
-  .nav-menu-btn:hover { transform: scale(1.08); }
-  .nav-menu-btn svg { width: 16px; height: 16px; stroke: var(--bg); fill:none; stroke-width:2.5; stroke-linecap:round; }
+/* TOPBAR */
+#topbar{height:var(--topbar-h);background:var(--bg-dark);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;position:sticky;top:0;z-index:50;}
+.topbar-brand{font-family:var(--font-display);font-size:1.5rem;color:var(--gold-light);letter-spacing:3px;}
+.topbar-sep{color:var(--border-strong);font-size:1.2rem;}
+.topbar-user{font-family:var(--font-cond);font-size:1rem;color:var(--text-muted);font-weight:600;}
+.topbar-clock{font-family:var(--font-cond);font-size:1rem;color:var(--gold);font-weight:600;letter-spacing:1px;margin-left:auto;}
+.topbar-date{font-size:.75rem;color:var(--text-muted);}
 
-  @media(max-width:767px){
-    .nav-items .nav-btn:nth-child(n+4){ display:none; }
-  }
+/* NAV TABS */
+#navTabs{background:var(--bg-dark);border-bottom:1px solid var(--border);display:flex;padding:0 20px;gap:4px;overflow-x:auto;}
+.nav-tab{padding:12px 18px;font-family:var(--font-cond);font-weight:700;font-size:.9rem;color:var(--text-muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;margin-bottom:-1px;}
+.nav-tab:hover{color:var(--text-main);}
+.nav-tab.active{color:var(--gold-light);border-bottom-color:var(--gold);}
 
-  /* ── DROPDOWN ── */
-  .dropdown {
-    position: fixed; top: 72px; right: 20px; z-index: 45;
-    background: var(--card-95); backdrop-filter: blur(16px);
-    border: 1px solid rgba(253,216,53,0.45); border-radius: 12px;
-    padding: 18px; min-width: 240px;
-    transform: translateY(-8px) scale(.97); opacity: 0;
-    pointer-events: none; transition: all .25s;
-  }
-  .dropdown.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: all; }
-  .dropdown h4 { color: var(--gold); font-family: 'Cinzel',serif; font-size:13px; letter-spacing:.1em; margin-bottom:12px; }
-  .dd-item {
-    display: flex; align-items: center; gap: 10px;
-    width: 100%; background: none; border: none;
-    color: var(--text); font-family:'Lato',sans-serif; font-size:13px;
-    padding: 10px 12px; border-radius: 8px; cursor: pointer;
-    transition: all .2s; text-align: left;
-  }
-  .dd-item:hover { background: var(--gold-dim); color: var(--gold); }
-  .dd-item svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; flex-shrink:0; }
-  .overlay {
-    position: fixed; inset: 0; z-index: 40;
-    background: rgba(0,0,0,.3); opacity: 0; pointer-events:none; transition: opacity .2s;
-  }
-  .overlay.open { opacity:1; pointer-events:all; }
+/* CONTENT */
+#content{padding:24px 28px;flex:1;max-width:1100px;width:100%;margin:0 auto;}
+.page{display:none;}
+.page.active{display:block;}
 
-  /* ── SECTIONS ── */
-  section { padding: 80px 20px; position: relative; }
-  .container { max-width: 1152px; margin: 0 auto; }
-  .section-title {
-    font-family: 'Cinzel', serif;
-    font-size: clamp(1.8rem, 4vw, 2.6rem);
-    color: var(--gold); text-align: center;
-    letter-spacing: .08em; margin-bottom: 48px;
-  }
+/* CARDS */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow);}
+.card:hover{border-color:var(--border-strong);}
+.card-title{font-family:var(--font-cond);font-size:1rem;font-weight:700;color:var(--gold-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;position:relative;overflow:hidden;transition:transform .2s;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent);}
+.stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-gold);}
+.stat-label{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-cond);}
+.stat-value{font-family:var(--font-display);font-size:2rem;color:var(--gold-light);letter-spacing:1px;margin:4px 0;}
+.stat-sub{font-size:.75rem;color:var(--text-dim);}
+.stat-icon{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:2rem;opacity:.12;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
 
-  /* ── HERO ── */
-  #home {
-    min-height: 100vh; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; text-align: center;
-    padding: 80px 20px;
-  }
-  .hero-logo {
-    width: 110px; height: 110px; margin-bottom: 32px;
-    background: var(--gold); border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-family:'Cinzel',serif; font-size: 28px; font-weight:700; color: var(--bg);
-    box-shadow: 0 0 40px rgba(253,216,53,0.4);
-    animation: logoPulse 3s ease-in-out infinite;
-  }
-  @keyframes logoPulse {
-    0%,100%{ box-shadow: 0 0 40px rgba(253,216,53,0.4); }
-    50%{ box-shadow: 0 0 70px rgba(253,216,53,0.7); }
-  }
-  .hero-title {
-    font-family: 'Cinzel', serif;
-    font-size: clamp(3.5rem, 12vw, 8rem);
-    font-weight: 700; color: var(--gold);
-    letter-spacing: .18em; line-height: 1;
-    animation: fadeUp .8s ease both;
-  }
-  .hero-sub {
-    font-family:'Cinzel',serif;
-    font-size: clamp(1rem,3vw, 1.5rem);
-    font-weight:400; letter-spacing:.4em;
-    color:rgba(253,216,53,.6); margin-bottom:24px;
-    animation: fadeUp .8s .15s ease both;
-  }
-  .hero-tagline {
-    font-size: clamp(1rem, 2.5vw, 1.25rem);
-    color: rgba(255,255,255,.85); max-width: 540px;
-    font-family:'Cormorant Garamond',serif; font-style:italic;
-    font-size:1.3rem; line-height:1.7;
-    animation: fadeUp .8s .3s ease both;
-  }
-  .hero-cta {
-    margin-top: 40px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
-    animation: fadeUp .8s .45s ease both;
-  }
-  @keyframes fadeUp {
-    from { opacity:0; transform: translateY(20px); }
-    to   { opacity:1; transform: translateY(0); }
-  }
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.section-title{font-family:var(--font-display);font-size:1.8rem;color:var(--text-main);letter-spacing:2px;}
+.section-sub{font-size:.82rem;color:var(--text-muted);margin-top:2px;}
 
-  /* ── BUTTONS ── */
-  .btn-primary {
-    background: var(--gold); color: var(--bg);
-    font-family:'Cinzel',serif; font-size:13px; letter-spacing:.1em;
-    padding: 14px 32px; border-radius: 8px; border: none; cursor:pointer;
-    font-weight: 600; transition: all .25s;
-  }
-  .btn-primary:hover { opacity:.88; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(253,216,53,.3); }
-  .btn-outline {
-    background: transparent; color: var(--gold);
-    font-family:'Cinzel',serif; font-size:13px; letter-spacing:.1em;
-    padding: 14px 32px; border-radius: 8px; border: 1.5px solid var(--gold);
-    cursor:pointer; font-weight:600; transition: all .25s;
-  }
-  .btn-outline:hover { background: var(--gold-dim); transform: translateY(-1px); }
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 18px;border-radius:var(--radius);border:none;font-family:var(--font-cond);font-size:.9rem;font-weight:600;letter-spacing:.5px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#0a0e1a;box-shadow:0 2px 12px rgba(201,148,10,.3);}
+.btn-gold:hover{box-shadow:0 4px 20px rgba(201,148,10,.5);transform:translateY(-1px);}
+.btn-outline{background:transparent;border:1px solid var(--border-strong);color:var(--gold-light);}
+.btn-outline:hover{background:var(--gold-glow);}
+.btn-ghost{background:var(--bg-raised);color:var(--text-main);}
+.btn-ghost:hover{background:var(--bg-hover);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-danger:hover{background:#e74c3c;}
+.btn-sm{padding:5px 12px;font-size:.8rem;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
 
-  /* ── BRANDS ── */
-  #brands { background: rgba(26,35,50,.4); backdrop-filter: blur(8px); }
-  .brands-track-wrap { overflow: hidden; }
-  .brands-track {
-    display: flex; gap: 48px; align-items: center;
-    animation: scrollLeft 30s linear infinite;
-    width: max-content;
-  }
-  @keyframes scrollLeft {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
-  }
-  .brand-card {
-    width: 130px; height: 70px; flex-shrink:0;
-    background: rgba(255,255,255,.06); backdrop-filter:blur(4px);
-    border: 1px solid var(--gold-border); border-radius:8px;
-    display: flex; align-items:center; justify-content:center;
-    padding:12px; transition: all .3s; cursor:default;
-  }
-  .brand-card:hover { border-color: var(--gold); background: var(--gold-dim); }
-  .brand-card span {
-    font-family:'Cinzel',serif; font-size:11px; letter-spacing:.12em;
-    color: rgba(255,255,255,.55); transition: color .3s; text-align:center;
-    font-weight:600; text-transform: uppercase;
-  }
-  .brand-card:hover span { color: var(--gold); }
-  .brands-desc { text-align:center; color:var(--muted); font-size:14px; margin-top:28px; font-style:italic; }
+/* FORMS */
+.form-group{margin-bottom:14px;}
+.form-label{display:block;font-size:.78rem;color:var(--text-muted);margin-bottom:5px;font-family:var(--font-cond);letter-spacing:.5px;text-transform:uppercase;}
+.form-control{width:100%;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-main);padding:9px 13px;font-family:var(--font-body);font-size:.9rem;transition:border-color .2s;outline:none;}
+.form-control:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,148,10,.12);}
+.form-control::placeholder{color:var(--text-dim);}
+select.form-control option{background:var(--bg-card);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 
-  /* ── GALLERY ── */
-  .gallery-viewport { overflow: hidden; }
-  .gallery-track {
-    display: flex; gap: 20px;
-    transition: transform .5s cubic-bezier(.4,0,.2,1);
-  }
-  .gallery-slide {
-    flex: 0 0 calc(33.333% - 14px);
-    border-radius: 10px; overflow:hidden;
-    border: 1px solid var(--gold-border);
-    position:relative; cursor:pointer;
-    transition: border-color .3s;
-  }
-  .gallery-slide:hover { border-color: var(--gold); }
-  @media(max-width:900px){ .gallery-slide{ flex: 0 0 calc(50% - 10px); } }
-  @media(max-width:600px){ .gallery-slide{ flex: 0 0 100%; } }
-  .gallery-img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; transition: transform .4s; }
-  .gallery-slide:hover .gallery-img { transform: scale(1.05); }
-  .gallery-overlay {
-    position:absolute; inset:0;
-    background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.2) 50%, transparent 100%);
-  }
-  .gallery-text { position:absolute; bottom:0; left:0; right:0; padding:20px; }
-  .gallery-text h3 { font-family:'Cinzel',serif; color:var(--gold); font-size:1rem; letter-spacing:.06em; margin-bottom:6px; }
-  .gallery-text p  { color:rgba(255,255,255,.8); font-size:.85rem; line-height:1.5; }
-  .gallery-nav { display:flex; justify-content:center; gap:10px; margin-top:24px; }
-  .gallery-arrow {
-    width:40px; height:40px; border-radius:50%; background:var(--gold);
-    border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
-    transition: opacity .2s;
-  }
-  .gallery-arrow:hover { opacity:.8; }
-  .gallery-arrow svg { width:16px; height:16px; stroke:var(--bg); fill:none; stroke-width:2.5; }
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);}
+table{width:100%;border-collapse:collapse;font-size:.88rem;}
+thead tr{background:var(--bg-raised);}
+th{padding:10px 14px;text-align:left;font-family:var(--font-cond);font-size:.75rem;letter-spacing:1px;color:var(--gold);text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:10px 14px;border-bottom:1px solid rgba(201,148,10,.06);vertical-align:middle;}
+tbody tr:hover{background:rgba(201,148,10,.04);}
+tbody tr:last-child td{border-bottom:none;}
 
-  /* ── TESTIMONIALS ── */
-  #testimonials { background: rgba(13,20,33,.5); }
-  .testimonials-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:28px; }
-  .testi-card {
-    background: var(--card-80); backdrop-filter:blur(10px);
-    border:1px solid rgba(253,216,53,.45); border-radius:12px;
-    padding:28px; transition: border-color .3s, transform .3s;
-  }
-  .testi-card:hover { border-color:var(--gold); transform: translateY(-3px); }
-  .stars { display:flex; gap:4px; margin-bottom:16px; }
-  .star { color:var(--gold); font-size:16px; }
-  .testi-quote {
-    font-family:'Cormorant Garamond',serif; font-style:italic;
-    font-size:1.05rem; line-height:1.7; color:rgba(255,255,255,.85);
-    margin-bottom:22px;
-  }
-  .testi-client { display:flex; align-items:center; gap:12px; }
-  .testi-avatar {
-    width:46px; height:46px; border-radius:50%;
-    background: var(--gold); display:flex; align-items:center; justify-content:center;
-    font-family:'Cinzel',serif; font-weight:700; color:var(--bg); font-size:1rem; flex-shrink:0;
-  }
-  .testi-name { font-family:'Cinzel',serif; color:var(--gold); font-size:.9rem; letter-spacing:.05em; }
-  .testi-role { color:var(--muted); font-size:.8rem; }
+/* BADGE */
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:.72rem;font-family:var(--font-cond);font-weight:600;text-transform:uppercase;}
+.badge-gold{background:rgba(201,148,10,.18);color:var(--gold-light);}
+.badge-green{background:rgba(39,174,96,.15);color:#2ecc71;}
+.badge-red{background:rgba(192,57,43,.15);color:#e74c3c;}
+.badge-blue{background:rgba(41,128,185,.2);color:#5dade2;}
+.badge-gray{background:rgba(255,255,255,.06);color:var(--text-muted);}
+.badge-yellow{background:rgba(241,196,15,.15);color:#f1c40f;}
 
-  /* ── LOCATIONS ── */
-  .locations-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:28px; }
-  .loc-card {
-    background: var(--card); border:1px solid var(--gold-border);
-    border-radius:12px; overflow:hidden; cursor:pointer;
-    transition: border-color .3s, transform .3s;
-  }
-  .loc-card:hover { border-color:var(--gold); transform: translateY(-4px); box-shadow:0 16px 40px rgba(0,0,0,.4); }
-  .loc-img-wrap { position:relative; aspect-ratio:16/9; overflow:hidden; }
-  .loc-img { width:100%; height:100%; object-fit:cover; display:block; transition: transform .4s; }
-  .loc-card:hover .loc-img { transform: scale(1.06); }
-  .loc-img-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(26,35,50,.8) 0%,transparent 60%); }
-  .loc-body { padding:22px; }
-  .loc-name { font-family:'Cinzel',serif; color:var(--gold); font-size:1.1rem; letter-spacing:.08em; margin-bottom:8px; }
-  .loc-addr { display:flex; align-items:flex-start; gap:8px; color:rgba(255,255,255,.75); font-size:.85rem; }
-  .loc-addr svg { width:14px; height:14px; stroke:var(--gold); fill:none; stroke-width:2; flex-shrink:0; margin-top:2px; }
-  .loc-badge {
-    display:inline-block; background:var(--gold-dim); color:var(--gold);
-    font-family:'Cinzel',serif; font-size:.7rem; letter-spacing:.1em;
-    padding:3px 10px; border-radius:999px; border:1px solid var(--gold-border); margin-top:10px;
-  }
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.show{display:flex;animation:fadeIn .2s ease;}
+.modal{background:var(--bg-card);border:1px solid var(--border-strong);border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.7),var(--shadow-gold);animation:popIn .25s cubic-bezier(.34,1.56,.64,1);}
+.modal-lg{max-width:720px;}
+.modal-header{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-family:var(--font-cond);font-size:1.1rem;font-weight:700;color:var(--gold-light);text-transform:uppercase;letter-spacing:1px;}
+.modal-close{background:none;border:none;color:var(--text-muted);font-size:1.4rem;cursor:pointer;transition:color .2s;}
+.modal-close:hover{color:var(--text-main);}
+.modal-body{padding:20px 22px;}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
 
-  /* ── MODAL ── */
-  .modal-backdrop {
-    position:fixed; inset:0; z-index:60;
-    background:rgba(0,0,0,.65); backdrop-filter:blur(4px);
-    display:flex; align-items:center; justify-content:center;
-    padding:20px; opacity:0; pointer-events:none; transition: opacity .25s;
-  }
-  .modal-backdrop.open { opacity:1; pointer-events:all; }
-  .modal {
-    background: var(--card); border:1px solid rgba(253,216,53,.5);
-    border-radius:14px; max-width:660px; width:100%;
-    max-height:85vh; overflow-y:auto; padding:28px;
-    transform: scale(.95); transition: transform .25s;
-  }
-  .modal-backdrop.open .modal { transform: scale(1); }
-  .modal-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; }
-  .modal-title { font-family:'Cinzel',serif; color:var(--gold); font-size:1.4rem; letter-spacing:.08em; }
-  .modal-close {
-    width:32px; height:32px; border-radius:50%; background:none;
-    border:1px solid var(--gold-border); cursor:pointer; color:var(--muted);
-    display:flex; align-items:center; justify-content:center; transition:.2s;
-  }
-  .modal-close:hover { background:var(--gold-dim); color:var(--gold); }
-  .modal-close svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2.5; }
-  .modal-gallery { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
-  .modal-gallery img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; }
-  .modal-desc { color:rgba(255,255,255,.75); font-size:.92rem; line-height:1.7; margin-bottom:20px; }
-  .modal-info { display:flex; flex-direction:column; gap:10px; margin-bottom:24px; }
-  .modal-info-row { display:flex; align-items:flex-start; gap:10px; font-size:.88rem; color:rgba(255,255,255,.7); }
-  .modal-info-row svg { width:15px; height:15px; stroke:var(--gold); fill:none; stroke-width:2; flex-shrink:0; margin-top:2px; }
+/* TOAST */
+#toastContainer{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--bg-raised);border:1px solid var(--border-strong);border-radius:var(--radius);padding:12px 18px;min-width:240px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);font-size:.88rem;animation:slideIn .3s cubic-bezier(.34,1.56,.64,1);}
+.toast.out{animation:slideOut .25s ease forwards;}
+.toast-success{border-left:3px solid var(--success);}
+.toast-error{border-left:3px solid var(--danger);}
+.toast-info{border-left:3px solid var(--gold);}
 
-  /* ── EVENTS ── */
-  #events { background: rgba(26,35,50,.35); }
-  .events-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:28px; }
-  .event-card {
-    border:1px solid rgba(253,216,53,.4); border-radius:12px;
-    overflow:hidden; position:relative;
-    transition: border-color .3s, transform .3s;
-  }
-  .event-card:hover { border-color:var(--gold); transform: translateY(-4px); }
-  .event-img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; transition: transform .4s; }
-  .event-card:hover .event-img { transform: scale(1.05); }
-  .event-badge {
-    position:absolute; top:14px; left:14px;
-    display:flex; align-items:center; gap:6px;
-    padding:4px 12px; border-radius:999px; font-size:.75rem; font-family:'Cinzel',serif; letter-spacing:.08em;
-  }
-  .badge-promo { background:var(--green); color:#fff; }
-  .badge-event { background:var(--gold); color:var(--bg); }
-  .event-overlay {
-    position:absolute; inset:0;
-    background:linear-gradient(to top, rgba(0,0,0,.9) 0%, rgba(0,0,0,.1) 55%, transparent 100%);
-  }
-  .event-text { position:absolute; bottom:0; left:0; right:0; padding:22px; }
-  .event-text h3 { font-family:'Cinzel',serif; color:var(--gold); font-size:1rem; letter-spacing:.05em; margin-bottom:8px; }
-  .event-text p  { color:rgba(255,255,255,.8); font-size:.83rem; line-height:1.5; margin-bottom:12px; }
-  .event-meta { display:flex; gap:14px; flex-wrap:wrap; }
-  .event-meta span { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:.75rem; }
-  .event-meta svg { width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:2; }
-  .newsletter { text-align:center; margin-top:48px; }
-  .newsletter p { color:var(--muted); font-size:.95rem; margin-bottom:16px; }
+/* AGENDA */
+.agenda-nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.agenda-date-label{font-family:var(--font-cond);font-size:1.1rem;font-weight:700;color:var(--text-main);min-width:200px;text-align:center;}
+.slot-cell{min-height:48px;border-radius:6px;padding:6px 8px;font-size:.82rem;cursor:pointer;transition:opacity .15s;margin:2px 0;}
+.slot-occupied{background:linear-gradient(135deg,rgba(201,148,10,.25),rgba(201,148,10,.12));border:1px solid rgba(201,148,10,.4);}
+.slot-empty{background:rgba(255,255,255,.02);border:1px dashed rgba(201,148,10,.1);color:var(--text-dim);font-size:.72rem;display:flex;align-items:center;justify-content:center;}
+.time-label{font-family:var(--font-cond);font-size:.78rem;color:var(--text-muted);padding:14px 8px 0;text-align:right;white-space:nowrap;}
 
-  /* ── FOOTER ── */
-  footer {
-    background: var(--card); border-top:1px solid rgba(253,216,53,.3);
-    padding:52px 20px; text-align:center;
-  }
-  .footer-title { font-family:'Cinzel',serif; color:var(--gold); font-size:1.4rem; letter-spacing:.15em; margin-bottom:28px; }
-  .socials { display:flex; justify-content:center; gap:18px; margin-bottom:36px; }
-  .social-btn {
-    width:48px; height:48px; border-radius:50%;
-    background: var(--gold-dim); border:1px solid var(--gold-border);
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; text-decoration:none; transition: all .3s;
-  }
-  .social-btn:hover { background:var(--gold); }
-  .social-btn:hover svg { stroke:var(--bg); }
-  .social-btn svg { width:20px; height:20px; stroke:var(--gold); fill:none; stroke-width:1.8; }
-  .footer-sep { border:none; border-top:1px solid rgba(253,216,53,.2); margin:0 0 20px; }
-  .footer-copy { color:var(--muted); font-size:.82rem; letter-spacing:.04em; }
+/* COMM BAR */
+.bar-wrap{background:var(--bg-raised);border-radius:4px;height:8px;overflow:hidden;margin:6px 0;}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:4px;transition:width .6s ease;}
 
-  /* ── FLOATING BUTTON ── */
-  .fab-wrap { position:fixed; bottom:28px; right:28px; z-index:50; }
-  .fab {
-    width:60px; height:60px; border-radius:50%;
-    background:var(--gold); border:none; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 4px 20px rgba(253,216,53,.5); transition: all .3s; position:relative;
-  }
-  .fab:hover { transform:scale(1.1); box-shadow:0 8px 30px rgba(253,216,53,.6); }
-  .fab svg { width:24px; height:24px; stroke:var(--bg); fill:none; stroke-width:2.5; }
-  .fab-pulse {
-    position:absolute; top:-2px; right:-2px;
-    width:14px; height:14px; border-radius:50%; background:#ef4444;
-    animation: pulse 1.8s infinite;
-  }
-  @keyframes pulse {
-    0%,100%{ transform:scale(1); opacity:1; }
-    50%{ transform:scale(1.5); opacity:.5; }
-  }
-  .fab-tooltip {
-    position:absolute; bottom:68px; right:0;
-    background:var(--card-95); backdrop-filter:blur(8px);
-    border:1px solid var(--gold-border); border-radius:8px;
-    padding:8px 14px; white-space:nowrap; font-size:.8rem; color:var(--text);
-    opacity:0; pointer-events:none; transition: opacity .2s; font-family:'Cinzel',serif; letter-spacing:.08em;
-  }
-  .fab-wrap:hover .fab-tooltip { opacity:1; }
-  .fab-menu {
-    position:absolute; bottom:72px; right:0;
-    background:var(--card-95); backdrop-filter:blur(12px);
-    border:1px solid rgba(253,216,53,.45); border-radius:14px;
-    padding:16px; min-width:220px;
-    transform: translateY(10px) scale(.95); opacity:0;
-    pointer-events:none; transition: all .25s;
-  }
-  .fab-menu.open { transform: translateY(0) scale(1); opacity:1; pointer-events:all; }
-  .fab-menu-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-  .fab-menu-header span { font-family:'Cinzel',serif; color:var(--gold); font-size:.85rem; letter-spacing:.08em; }
-  .fab-close { background:none; border:none; cursor:pointer; color:var(--muted); display:flex; padding:4px; border-radius:50%; transition:.2s; }
-  .fab-close:hover { background:var(--gold-dim); color:var(--gold); }
-  .fab-close svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2.5; }
-  .service-btn {
-    display:flex; align-items:center; gap:10px;
-    width:100%; background:none; border:1px solid transparent;
-    color:var(--text); font-family:'Lato',sans-serif; font-size:.85rem;
-    padding:10px 12px; border-radius:10px; cursor:pointer; transition: all .2s;
-    text-align:left;
-  }
-  .service-btn:hover { background:var(--gold-dim); color:var(--gold); border-color:rgba(253,216,53,.2); }
-  .service-icon { font-size:18px; width:26px; flex-shrink:0; }
+/* MISC */
+.divider{height:1px;background:var(--border);margin:16px 0;}
+.empty-state{text-align:center;padding:40px 24px;color:var(--text-dim);}
+.empty-state .icon{font-size:3rem;margin-bottom:12px;opacity:.4;}
+.empty-state p{font-size:.9rem;}
+.alert{padding:11px 16px;border-radius:var(--radius);font-size:.85rem;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px;}
+.alert-info{background:rgba(41,128,185,.12);border:1px solid rgba(41,128,185,.3);color:#5dade2;}
+.alert-warning{background:rgba(201,148,10,.1);border:1px solid var(--border-strong);color:var(--gold-light);}
+.alert-success{background:var(--success-dim);border:1px solid rgba(39,174,96,.3);color:#2ecc71;}
+.alert-danger{background:var(--danger-dim);border:1px solid rgba(192,57,43,.3);color:#e74c3c;}
+.pending-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px rgba(201,148,10,.6);margin-right:4px;animation:pulse 1.5s infinite;}
 
-  /* ── DIVIDER ── */
-  .gold-divider { width:60px; height:2px; background:var(--gold); margin:0 auto 24px; opacity:.6; }
+/* REPORT PERIOD TABS */
+.period-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;}
+.period-tab{padding:6px 16px;border-radius:20px;font-family:var(--font-cond);font-weight:600;font-size:.82rem;cursor:pointer;border:1px solid var(--border);color:var(--text-muted);transition:all .2s;letter-spacing:.5px;}
+.period-tab:hover{border-color:var(--gold-dim);color:var(--text-main);}
+.period-tab.active{background:var(--gold);color:#000;border-color:var(--gold);}
 
-  /* ── UTILS ── */
-  .text-gold { color:var(--gold); }
-  .text-muted { color:var(--muted); }
-  .text-center { text-align:center; }
-  .mt-4 { margin-top:1rem; }
-  .mb-2 { margin-bottom:.5rem; }
+/* ADELANTO STATUS */
+.adelanto-pending{background:rgba(241,196,15,.08);border-left:3px solid #f1c40f;}
+.adelanto-approved{background:rgba(39,174,96,.08);border-left:3px solid var(--success);}
+.adelanto-rejected{background:var(--danger-dim);border-left:3px solid var(--danger);}
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width:6px; }
-  ::-webkit-scrollbar-track { background:var(--bg); }
-  ::-webkit-scrollbar-thumb { background:rgba(253,216,53,.3); border-radius:3px; }
+/* ANIMATIONS */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(50px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideOut{to{opacity:0;transform:translateX(50px)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-  /* ═══════════════════════════════════════════
-     PÁGINAS INTERNAS — SISTEMA COMPARTIDO
-  ═══════════════════════════════════════════ */
+/* PRINT */
+@media print{
+  #loginScreen,#topbar,#navTabs,.btn,.no-print{display:none!important;}
+  body{background:#fff !important;color:#1a3a6b !important;}
+  .card,.stat-card,.modal,.table-wrap{border-color:#1a3a6b !important;background:#fff !important;box-shadow:none !important;}
+  .card-title,.stat-label,.section-title,.topbar-brand{color:#1a3a6b !important;}
+  .stat-value,.history-amount,.bar-fill{color:#1a3a6b !important;background:#1a3a6b !important;}
+  th{color:#1a3a6b !important;border-color:#1a3a6b !important;}
+  td{border-color:rgba(26,58,107,.15) !important;color:#1a3a6b !important;}
+  .badge{border:1px solid #1a3a6b !important;color:#1a3a6b !important;background:#fff !important;}
+  .bar-wrap{background:#e8eef8 !important;}
+  .bar-fill{background:#1a3a6b !important;}
+  .stat-card::before{background:#1a3a6b !important;}
+  thead tr{background:#e8eef8 !important;}
+  #content{padding:0 !important;max-width:100% !important;}
+  .page{display:block !important;}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr 1fr !important;}
+  .alert{border-color:#1a3a6b !important;color:#1a3a6b !important;background:#e8eef8 !important;}
+}
 
-  /* ── PAGE WRAPPER ── */
-  .page-view {
-    display: none;
-    min-height: 100vh;
-    padding: 80px 20px 60px;
-    animation: fadeUp .4s ease both;
-  }
-  .page-view.active { display: block; }
-
-  /* ── PAGE HEADER ── */
-  .page-header {
-    display: flex; align-items: flex-start; gap: 16px;
-    margin-bottom: 48px; padding-top: 12px;
-  }
-  .page-back {
-    width: 40px; height: 40px; border-radius: 8px;
-    background: none; border: 1.5px solid var(--gold-border);
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; transition: all .2s; color: var(--gold);
-  }
-  .page-back:hover { background: var(--gold-dim); border-color: var(--gold); }
-  .page-back svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.5; }
-  .page-header-text h1 {
-    font-family: 'Cinzel', serif;
-    font-size: clamp(1.6rem, 4vw, 2.2rem);
-    color: var(--gold); letter-spacing: .08em; margin-bottom: 6px;
-  }
-  .page-header-text p { color: var(--muted); font-size: .95rem; }
-
-  /* ── PAGE CARDS ── */
-  .pg-card {
-    background: var(--card); border: 1px solid var(--gold-border);
-    border-radius: 12px; overflow: hidden;
-    transition: border-color .3s;
-  }
-  .pg-card:hover { border-color: rgba(253,216,53,.5); }
-  .pg-card-body { padding: 28px; }
-  .pg-card-cta {
-    background: rgba(253,216,53,.08);
-    border: 1px solid rgba(253,216,53,.2);
-    border-radius: 12px; padding: 40px 28px; text-align: center;
-  }
-  .pg-card-cta h2 { font-family:'Cinzel',serif; color:var(--gold); font-size:1.6rem; letter-spacing:.06em; margin-bottom:16px; }
-  .pg-card-cta p { color:var(--muted); max-width:540px; margin:0 auto 28px; line-height:1.7; }
-  .btn-group { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
-
-  /* ── GRID HELPERS ── */
-  .grid-3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:24px; }
-  .grid-2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:24px; }
-  .grid-4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:24px; }
-  .grid-2-split { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
-  @media(max-width:700px){ .grid-2-split { grid-template-columns:1fr; } }
-
-  /* ── SECTION BLOCK ── */
-  .pg-section { margin-bottom: 48px; }
-  .pg-section-header { margin-bottom: 28px; }
-  .pg-section-header h2 { font-family:'Cinzel',serif; color:var(--gold); font-size:1.5rem; letter-spacing:.07em; margin-bottom:8px; }
-  .pg-section-header p { color:var(--muted); font-size:.92rem; line-height:1.6; }
-  .pg-section-header.center { text-align:center; }
-
-  /* ── ICON BOX ── */
-  .icon-box {
-    width:56px; height:56px; border-radius:12px;
-    background: var(--gold-dim); border:1px solid var(--gold-border);
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  }
-  .icon-box svg { width:24px; height:24px; stroke:var(--gold); fill:none; stroke-width:2; }
-  .icon-box.lg { width:72px; height:72px; border-radius:50%; }
-  .icon-box.lg svg { width:32px; height:32px; }
-
-  /* ── FEATURE ROW ── */
-  .feature-row { display:flex; align-items:flex-start; gap:16px; margin-bottom:20px; }
-  .feature-row:last-child { margin-bottom:0; }
-  .feature-text h3 { font-family:'Cinzel',serif; color:var(--text); font-size:1rem; letter-spacing:.05em; margin-bottom:4px; }
-  .feature-text p { color:var(--muted); font-size:.88rem; line-height:1.6; }
-
-  /* ── SKILL BULLET ── */
-  .skill-list { list-style:none; display:flex; flex-direction:column; gap:8px; }
-  .skill-list li { display:flex; align-items:center; gap:10px; color:rgba(255,255,255,.8); font-size:.9rem; }
-  .skill-list li::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--gold); flex-shrink:0; }
-
-  /* ── PRICE TAG ── */
-  .price-tag { font-family:'Cinzel',serif; color:var(--gold); font-size:1.8rem; letter-spacing:.04em; margin:16px 0 12px; }
-
-  /* ── BADGE PILL ── */
-  .badge-pill {
-    display:inline-block; background:var(--gold-dim); color:var(--gold);
-    font-family:'Cinzel',serif; font-size:.7rem; letter-spacing:.1em;
-    padding:3px 12px; border-radius:999px; border:1px solid var(--gold-border);
-  }
-  .badge-pill.active-pill { background:var(--gold); color:var(--bg); }
-
-  /* ══════════════════════════
-     ACADEMY PAGE
-  ══════════════════════════ */
-
-  /* Hero banner */
-  .academy-hero {
-    position: relative; border-radius: 16px; overflow:hidden;
-    height: 300px; margin-bottom:48px;
-  }
-  @media(max-width:600px){ .academy-hero { height: 220px; } }
-  .academy-hero img { width:100%; height:100%; object-fit:cover; display:block; }
-  .academy-hero-overlay {
-    position:absolute; inset:0;
-    background: linear-gradient(to right, rgba(13,20,33,.92) 50%, rgba(13,20,33,.2) 100%);
-  }
-  .academy-hero-content {
-    position:absolute; inset:0; display:flex; flex-direction:column;
-    justify-content:center; padding:40px 48px; max-width:600px;
-  }
-  @media(max-width:600px){ .academy-hero-content { padding:24px; } }
-  .academy-hero-content h2 { font-family:'Cinzel',serif; color:#fff; font-size:clamp(1.3rem,4vw,2rem); letter-spacing:.06em; margin-bottom:12px; }
-  .academy-hero-content p { color:rgba(255,255,255,.75); margin-bottom:24px; line-height:1.6; }
-
-  /* Instructor card */
-  .instructor-card { text-align:center; padding:28px 20px; }
-  .instructor-card .icon-box { margin:0 auto 16px; }
-  .instructor-card h3 { font-family:'Cinzel',serif; color:var(--text); font-size:1.1rem; letter-spacing:.05em; margin-bottom:4px; }
-  .instructor-card .exp { color:var(--gold); font-size:.85rem; margin-bottom:4px; }
-  .instructor-card .specialty { color:var(--muted); font-size:.82rem; }
-
-  /* Benefit item */
-  .benefit-item { text-align:center; padding:20px 12px; }
-  .benefit-item .icon-box { margin:0 auto 16px; }
-  .benefit-item h3 { font-family:'Cinzel',serif; color:var(--text); font-size:.95rem; letter-spacing:.05em; margin-bottom:6px; }
-  .benefit-item p { color:var(--muted); font-size:.84rem; line-height:1.5; }
-
-  /* ══════════════════════════
-     MEDIA PAGE
-  ══════════════════════════ */
-
-  /* Stat card */
-  .stat-card { text-align:center; padding:28px 20px; }
-  .stat-card .platform-row { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:10px; }
-  .stat-card .platform-row svg { width:22px; height:22px; stroke:var(--gold); fill:none; stroke-width:1.8; }
-  .stat-card .platform-row span { font-family:'Cinzel',serif; color:var(--text); font-size:.95rem; letter-spacing:.06em; }
-  .stat-card .count { font-family:'Cinzel',serif; color:var(--gold); font-size:2rem; letter-spacing:.04em; }
-  .stat-card .label { color:var(--muted); font-size:.82rem; }
-
-  /* Video card */
-  .video-card { cursor:pointer; }
-  .video-thumb {
-    position:relative; height:192px; overflow:hidden;
-  }
-  .video-thumb img { width:100%; height:100%; object-fit:cover; display:block; transition: transform .4s; }
-  .video-card:hover .video-thumb img { transform: scale(1.05); }
-  .video-overlay {
-    position:absolute; inset:0; background:rgba(0,0,0,.45);
-    display:flex; align-items:center; justify-content:center;
-    transition: background .3s;
-  }
-  .video-card:hover .video-overlay { background:rgba(0,0,0,.2); }
-  .play-btn {
-    width:56px; height:56px; border-radius:50%;
-    background:rgba(253,216,53,.9);
-    display:flex; align-items:center; justify-content:center;
-  }
-  .play-btn svg { width:22px; height:22px; stroke:var(--bg); fill:var(--bg); stroke-width:1.5; margin-left:3px; }
-  .duration-badge {
-    position:absolute; bottom:10px; right:10px;
-    background:rgba(0,0,0,.8); color:#fff; font-size:.75rem;
-    padding:3px 8px; border-radius:4px;
-  }
-  .video-info { padding:16px 20px 20px; }
-  .video-info h3 {
-    font-family:'Cinzel',serif; color:var(--text); font-size:.95rem; letter-spacing:.04em;
-    margin-bottom:10px; transition: color .2s;
-  }
-  .video-card:hover .video-info h3 { color: var(--gold); }
-  .video-meta { display:flex; justify-content:space-between; color:var(--muted); font-size:.8rem; }
-  .video-meta span { display:flex; align-items:center; gap:5px; }
-  .video-meta svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; }
-
-  /* Gallery grid */
-  .photo-grid {
-    display:grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap:14px;
-  }
-  @media(max-width:900px){ .photo-grid { grid-template-columns: repeat(3,1fr); } }
-  @media(max-width:600px){ .photo-grid { grid-template-columns: repeat(2,1fr); } }
-  .photo-item {
-    position:relative; height:192px; overflow:hidden;
-    border-radius:10px; border:1px solid var(--gold-border);
-    cursor:pointer; transition: border-color .3s;
-  }
-  .photo-item:hover { border-color: rgba(253,216,53,.6); }
-  .photo-item img { width:100%; height:100%; object-fit:cover; display:block; transition: transform .4s; }
-  .photo-item:hover img { transform: scale(1.07); }
-  .photo-overlay {
-    position:absolute; inset:0;
-    background:linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 60%);
-    opacity:0; transition: opacity .3s;
-  }
-  .photo-item:hover .photo-overlay { opacity:1; }
-  .photo-badge {
-    position:absolute; bottom:12px; left:12px;
-    background:var(--gold); color:var(--bg);
-    font-family:'Cinzel',serif; font-size:.65rem; letter-spacing:.08em;
-    padding:3px 10px; border-radius:999px;
-    opacity:0; transition: opacity .3s; transform:translateY(4px);
-  }
-  .photo-item:hover .photo-badge { opacity:1; transform:translateY(0); }
-
-  /* BTS section */
-  .bts-card { display:grid; grid-template-columns:1fr 1fr; }
-  @media(max-width:700px){ .bts-card { grid-template-columns:1fr; } }
-  .bts-img { height:100%; min-height:240px; object-fit:cover; display:block; width:100%; }
-  .bts-content { padding:36px 32px; }
-  .bts-feature { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
-  .bts-feature:last-child { margin-bottom:0; }
-  .bts-feature svg { width:20px; height:20px; stroke:var(--gold); fill:none; stroke-width:2; flex-shrink:0; }
-  .bts-feature span { color:rgba(255,255,255,.85); font-size:.92rem; }
-
-  /* Social CTA */
-  .btn-instagram {
-    background: linear-gradient(135deg, #e1306c, #833ab4);
-    color:#fff; font-family:'Cinzel',serif; font-size:13px; letter-spacing:.1em;
-    padding:14px 28px; border-radius:8px; border:none; cursor:pointer; font-weight:600; transition: opacity .2s;
-  }
-  .btn-instagram:hover { opacity:.85; }
-  .btn-youtube {
-    background: #dc2626; color:#fff;
-    font-family:'Cinzel',serif; font-size:13px; letter-spacing:.1em;
-    padding:14px 28px; border-radius:8px; border:none; cursor:pointer; font-weight:600; transition: opacity .2s;
-  }
-  .btn-youtube:hover { opacity:.85; }
-
-  /* ══════════════════════════
-     ACERCA DE PAGE
-  ══════════════════════════ */
-
-  /* Stat numbers */
-  .about-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
-  @media(max-width:700px){ .about-stats { grid-template-columns:repeat(2,1fr); } }
-  .about-stat-card { text-align:center; padding:24px 16px; }
-  .about-stat-card .num { font-family:'Cinzel',serif; color:var(--gold); font-size:2.2rem; letter-spacing:.04em; margin-bottom:6px; }
-  .about-stat-card .lbl { color:var(--muted); font-size:.85rem; }
-
-  /* Story card */
-  .story-card { display:grid; grid-template-columns:1fr 1fr; }
-  @media(max-width:700px){ .story-card { grid-template-columns:1fr; } }
-  .story-img { height:100%; min-height:260px; object-fit:cover; display:block; width:100%; }
-  .story-content { padding:40px 36px; }
-  .story-content h2 { font-family:'Cinzel',serif; color:var(--gold); font-size:1.5rem; letter-spacing:.07em; margin-bottom:20px; }
-  .story-content p { color:rgba(255,255,255,.78); font-size:.93rem; line-height:1.75; margin-bottom:14px; }
-  .story-content p:last-of-type { margin-bottom:24px; }
-  .story-highlight { display:flex; align-items:center; gap:12px; color:var(--gold); font-size:.9rem; }
-  .story-highlight svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2; flex-shrink:0; }
-
-  /* Values */
-  .value-card { text-align:center; padding:28px 20px; }
-  .value-card .icon-box { margin:0 auto 16px; }
-  .value-card h3 { font-family:'Cinzel',serif; color:var(--text); font-size:1rem; letter-spacing:.06em; margin-bottom:8px; }
-  .value-card p { color:var(--muted); font-size:.85rem; line-height:1.6; }
-
-  /* Timeline */
-  .timeline { display:flex; flex-direction:column; gap:20px; }
-  .timeline-item {
-    display:grid; grid-template-columns:100px 1fr;
-    border-radius:12px; overflow:hidden;
-    border:1px solid var(--gold-border);
-    transition: border-color .3s;
-  }
-  .timeline-item:hover { border-color:rgba(253,216,53,.5); }
-  .timeline-year {
-    background:rgba(253,216,53,.12);
-    display:flex; align-items:center; justify-content:center;
-    padding:20px 12px;
-  }
-  .timeline-year span { font-family:'Cinzel',serif; color:var(--gold); font-size:1.05rem; letter-spacing:.06em; font-weight:600; }
-  .timeline-content { background:var(--card); padding:20px 24px; }
-  .timeline-content h3 { font-family:'Cinzel',serif; color:var(--text); font-size:.95rem; letter-spacing:.05em; margin-bottom:6px; }
-  .timeline-content p { color:var(--muted); font-size:.87rem; line-height:1.6; }
-
-  /* Awards */
-  .award-item { text-align:center; padding:20px 12px; }
-  .award-item .icon-box { margin:0 auto 14px; }
-  .award-item h3 { font-family:'Cinzel',serif; color:var(--text); font-size:.95rem; letter-spacing:.05em; margin-bottom:4px; }
-  .award-item p { color:var(--muted); font-size:.82rem; }
-
-  /* Location list */
-  .loc-list-item { display:flex; align-items:flex-start; gap:12px; margin-bottom:18px; }
-  .loc-list-item:last-child { margin-bottom:0; }
-  .loc-list-item svg { width:18px; height:18px; stroke:var(--gold); fill:none; stroke-width:2; flex-shrink:0; margin-top:2px; }
-  .loc-list-item h4 { font-family:'Cinzel',serif; color:var(--text); font-size:.95rem; margin-bottom:2px; }
-  .loc-list-item p { color:var(--muted); font-size:.84rem; }
-
-  /* ══════════════════════════
-     FAQ PAGE
-  ══════════════════════════ */
-
-  .quick-card { text-align:center; padding:28px 20px; }
-  .quick-card .icon-box { margin:0 auto 16px; }
-  .quick-card h3 { font-family:'Cinzel',serif; color:var(--text); font-size:1rem; letter-spacing:.05em; margin-bottom:10px; }
-  .quick-card p { color:var(--muted); font-size:.87rem; line-height:1.7; }
-
-  /* FAQ category card */
-  .faq-cat { margin-bottom:28px; }
-  .faq-cat-header {
-    background:rgba(253,216,53,.08); border-bottom:1px solid var(--gold-border);
-    padding:20px 24px; display:flex; align-items:center; gap:12px;
-    border-radius:12px 12px 0 0;
-  }
-  .faq-cat-header svg { width:22px; height:22px; stroke:var(--gold); fill:none; stroke-width:2; }
-  .faq-cat-header span { font-family:'Cinzel',serif; color:var(--gold); font-size:1.05rem; letter-spacing:.07em; }
-  .faq-items { background:var(--card); border:1px solid var(--gold-border); border-top:none; border-radius:0 0 12px 12px; padding:20px 24px; }
-  .faq-item { border:1px solid var(--gold-border); border-radius:10px; margin-bottom:14px; overflow:hidden; }
-  .faq-item:last-child { margin-bottom:0; }
-  .faq-q {
-    width:100%; background:none; border:none; cursor:pointer;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:16px 18px; text-align:left;
-    color:var(--text); font-family:'Lato',sans-serif; font-size:.93rem;
-    transition: color .2s;
-  }
-  .faq-q:hover { color:var(--gold); }
-  .faq-q.open { color:var(--gold); }
-  .faq-chevron { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2.5; flex-shrink:0; transition: transform .3s; }
-  .faq-q.open .faq-chevron { transform: rotate(180deg); }
-  .faq-a {
-    max-height:0; overflow:hidden; transition: max-height .35s ease, padding .35s;
-    padding:0 18px; color:var(--muted); font-size:.9rem; line-height:1.7;
-  }
-  .faq-a.open { max-height:300px; padding:0 18px 18px; }
-
+@media(max-width:700px){
+  #content{padding:14px;}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr !important;}
+  .form-row{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
 
-<!-- Fixed Background -->
-<div class="bg-fixed"></div>
-
-<!-- ─── NAVIGATION ─── -->
-<nav class="nav" id="mainNav">
-  <div class="nav-items">
-    <button class="nav-btn active" onclick="showHome(); scrollToSection('home')">Inicio</button>
-    <button class="nav-btn" onclick="showHome(); scrollToSection('gallery')">Galería</button>
-    <button class="nav-btn" onclick="showHome(); scrollToSection('testimonials')">Testimonios</button>
-    <button class="nav-btn" onclick="showHome(); scrollToSection('locations')">Ubicaciones</button>
-    <button class="nav-btn" onclick="showHome(); scrollToSection('events')">Eventos</button>
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="scissors">🪓</span>
+      <div class="brand">TAJOS</div>
+      <div class="sub">Portal de Barberos</div>
+    </div>
+    <div class="login-error" id="loginError">❌ Usuario o PIN incorrecto</div>
+    <div class="form-group">
+      <label class="form-label">Usuario</label>
+      <input class="form-control" id="loginUser" placeholder="Tu usuario" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">PIN</label>
+      <input class="form-control" type="password" id="loginPin" placeholder="••••" maxlength="8" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button id="btnLoginPortal" class="btn btn-gold" style="width:100%;padding:12px;margin-top:6px" onclick="doLogin()">Ingresar</button>
+    <div style="text-align:center;margin-top:14px;font-size:.72rem;color:var(--text-dim)">TAJOS · Portal exclusivo para barberos</div>
   </div>
-  <button class="nav-menu-btn" onclick="toggleMenu()" id="menuBtn">
-    <svg id="menuIcon" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-  </button>
-</nav>
-
-<!-- Overlay -->
-<div class="overlay" id="menuOverlay" onclick="closeMenu()"></div>
-
-<!-- Dropdown -->
-<div class="dropdown" id="dropdown">
-  <h4>MENÚ</h4>
-  <button class="dd-item" onclick="openWhatsApp(); closeMenu();">
-    <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-    Contáctanos
-  </button>
-  <button class="dd-item" onclick="showPage('page-academy'); closeMenu();">
-    <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-7 10 7M6 11v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7"/></svg>
-    TAJOS Academy
-  </button>
-  <button class="dd-item" onclick="showHome(); scrollToSection('events'); closeMenu();">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    Eventos y Promociones
-  </button>
-  <button class="dd-item" onclick="showPage('page-media'); closeMenu();">
-    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-    Media
-  </button>
-  <button class="dd-item" onclick="showPage('page-about'); closeMenu();">
-    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    Acerca de nosotros
-  </button>
-  <button class="dd-item" onclick="showPage('page-faq'); closeMenu();">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    FAQ
-  </button>
 </div>
 
-<!-- ════════════════════════════════════════
-     LANDING HOME
-════════════════════════════════════════ -->
-<div id="home-view">
-
-<!-- ─── HERO ─── -->
-<section id="home">
-  <div class="hero-logo">TJ</div>
-  <p class="hero-sub">ASUNCIÓN, PARAGUAY</p>
-  <h1 class="hero-title">TAJOS<br>BARBEROS</h1>
-  <p class="hero-tagline">Forjando al caballero perfecto desde 2017.</p>
-  <div class="hero-cta">
-    <button class="btn-primary" onclick="scrollToSection('locations')">Agendar Cita</button>
-    <button class="btn-outline" onclick="scrollToSection('gallery')">Ver Galería</button>
-  </div>
-</section>
-
-<!-- ─── BRANDS ─── -->
-<section id="brands">
-  <div class="container">
-    <h2 class="section-title">Nuestras marcas de confianza</h2>
-    <div class="brands-track-wrap">
-      <div class="brands-track" id="brandsTrack">
-        <div class="brand-card"><span>BaByliss</span></div>
-        <div class="brand-card"><span>American Crew</span></div>
-        <div class="brand-card"><span>Wahl</span></div>
-        <div class="brand-card"><span>Andis</span></div>
-        <div class="brand-card"><span>Oster</span></div>
-        <div class="brand-card"><span>BaByliss</span></div>
-        <div class="brand-card"><span>American Crew</span></div>
-        <div class="brand-card"><span>Wahl</span></div>
-        <div class="brand-card"><span>Andis</span></div>
-        <div class="brand-card"><span>Oster</span></div>
-      </div>
-    </div>
-    <p class="brands-desc">Trabajamos con las mejores marcas del sector para garantizar resultados excepcionales</p>
-  </div>
-</section>
-
-<!-- ─── GALLERY ─── -->
-<section id="gallery">
-  <div class="container">
-    <h2 class="section-title">Nuestro arte</h2>
-    <div style="position:relative;">
-      <div class="gallery-viewport">
-        <div class="gallery-track" id="galleryTrack">
-          <div class="gallery-slide">
-            <img class="gallery-img" src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=600&q=80" alt="Cortes modernos">
-            <div class="gallery-overlay"></div>
-            <div class="gallery-text">
-              <h3>Cortes modernos y con máxima precisión</h3>
-              <p>Líneas nítidas y elegantes, hechas a la medida de tu estilo de vida.</p>
-            </div>
-          </div>
-          <div class="gallery-slide">
-            <img class="gallery-img" src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600&q=80" alt="Cuidado de barba">
-            <div class="gallery-overlay"></div>
-            <div class="gallery-text">
-              <h3>Máximo detalle</h3>
-              <p>Técnicas consagradas con herramientas clásicas.</p>
-            </div>
-          </div>
-          <div class="gallery-slide">
-            <img class="gallery-img" src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=600&q=80" alt="Herramientas vintage">
-            <div class="gallery-overlay"></div>
-            <div class="gallery-text">
-              <h3>Excelencia en el cuidado de la barba</h3>
-              <p>Perfilado y acondicionamiento experto para la barba moderna.</p>
-            </div>
-          </div>
-          <div class="gallery-slide">
-            <img class="gallery-img" src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&q=80" alt="Ambiente">
-            <div class="gallery-overlay"></div>
-            <div class="gallery-text">
-              <h3>Atmósfera inigualable</h3>
-              <p>Relajate en nuestros espacios cómodos y entorno confortable.</p>
-            </div>
-          </div>
-          <div class="gallery-slide">
-            <img class="gallery-img" src="https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=600&q=80" alt="Ritual de barba">
-            <div class="gallery-overlay"></div>
-            <div class="gallery-text">
-              <h3>Ritual de barba completo</h3>
-              <p>La máxima experiencia de relajación.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="gallery-nav">
-        <button class="gallery-arrow" onclick="galleryPrev()">
-          <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <button class="gallery-arrow" onclick="galleryNext()">
-          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
+<!-- APP -->
+<div id="app">
+  <div id="topbar">
+    <div class="topbar-brand">TAJOS</div>
+    <span class="topbar-sep">|</span>
+    <div class="topbar-user" id="topbarUser">—</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:12px">
+      <div class="topbar-date" id="topbarDate"></div>
+      <div class="topbar-clock" id="topbarClock"></div>
+      <button class="btn btn-outline btn-sm no-print" onclick="confirmLogout()">⏻ Salir</button>
     </div>
   </div>
-</section>
 
-<!-- ─── TESTIMONIALS ─── -->
-<section id="testimonials">
-  <div class="container">
-    <h2 class="section-title">Algunos de nuestros clientes</h2>
-    <div class="gold-divider"></div>
-    <p class="text-center text-muted" style="max-width:540px;margin:0 auto 48px;font-size:.95rem;">
-      Descubrí por qué cada vez más clientes exigentes confían en TAJOS para el cuidado y estilo personal
-    </p>
-    <div class="testimonials-grid">
-      <div class="testi-card">
-        <div class="stars">★★★★★</div>
-        <p class="testi-quote">"Servicios excelentes a un precio razonable. He venido 3 veces en 3 años y siempre he tenido una experiencia excepcional."</p>
-        <div class="testi-client">
-          <div class="testi-avatar">CR</div>
-          <div>
-            <div class="testi-name">Carlos Rodríguez</div>
-            <div class="testi-role">Cliente</div>
+  <div id="navTabs">
+    <div class="nav-tab active" data-page="agenda">📅 Agenda</div>
+    <div class="nav-tab" data-page="servicios">✂ Mis Servicios</div>
+    <div class="nav-tab" data-page="reportes">📊 Reportes</div>
+    <div class="nav-tab" data-page="adelantos">💸 Adelantos</div>
+  </div>
+
+  <div id="content">
+
+    <!-- ══ AGENDA ══ -->
+    <div class="page active" id="page-agenda">
+      <div class="section-header">
+        <div>
+          <div class="section-title">AGENDA</div>
+          <div class="section-sub" id="agendaSubtitle">Mis turnos</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" class="no-print">
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-ghost btn-sm" id="btnVistaDia" onclick="setVistaAgenda('dia')">Día</button>
+            <button class="btn btn-outline btn-sm" id="btnVistaSemana" onclick="setVistaAgenda('semana')">Semana</button>
+          </div>
+          <div class="agenda-nav">
+            <button class="btn btn-ghost btn-sm" onclick="navAgenda(-1)">◀</button>
+            <div class="agenda-date-label" id="agendaDateLabel"></div>
+            <button class="btn btn-ghost btn-sm" onclick="navAgenda(1)">▶</button>
+            <button class="btn btn-outline btn-sm" onclick="goHoy()">Hoy</button>
           </div>
         </div>
       </div>
-      <div class="testi-card">
-        <div class="stars">★★★★★</div>
-        <p class="testi-quote">"Solo el ritual de la toalla caliente vale la pena la visita. La atmósfera, la artesanía, la atención personal — es como volver en el tiempo cuando la barbería era una forma de arte. Servicio excepcional siempre."</p>
-        <div class="testi-client">
-          <div class="testi-avatar">DM</div>
-          <div>
-            <div class="testi-name">David Martínez</div>
-            <div class="testi-role">Cliente</div>
-          </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div id="agendaContent" style="overflow-x:auto"></div>
+      </div>
+    </div>
+
+    <!-- ══ SERVICIOS ══ -->
+    <div class="page" id="page-servicios">
+      <div class="section-header">
+        <div>
+          <div class="section-title">MIS SERVICIOS</div>
+          <div class="section-sub">Servicios realizados · Monto = tu comisión</div>
+        </div>
+        <div style="display:flex;gap:8px" class="no-print">
+          <input type="date" class="form-control" id="servFechaFiltro" style="width:160px" onchange="renderServicios()">
         </div>
       </div>
-      <div class="testi-card">
-        <div class="stars">★★★★★</div>
-        <p class="testi-quote">"Excelentes profesionales, muy buen ambiente, buena atención, entorno cómodo y un trabajo con puro detalle. Recomendado al 100%."</p>
-        <div class="testi-client">
-          <div class="testi-avatar">WR</div>
-          <div>
-            <div class="testi-name">Walter Riveros</div>
-            <div class="testi-role">Cliente</div>
-          </div>
+      <div class="grid-4" style="margin-bottom:20px">
+        <div class="stat-card"><div class="stat-label">Comisión Hoy</div><div class="stat-value" id="srvComHoy">Gs. 0</div><div class="stat-icon">💈</div></div>
+        <div class="stat-card"><div class="stat-label">Servicios Hoy</div><div class="stat-value" id="srvCntHoy">0</div><div class="stat-icon">✂</div></div>
+        <div class="stat-card"><div class="stat-label">Comisión Mes</div><div class="stat-value" id="srvComMes">Gs. 0</div><div class="stat-icon">📅</div></div>
+        <div class="stat-card"><div class="stat-label">Servicios Mes</div><div class="stat-value" id="srvCntMes">0</div><div class="stat-icon">📋</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Detalle de Cobros</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fecha</th><th>Hora</th><th>Servicios</th><th>Productos (comisionables)</th><th>Tu Comisión</th></tr></thead>
+            <tbody id="serviciosTbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- ─── LOCATIONS ─── -->
-<section id="locations">
-  <div class="container">
-    <h2 class="section-title">Nuestras ubicaciones</h2>
-    <div class="locations-grid">
-      <div class="loc-card" onclick="openModal('modal-loc1')">
-        <div class="loc-img-wrap">
-          <img class="loc-img" src="https://images.unsplash.com/photo-1567894340315-735d7c361db0?w=600&q=80" alt="Denis Roa">
-          <div class="loc-img-overlay"></div>
-        </div>
-        <div class="loc-body">
-          <div class="loc-name">TAJOS Denis Roa</div>
-          <div class="loc-addr">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Denis Roa 673, Bo. Herrera — Asunción
-          </div>
-          <div class="loc-badge">Casa Central</div>
+    <!-- ══ REPORTES ══ -->
+    <div class="page" id="page-reportes">
+      <div class="section-header">
+        <div><div class="section-title">REPORTES</div><div class="section-sub">Ingresos y egresos</div></div>
+      </div>
+      <div class="period-tabs no-print">
+        <div class="period-tab active" onclick="setPeriodo('dia',this)">Hoy</div>
+        <div class="period-tab" onclick="setPeriodo('semana',this)">Esta Semana</div>
+        <div class="period-tab" onclick="setPeriodo('mes',this)">Este Mes</div>
+      </div>
+      <div id="reportePeriodoLabel" style="font-family:var(--font-cond);font-size:.85rem;color:var(--text-muted);margin-bottom:16px"></div>
+
+      <!-- Resumen -->
+      <div class="grid-4" style="margin-bottom:20px">
+        <div class="stat-card"><div class="stat-label">Comisiones (servicios)</div><div class="stat-value" id="rpComServ">Gs. 0</div><div class="stat-icon">💈</div></div>
+        <div class="stat-card"><div class="stat-label">Comisiones (productos)</div><div class="stat-value" id="rpComProd">Gs. 0</div><div class="stat-icon">📦</div></div>
+        <div class="stat-card"><div class="stat-label">Egresos (consumos)</div><div class="stat-value" id="rpEgresos" style="color:#e74c3c">Gs. 0</div><div class="stat-icon">🧴</div></div>
+        <div class="stat-card"><div class="stat-label">Adelantos descontados</div><div class="stat-value" id="rpAdelantos" style="color:#e74c3c">Gs. 0</div><div class="stat-icon">💸</div></div>
+      </div>
+      <div class="stat-card" style="margin-bottom:20px;padding:20px">
+        <div class="stat-label">NETO A COBRAR</div>
+        <div class="stat-value" id="rpNeto" style="font-size:2.4rem">Gs. 0</div>
+        <div class="stat-sub">(comisiones − egresos − adelantos)</div>
+      </div>
+
+      <!-- Detalle servicios -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">✂ Servicios Realizados</div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Fecha</th><th>Servicio</th><th>Facturado</th><th>Tu Comisión</th></tr></thead>
+          <tbody id="rpServTbody"></tbody></table>
         </div>
       </div>
-      <div class="loc-card" onclick="openModal('modal-loc2')">
-        <div class="loc-img-wrap">
-          <img class="loc-img" src="https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=600&q=80" alt="Cottage">
-          <div class="loc-img-overlay"></div>
-        </div>
-        <div class="loc-body">
-          <div class="loc-name">TAJOS Cottage</div>
-          <div class="loc-addr">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Denis Roa 673, Bo. Herrera — Asunción
-          </div>
-          <div class="loc-badge">Ambiente Rústico</div>
+
+      <!-- Detalle productos vendidos -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📦 Productos Vendidos</div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Fecha</th><th>Producto</th><th>Precio venta</th><th>Tu Comisión</th></tr></thead>
+          <tbody id="rpProdTbody"></tbody></table>
         </div>
       </div>
-      <div class="loc-card" onclick="openModal('modal-loc3')">
-        <div class="loc-img-wrap">
-          <img class="loc-img" src="https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=600&q=80" alt="CIT">
-          <div class="loc-img-overlay"></div>
+
+      <!-- Egresos/consumos -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">🧴 Egresos / Consumos de Productos</div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Monto</th></tr></thead>
+          <tbody id="rpEgresosTbody"></tbody></table>
         </div>
-        <div class="loc-body">
-          <div class="loc-name">TAJOS CIT</div>
-          <div class="loc-addr">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Spa Caballeros, Club Internacional de Tenis
-          </div>
-          <div class="loc-badge">Exclusivo</div>
+      </div>
+
+      <!-- Adelantos -->
+      <div class="card">
+        <div class="card-title">💸 Adelantos Descontados</div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Fecha aprobación</th><th>Monto</th><th>Nota</th></tr></thead>
+          <tbody id="rpAdelantosTbody"></tbody></table>
         </div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- LOCATION MODALS -->
-<div class="modal-backdrop" id="modal-loc1" onclick="closeModalOutside(event,'modal-loc1')">
+    <!-- ══ ADELANTOS ══ -->
+    <div class="page" id="page-adelantos">
+      <div class="section-header">
+        <div><div class="section-title">ADELANTOS</div><div class="section-sub">Solicitudes y estado</div></div>
+        <button class="btn btn-gold no-print" onclick="openModal('modalSolicitarAdelanto')">＋ Solicitar Adelanto</button>
+      </div>
+      <div class="grid-2" style="margin-bottom:20px">
+        <div class="stat-card"><div class="stat-label">Pendiente de aprobación</div><div class="stat-value" id="adelPendiente">Gs. 0</div><div class="stat-icon">⏳</div></div>
+        <div class="stat-card"><div class="stat-label">Descontado este mes</div><div class="stat-value" id="adelMes" style="color:#e74c3c">Gs. 0</div><div class="stat-icon">💸</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Historial de Solicitudes</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fecha solicitud</th><th>Monto solicitado</th><th>Monto aprobado</th><th>Estado</th><th>Nota admin</th></tr></thead>
+            <tbody id="adelantosTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<div id="toastContainer"></div>
+
+<!-- MODAL SOLICITAR ADELANTO -->
+<div class="modal-overlay" id="modalSolicitarAdelanto" onclick="closeModalOut(event,'modalSolicitarAdelanto')">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">TAJOS Denis Roa</div>
-      <button class="modal-close" onclick="closeModal('modal-loc1')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div class="modal-title">💸 Solicitar Adelanto</div>
+      <button class="modal-close" onclick="closeModal('modalSolicitarAdelanto')">✕</button>
     </div>
-    <div class="modal-gallery">
-      <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&q=75" alt="Interior 1">
-      <img src="https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=400&q=75" alt="Interior 2">
-      <img src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400&q=75" alt="Interior 3">
-      <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400&q=75" alt="Interior 4">
+    <div class="modal-body">
+      <div class="alert alert-info" style="margin-bottom:14px">Tu solicitud será enviada al administrador para su aprobación. El monto aprobado se descontará de tu liquidación mensual.</div>
+      <div class="form-group">
+        <label class="form-label">Monto solicitado (Gs.) *</label>
+        <input type="number" class="form-control" id="adelMontoSolicitud" placeholder="Ej: 200000" min="1000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Motivo / Nota</label>
+        <input type="text" class="form-control" id="adelNotaSolicitud" placeholder="Opcional...">
+      </div>
     </div>
-    <p class="modal-desc">Nuestra sede principal en el corazón de Herrera. Esta barbería combina la calidez vintage con modernas amenities, donde además ofrecemos bebidas frescas y café de primera calidad.</p>
-    <div class="modal-info">
-      <div class="modal-info-row"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Denis Roa 673, Bo. Herrera — Asunción, Paraguay</div>
-      <div class="modal-info-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Lun–Sáb: 9:00 AM – 7:30 PM &nbsp;|&nbsp; Dom: CERRADO</div>
-      <div class="modal-info-row"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.35 2 2 0 0 1 3.6 1.15h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.75a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>(+595) 982-473-078</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalSolicitarAdelanto')">Cancelar</button>
+      <button class="btn btn-gold" onclick="solicitarAdelanto()">Enviar Solicitud</button>
     </div>
-    <button class="btn-primary" style="width:100%;" onclick="bookService('agendar un servicio en la Central...')">Agendar su cita</button>
   </div>
 </div>
 
-<div class="modal-backdrop" id="modal-loc2" onclick="closeModalOutside(event,'modal-loc2')">
+<!-- MODAL DETALLE TURNO -->
+<div class="modal-overlay" id="modalDetalleTurno" onclick="closeModalOut(event,'modalDetalleTurno')">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">TAJOS Cottage</div>
-      <button class="modal-close" onclick="closeModal('modal-loc2')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div class="modal-title">📅 Detalle del Turno</div>
+      <button class="modal-close" onclick="closeModal('modalDetalleTurno')">✕</button>
     </div>
-    <div class="modal-gallery">
-      <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400&q=75" alt="Cottage 1">
-      <img src="https://images.unsplash.com/photo-1567894340315-735d7c361db0?w=400&q=75" alt="Cottage 2">
-      <img src="https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=400&q=75" alt="Cottage 3">
-      <img src="https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&q=75" alt="Cottage 4">
-    </div>
-    <p class="modal-desc">Ambientado como una acogedora cabaña, combina la calidez de la madera rústica con un diseño refinado. Un espacio privado, pensado para quienes buscan tranquilidad, discreción y un servicio de barbería de primer nivel.</p>
-    <div class="modal-info">
-      <div class="modal-info-row"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Denis Roa 673, Bo. Herrera — Asunción, Paraguay</div>
-      <div class="modal-info-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Lun–Sáb: 9:00 AM – 7:30 PM &nbsp;|&nbsp; Dom: CERRADO</div>
-      <div class="modal-info-row"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.35 2 2 0 0 1 3.6 1.15h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.75a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>(+595) 982-473-078</div>
-    </div>
-    <button class="btn-primary" style="width:100%;" onclick="bookService('agendar un servicio en Cottage...')">Agendar su cita</button>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="modal-loc3" onclick="closeModalOutside(event,'modal-loc3')">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">TAJOS CIT</div>
-      <button class="modal-close" onclick="closeModal('modal-loc3')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div class="modal-gallery">
-      <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&q=75" alt="CIT 1">
-      <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400&q=75" alt="CIT 2">
-      <img src="https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=400&q=75" alt="CIT 3">
-      <img src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400&q=75" alt="CIT 4">
-    </div>
-    <p class="modal-desc">Ubicado en el prestigioso Club Internacional de Tenis, redefine la barbería como un servicio de élite. Diseñada para socios exigentes, combina elegancia y discreción en un ambiente reservado con atención personalizada.</p>
-    <div class="modal-info">
-      <div class="modal-info-row"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Spa Caballeros, CIT — Tte. 2° Benigno Cáceres y Sinforiano Buzó, Asunción</div>
-      <div class="modal-info-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Lun–Sáb: 1:00 PM – 9:00 PM &nbsp;|&nbsp; Dom: CERRADO</div>
-      <div class="modal-info-row"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.35 2 2 0 0 1 3.6 1.15h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.75a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>(+595) 982-473-078</div>
-    </div>
-    <button class="btn-primary" style="width:100%;" onclick="bookService('conocer más sobre el local del CIT...')">Consultar disponibilidad</button>
-  </div>
-</div>
-
-<!-- ─── EVENTS ─── -->
-<section id="events">
-  <div class="container">
-    <h2 class="section-title">Eventos y Promociones</h2>
-    <div class="events-grid">
-      <div class="event-card">
-        <img class="event-img" src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600&q=80" alt="Promo barba">
-        <span class="event-badge badge-promo">🎁 Promoción</span>
-        <div class="event-overlay"></div>
-        <div class="event-text">
-          <h3>Descuento del 20% en servicios de barba</h3>
-          <p>Todo el mes de enero, disfrutá de un 20% de descuento en todos nuestros servicios de barba y perfilado.</p>
-          <div class="event-meta">
-            <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Todo enero 2025</span>
-            <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Horario regular</span>
-          </div>
-        </div>
-      </div>
-      <div class="event-card">
-        <img class="event-img" src="https://images.unsplash.com/photo-1582618800048-6a1b99c7e60b?w=600&q=80" alt="Taller">
-        <span class="event-badge badge-event">📅 Evento</span>
-        <div class="event-overlay"></div>
-        <div class="event-text">
-          <h3>Taller de Barbería Clásica</h3>
-          <p>Aprendé las técnicas tradicionales de barbería en nuestro taller exclusivo. Cupos limitados.</p>
-          <div class="event-meta">
-            <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>15 feb, 2025</span>
-            <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>10:00 – 14:00</span>
-          </div>
-        </div>
-      </div>
-      <div class="event-card">
-        <img class="event-img" src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=600&q=80" alt="Padre hijo">
-        <span class="event-badge badge-promo">🎁 Promoción</span>
-        <div class="event-overlay"></div>
-        <div class="event-text">
-          <h3>Paquete Padre e Hijo</h3>
-          <p>Disfruten juntos de la experiencia TAJOS con un descuento especial del 15% en servicios combinados.</p>
-          <div class="event-meta">
-            <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Hasta marzo 2025</span>
-            <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Cualquier horario</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="newsletter">
-      <p>¿Querés estar al día con nuestras últimas promociones y eventos?</p>
-      <button class="btn-primary">Suscribite a nuestro newsletter</button>
+    <div class="modal-body" id="detalleTurnoContent"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalDetalleTurno')">Cerrar</button>
     </div>
   </div>
-</section>
-
-<!-- ─── FOOTER ─── -->
-<footer>
-  <div class="container">
-    <p class="footer-title">Seguinos</p>
-    <div class="socials">
-      <a href="https://instagram.com/tajosbarberos" target="_blank" class="social-btn" title="Instagram">
-        <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-      </a>
-      <a href="https://tiktok.com/@tajos.barberos" target="_blank" class="social-btn" title="TikTok">
-        <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
-      </a>
-      <a href="https://facebook.com/tajosdenisroa" target="_blank" class="social-btn" title="Facebook">
-        <svg viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-      </a>
-      <a href="https://linkedin.com/company/barberos" target="_blank" class="social-btn" title="LinkedIn">
-        <svg viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-      </a>
-    </div>
-    <hr class="footer-sep">
-    <p class="footer-copy">© 2026 TAJOS BARBEROS. &nbsp;|&nbsp; Forjando caballeros desde 2017.&nbsp;Todos los derechos reservados.</p>
-  </div>
-</footer>
-
-</div><!-- /home-view -->
-
-
-<!-- ════════════════════════════════════════
-     PÁGINA: TAJOS ACADEMY
-════════════════════════════════════════ -->
-<div class="page-view" id="page-academy">
-<div class="container">
-
-  <!-- Header -->
-  <div class="page-header">
-    <button class="page-back" onclick="showHome()">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <div class="page-header-text">
-      <h1>TAJOS Academy</h1>
-      <p>Formación profesional en barbería de excelencia</p>
-    </div>
-  </div>
-
-  <!-- Hero Banner -->
-  <div class="academy-hero pg-section">
-    <img src="https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200&q=80" alt="Academy">
-    <div class="academy-hero-overlay"></div>
-    <div class="academy-hero-content">
-      <h2>Convierte tu pasión en profesión</h2>
-      <p>Únete a la academia de barbería más prestigiosa de la región. Aprende de maestros barberos con décadas de experiencia.</p>
-      <button class="btn-primary" onclick="bookService('inscribirme en TAJOS Academy')">Inscríbete Ahora</button>
-    </div>
-  </div>
-
-  <!-- Programas -->
-  <div class="pg-section">
-    <div class="pg-section-header center">
-      <h2>Nuestros Programas</h2>
-      <p>Ofrecemos programas diseñados para diferentes niveles, desde principiantes hasta barberos que quieren perfeccionar sus técnicas.</p>
-    </div>
-    <div class="grid-3">
-
-      <!-- Programa 1 -->
-      <div class="pg-card">
-        <div class="pg-card-body">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-            <div class="icon-box"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-7 10 7M6 11v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7"/></svg></div>
-            <div>
-              <div style="font-family:'Cinzel',serif;color:var(--text);font-size:1.05rem;letter-spacing:.05em;">Barbería Clásica</div>
-              <div class="badge-pill" style="margin-top:4px;">Principiante</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:18px;margin-bottom:14px;">
-            <span style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.83rem;">
-              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>3 meses
-            </span>
-            <span style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.83rem;">
-              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>12 est. máx.
-            </span>
-          </div>
-          <div class="price-tag">Gs. 750.000</div>
-          <p style="color:var(--muted);font-size:.88rem;line-height:1.6;margin-bottom:16px;">Aprende las técnicas fundamentales de la barbería tradicional, desde el manejo de herramientas hasta cortes clásicos.</p>
-          <div style="margin-bottom:20px;">
-            <div style="color:var(--text);font-size:.85rem;font-family:'Cinzel',serif;letter-spacing:.05em;margin-bottom:10px;">Incluye:</div>
-            <ul class="skill-list">
-              <li>Cortes clásicos</li>
-              <li>Afeitado con navaja</li>
-              <li>Técnicas de peinado</li>
-              <li>Atención al cliente</li>
-            </ul>
-          </div>
-          <button class="btn-primary" style="width:100%;" onclick="bookService('obtener más información sobre el programa Barbería Clásica de TAJOS Academy')">Más información</button>
-        </div>
-      </div>
-
-      <!-- Programa 2 -->
-      <div class="pg-card">
-        <div class="pg-card-body">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-            <div class="icon-box"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
-            <div>
-              <div style="font-family:'Cinzel',serif;color:var(--text);font-size:1.05rem;letter-spacing:.05em;">Barbería Moderna</div>
-              <div class="badge-pill" style="margin-top:4px;">Intermedio</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:18px;margin-bottom:14px;">
-            <span style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.83rem;">
-              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>4 meses
-            </span>
-            <span style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.83rem;">
-              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>10 est. máx.
-            </span>
-          </div>
-          <div class="price-tag">Gs. 960.000</div>
-          <p style="color:var(--muted);font-size:.88rem;line-height:1.6;margin-bottom:16px;">Domina las tendencias actuales en barbería, incluyendo fades, texturas y técnicas contemporáneas.</p>
-          <div style="margin-bottom:20px;">
-            <div style="color:var(--text);font-size:.85rem;font-family:'Cinzel',serif;letter-spacing:.05em;margin-bottom:10px;">Incluye:</div>
-            <ul class="skill-list">
-              <li>Fades y degradados</li>
-              <li>Cortes modernos</li>
-              <li>Texturizado</li>
-              <li>Uso de máquinas profesionales</li>
-            </ul>
-          </div>
-          <button class="btn-primary" style="width:100%;" onclick="bookService('obtener más información sobre el programa Barbería Moderna de TAJOS Academy')">Más información</button>
-        </div>
-      </div>
-
-      <!-- Programa 3 -->
-      <div class="pg-card" style="border-color:rgba(253,216,53,.5);">
-        <div style="background:var(--gold);padding:10px 20px;text-align:center;">
-          <span style="font-family:'Cinzel',serif;color:var(--bg);font-size:.75rem;letter-spacing:.12em;font-weight:700;">⭐ MÁS COMPLETO</span>
-        </div>
-        <div class="pg-card-body">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-            <div class="icon-box"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-            <div>
-              <div style="font-family:'Cinzel',serif;color:var(--text);font-size:1.05rem;letter-spacing:.05em;">Programa Completo</div>
-              <div class="badge-pill active-pill" style="margin-top:4px;">Avanzado</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:18px;margin-bottom:14px;">
-            <span style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.83rem;">
-              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>6 meses
-            </span>
-            <span style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.83rem;">
-              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>8 est. máx.
-            </span>
-          </div>
-          <div class="price-tag">Gs. 1.350.000</div>
-          <p style="color:var(--muted);font-size:.88rem;line-height:1.6;margin-bottom:16px;">Formación integral que combina técnicas clásicas y modernas, más módulos de gestión empresarial.</p>
-          <div style="margin-bottom:20px;">
-            <div style="color:var(--text);font-size:.85rem;font-family:'Cinzel',serif;letter-spacing:.05em;margin-bottom:10px;">Incluye:</div>
-            <ul class="skill-list">
-              <li>Todas las técnicas</li>
-              <li>Gestión de negocio</li>
-              <li>Marketing personal</li>
-              <li>Certificación profesional</li>
-            </ul>
-          </div>
-          <button class="btn-primary" style="width:100%;" onclick="bookService('inscribirme en el Programa Completo de TAJOS Academy')">Inscribirme</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Instructores -->
-  <div class="pg-section">
-    <div class="pg-section-header center">
-      <h2>Nuestros Instructores</h2>
-      <p>Aprende de los mejores profesionales de la industria</p>
-    </div>
-    <div class="grid-3">
-      <div class="pg-card"><div class="instructor-card">
-        <div class="icon-box lg"><svg viewBox="0 0 24 24"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg></div>
-        <h3>Miguel Rodriguez</h3>
-        <div class="exp">15 años de experiencia</div>
-        <div class="specialty">Barbería Clásica y Tradicional</div>
-      </div></div>
-      <div class="pg-card"><div class="instructor-card">
-        <div class="icon-box lg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
-        <h3>Carlos Mendoza</h3>
-        <div class="exp">12 años de experiencia</div>
-        <div class="specialty">Técnicas Modernas y Fades</div>
-      </div></div>
-      <div class="pg-card"><div class="instructor-card">
-        <div class="icon-box lg"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-7 10 7M6 11v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7"/></svg></div>
-        <h3>Fernando Silva</h3>
-        <div class="exp">20 años de experiencia</div>
-        <div class="specialty">Gestión y Emprendimiento</div>
-      </div></div>
-    </div>
-  </div>
-
-  <!-- Beneficios -->
-  <div class="pg-section">
-    <div class="pg-card">
-      <div class="pg-card-body">
-        <div class="pg-section-header center" style="margin-bottom:32px;">
-          <h2>¿Por qué elegir TAJOS Academy?</h2>
-        </div>
-        <div class="grid-4">
-          <div class="benefit-item">
-            <div class="icon-box lg"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg></div>
-            <h3>Certificación Oficial</h3>
-            <p>Diploma reconocido en la industria</p>
-          </div>
-          <div class="benefit-item">
-            <div class="icon-box lg"><svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
-            <h3>Material Incluido</h3>
-            <p>Kit completo de herramientas profesionales</p>
-          </div>
-          <div class="benefit-item">
-            <div class="icon-box lg"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-            <h3>Grupos Pequeños</h3>
-            <p>Atención personalizada para cada estudiante</p>
-          </div>
-          <div class="benefit-item">
-            <div class="icon-box lg"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
-            <h3>Bolsa de Trabajo</h3>
-            <p>Apoyo para encontrar empleo al egresarte</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CTA -->
-  <div class="pg-section">
-    <div class="pg-card-cta">
-      <h2>¿Listo para comenzar tu carrera?</h2>
-      <p>Únete a nuestra próxima generación de barberos profesionales. Las inscripciones están abiertas para el siguiente ciclo escolar.</p>
-      <div class="btn-group">
-        <button class="btn-primary" onclick="bookService('agendar una visita a TAJOS Academy')">Agendar Visita</button>
-        <button class="btn-outline" onclick="bookService('descargar el brochure de TAJOS Academy')">Descargar Brochure</button>
-      </div>
-    </div>
-  </div>
-
-</div>
-</div><!-- /page-academy -->
-
-
-<!-- ════════════════════════════════════════
-     PÁGINA: MEDIA
-════════════════════════════════════════ -->
-<div class="page-view" id="page-media">
-<div class="container">
-
-  <!-- Header -->
-  <div class="page-header">
-    <button class="page-back" onclick="showHome()">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <div class="page-header-text">
-      <h1>Media Center</h1>
-      <p>Galería, videos y contenido exclusivo de TAJOS</p>
-    </div>
-  </div>
-
-  <!-- Stats Sociales -->
-  <div class="pg-section">
-    <div class="grid-3">
-      <div class="pg-card"><div class="stat-card">
-        <div class="platform-row">
-          <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-          <span>Instagram</span>
-        </div>
-        <div class="count">45.2K</div>
-        <div class="label">seguidores</div>
-      </div></div>
-      <div class="pg-card"><div class="stat-card">
-        <div class="platform-row">
-          <svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.54C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="var(--bg)" stroke="none"/></svg>
-          <span>YouTube</span>
-        </div>
-        <div class="count">12.8K</div>
-        <div class="label">suscriptores</div>
-      </div></div>
-      <div class="pg-card"><div class="stat-card">
-        <div class="platform-row">
-          <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
-          <span>TikTok</span>
-        </div>
-        <div class="count">28.5K</div>
-        <div class="label">seguidores</div>
-      </div></div>
-    </div>
-  </div>
-
-  <!-- Videos Destacados -->
-  <div class="pg-section">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px;">
-      <h2 style="font-family:'Cinzel',serif;color:var(--gold);font-size:1.5rem;letter-spacing:.07em;">Videos Destacados</h2>
-      <button class="btn-outline" style="padding:10px 22px;font-size:12px;" onclick="window.open('https://www.youtube.com/@tajosbarberos','_blank')">Ver todos en YouTube</button>
-    </div>
-    <div class="grid-3">
-
-      <div class="pg-card video-card">
-        <div class="video-thumb">
-          <img src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=600&q=80" alt="Video 1">
-          <div class="video-overlay">
-            <div class="play-btn"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
-          </div>
-          <div class="duration-badge">12:34</div>
-        </div>
-        <div class="video-info">
-          <h3>Transformación Completa — Corte Clásico</h3>
-          <div class="video-meta">
-            <span><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>25K vistas</span>
-            <span>Hace 3 días</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="pg-card video-card">
-        <div class="video-thumb">
-          <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600&q=80" alt="Video 2">
-          <div class="video-overlay">
-            <div class="play-btn"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
-          </div>
-          <div class="duration-badge">8:22</div>
-        </div>
-        <div class="video-info">
-          <h3>Técnica de Fade Perfecto</h3>
-          <div class="video-meta">
-            <span><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>18K vistas</span>
-            <span>Hace 1 semana</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="pg-card video-card">
-        <div class="video-thumb">
-          <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=600&q=80" alt="Video 3">
-          <div class="video-overlay">
-            <div class="play-btn"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
-          </div>
-          <div class="duration-badge">15:45</div>
-        </div>
-        <div class="video-info">
-          <h3>Afeitado Tradicional con Navaja</h3>
-          <div class="video-meta">
-            <span><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>32K vistas</span>
-            <span>Hace 2 semanas</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Galería Fotográfica -->
-  <div class="pg-section">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:28px;">
-      <h2 style="font-family:'Cinzel',serif;color:var(--gold);font-size:1.5rem;letter-spacing:.07em;">Galería Fotográfica</h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="badge-pill active-pill" onclick="filterGallery('todos',this)">Todos</button>
-        <button class="badge-pill" onclick="filterGallery('instalaciones',this)">Instalaciones</button>
-        <button class="badge-pill" onclick="filterGallery('accion',this)">En Acción</button>
-        <button class="badge-pill" onclick="filterGallery('resultados',this)">Resultados</button>
-      </div>
-    </div>
-    <div class="photo-grid" id="photoGrid">
-      <div class="photo-item" data-cat="instalaciones">
-        <img src="https://images.unsplash.com/photo-1567894340315-735d7c361db0?w=400&q=80" alt="Interior">
-        <div class="photo-overlay"></div>
-        <div class="photo-badge">Instalaciones</div>
-      </div>
-      <div class="photo-item" data-cat="accion">
-        <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&q=80" alt="En acción">
-        <div class="photo-overlay"></div>
-        <div class="photo-badge">En Acción</div>
-      </div>
-      <div class="photo-item" data-cat="resultados">
-        <img src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=400&q=80" alt="Resultado">
-        <div class="photo-overlay"></div>
-        <div class="photo-badge">Resultados</div>
-      </div>
-      <div class="photo-item" data-cat="instalaciones">
-        <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=400&q=80" alt="Silla vintage">
-        <div class="photo-overlay"></div>
-        <div class="photo-badge">Instalaciones</div>
-      </div>
-      <div class="photo-item" data-cat="accion">
-        <img src="https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=400&q=80" alt="Barbero">
-        <div class="photo-overlay"></div>
-        <div class="photo-badge">En Acción</div>
-      </div>
-      <div class="photo-item" data-cat="resultados">
-        <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=400&q=80" alt="Fade">
-        <div class="photo-overlay"></div>
-        <div class="photo-badge">Resultados</div>
-      </div>
-      <div class="photo-item" data-cat="instalaciones">
-        <img src="https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=400&q=80" alt="Local">
-        <div class="photo-overlay"></div>
-        <div class="photo-badge">Instalaciones</div>
-      </div>
-      <div class="photo-item" data-cat="accion">
-        <img src="https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400&q=80" alt="Trabajo">
-        <div class="photo-overlay"></div>
-        <div class="photo-badge">En Acción</div>
-      </div>
-    </div>
-    <div style="text-align:center;margin-top:28px;">
-      <button class="btn-outline">Ver más fotos</button>
-    </div>
-  </div>
-
-  <!-- Detrás de Cámaras -->
-  <div class="pg-section">
-    <div class="pg-card bts-card">
-      <img class="bts-img" src="https://images.unsplash.com/photo-1582619840584-e16b16e73e44?w=600&q=80" alt="Behind the scenes">
-      <div class="bts-content">
-        <h2 style="font-family:'Cinzel',serif;color:var(--gold);font-size:1.5rem;letter-spacing:.07em;margin-bottom:16px;">Detrás de Cámaras</h2>
-        <p style="color:var(--muted);font-size:.9rem;line-height:1.75;margin-bottom:24px;">Descubre el proceso creativo detrás de cada corte. Nuestro equipo documenta cada paso para compartir técnicas e inspirar a otros profesionales del sector.</p>
-        <div style="margin-bottom:24px;">
-          <div class="bts-feature">
-            <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-            <span>Videos tutoriales semanales</span>
-          </div>
-          <div class="bts-feature">
-            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            <span>Sesiones fotográficas profesionales</span>
-          </div>
-          <div class="bts-feature">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span>Contenido exclusivo cada mes</span>
-          </div>
-        </div>
-        <button class="btn-primary" onclick="window.open('https://instagram.com/tajosbarberos','_blank')">Suscribirse para contenido exclusivo</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Newsletter Social -->
-  <div class="pg-section">
-    <div class="pg-card-cta">
-      <h2>Mantente Conectado</h2>
-      <p>Sé el primero en ver nuestro contenido más reciente. Suscríbete a nuestras redes sociales y no te pierdas ninguna actualización.</p>
-      <div class="btn-group">
-        <button class="btn-instagram" onclick="window.open('https://instagram.com/tajosbarberos','_blank')">Seguir en Instagram</button>
-        <button class="btn-youtube" onclick="window.open('https://www.youtube.com/@tajosbarberos','_blank')">Suscribirse en YouTube</button>
-        <button class="btn-outline" onclick="window.open('https://tiktok.com/@tajos.barberos','_blank')">Seguir en TikTok</button>
-      </div>
-    </div>
-  </div>
-
-</div>
-</div><!-- /page-media -->
-
-
-<!-- ════════════════════════════════════════
-     PÁGINA: ACERCA DE NOSOTROS
-════════════════════════════════════════ -->
-<div class="page-view" id="page-about">
-<div class="container">
-
-  <!-- Header -->
-  <div class="page-header">
-    <button class="page-back" onclick="showHome()">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <div class="page-header-text">
-      <h1>Acerca de TAJOS</h1>
-      <p>Conocé nuestra historia, misión y valores</p>
-    </div>
-  </div>
-
-  <!-- Nuestra Historia -->
-  <div class="pg-section">
-    <div class="pg-card story-card">
-      <img class="story-img" src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=700&q=80" alt="Equipo TAJOS">
-      <div class="story-content">
-        <h2>Nuestra Historia</h2>
-        <p>TAJOS nació en 2017 de la pasión de un grupo de barberos que soñaban con crear un espacio donde la tradición se encontrara con la innovación. Comenzamos con una gran visión: ofrecer no solo un corte de cabello, sino una experiencia completa.</p>
-        <p>Lo que nos distingue es nuestra dedicación a la artesanía, el trato personalizado y la atmósfera única que hemos creado. Cada cliente que entra por nuestras puertas no es solo un cliente, es parte de la familia TAJOS.</p>
-        <div class="story-highlight">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Más de 8 años perfeccionando nuestro arte
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="pg-section">
-    <div class="about-stats">
-      <div class="pg-card"><div class="about-stat-card">
-        <div class="num">8+</div>
-        <div class="lbl">Años de experiencia</div>
-      </div></div>
-      <div class="pg-card"><div class="about-stat-card">
-        <div class="num">15K+</div>
-        <div class="lbl">Clientes satisfechos</div>
-      </div></div>
-      <div class="pg-card"><div class="about-stat-card">
-        <div class="num">3</div>
-        <div class="lbl">Ubicaciones</div>
-      </div></div>
-      <div class="pg-card"><div class="about-stat-card">
-        <div class="num">25+</div>
-        <div class="lbl">Barberos certificados</div>
-      </div></div>
-    </div>
-  </div>
-
-  <!-- Misión y Visión -->
-  <div class="pg-section">
-    <div class="grid-2">
-      <div class="pg-card">
-        <div class="pg-card-body">
-          <div class="icon-box lg" style="margin-bottom:20px;"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
-          <h3 style="font-family:'Cinzel',serif;color:var(--text);font-size:1.15rem;letter-spacing:.06em;margin-bottom:14px;">Nuestra Misión</h3>
-          <p style="color:var(--muted);font-size:.9rem;line-height:1.75;">Brindar servicios de barbería de la más alta calidad, combinando técnicas tradicionales con tendencias modernas, en un ambiente acogedor donde cada cliente se sienta valorado y transformado.</p>
-        </div>
-      </div>
-      <div class="pg-card">
-        <div class="pg-card-body">
-          <div class="icon-box lg" style="margin-bottom:20px;"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-          <h3 style="font-family:'Cinzel',serif;color:var(--text);font-size:1.15rem;letter-spacing:.06em;margin-bottom:14px;">Nuestra Visión</h3>
-          <p style="color:var(--muted);font-size:.9rem;line-height:1.75;">Ser la barbería de referencia en la región, reconocida por la excelencia en nuestros servicios, la innovación constante y la formación de nuevas generaciones de barberos profesionales.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Valores -->
-  <div class="pg-section">
-    <div class="pg-section-header center">
-      <h2>Nuestros Valores</h2>
-      <p>Los principios fundamentales que guían cada decisión y acción en TAJOS</p>
-    </div>
-    <div class="grid-4">
-      <div class="pg-card"><div class="value-card">
-        <div class="icon-box"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-        <h3>Pasión</h3>
-        <p>Cada corte es una obra de arte creada con dedicación y amor por nuestro oficio.</p>
-      </div></div>
-      <div class="pg-card"><div class="value-card">
-        <div class="icon-box"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
-        <h3>Precisión</h3>
-        <p>Atención meticulosa a cada detalle para lograr resultados perfectos.</p>
-      </div></div>
-      <div class="pg-card"><div class="value-card">
-        <div class="icon-box"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <h3>Comunidad</h3>
-        <p>Construimos relaciones duraderas con nuestros clientes y la comunidad.</p>
-      </div></div>
-      <div class="pg-card"><div class="value-card">
-        <div class="icon-box"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-        <h3>Excelencia</h3>
-        <p>Compromiso constante con la calidad y la mejora continua.</p>
-      </div></div>
-    </div>
-  </div>
-
-  <!-- Timeline -->
-  <div class="pg-section">
-    <div class="pg-section-header center">
-      <h2>Nuestro Recorrido</h2>
-      <p>Los momentos más importantes en la historia de TAJOS</p>
-    </div>
-    <div class="timeline">
-      <div class="timeline-item">
-        <div class="timeline-year"><span>2017</span></div>
-        <div class="timeline-content">
-          <h3>Fundación</h3>
-          <p>TAJOS abre sus puertas en Denis Roa con la visión de revolucionar la barbería tradicional en Asunción.</p>
-        </div>
-      </div>
-      <div class="timeline-item">
-        <div class="timeline-year"><span>2019</span></div>
-        <div class="timeline-content">
-          <h3>TAJOS Cottage</h3>
-          <p>Inauguramos el Cottage, un espacio rústico y exclusivo para quienes buscan discreción y ambiente único.</p>
-        </div>
-      </div>
-      <div class="timeline-item">
-        <div class="timeline-year"><span>2021</span></div>
-        <div class="timeline-content">
-          <h3>TAJOS Academy</h3>
-          <p>Lanzamos nuestro programa de formación profesional para nuevas generaciones de barberos.</p>
-        </div>
-      </div>
-      <div class="timeline-item">
-        <div class="timeline-year"><span>2023</span></div>
-        <div class="timeline-content">
-          <h3>TAJOS CIT</h3>
-          <p>Llegamos al Club Internacional de Tenis, reafirmando nuestro compromiso con la excelencia y el servicio de élite.</p>
-        </div>
-      </div>
-      <div class="timeline-item">
-        <div class="timeline-year"><span>2025</span></div>
-        <div class="timeline-content">
-          <h3>Comunidad Digital</h3>
-          <p>Superamos los 50K seguidores en redes sociales, compartiendo nuestra pasión con todo el Paraguay.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Reconocimientos -->
-  <div class="pg-section">
-    <div class="pg-card">
-      <div class="pg-card-body" style="text-align:center;">
-        <div class="icon-box lg" style="margin:0 auto 16px;"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg></div>
-        <h2 style="font-family:'Cinzel',serif;color:var(--gold);font-size:1.5rem;letter-spacing:.07em;margin-bottom:12px;">Reconocimientos</h2>
-        <p style="color:var(--muted);max-width:500px;margin:0 auto 36px;font-size:.9rem;line-height:1.6;">Orgullosos de los reconocimientos recibidos por nuestro trabajo y dedicación a la excelencia.</p>
-        <div class="grid-3">
-          <div class="award-item">
-            <div class="icon-box" style="margin:0 auto 14px;"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg></div>
-            <h3>Mejor Barbería 2023</h3>
-            <p>Asociación Nacional de Barberos</p>
-          </div>
-          <div class="award-item">
-            <div class="icon-box" style="margin:0 auto 14px;"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-            <h3>Excelencia en Servicio</h3>
-            <p>Cámara de Comercio Local</p>
-          </div>
-          <div class="award-item">
-            <div class="icon-box" style="margin:0 auto 14px;"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-            <h3>5 Estrellas Promedio</h3>
-            <p>Reseñas verificadas de clientes</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Ubicaciones -->
-  <div class="pg-section">
-    <div class="pg-card grid-2-split" style="overflow:hidden;">
-      <div style="padding:36px 32px;">
-        <h2 style="font-family:'Cinzel',serif;color:var(--gold);font-size:1.3rem;letter-spacing:.06em;margin-bottom:14px;">¿Dónde Encontrarnos?</h2>
-        <p style="color:var(--muted);font-size:.9rem;line-height:1.7;margin-bottom:24px;">Contamos con tres ubicaciones pensadas para servir mejor a nuestra comunidad, cada una con su propio carácter.</p>
-        <div class="loc-list-item">
-          <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          <div>
-            <h4>TAJOS Denis Roa</h4>
-            <p>Denis Roa 673, Bo. Herrera — Asunción</p>
-          </div>
-        </div>
-        <div class="loc-list-item">
-          <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          <div>
-            <h4>TAJOS Cottage</h4>
-            <p>Denis Roa 673, Bo. Herrera — Asunción</p>
-          </div>
-        </div>
-        <div class="loc-list-item">
-          <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          <div>
-            <h4>TAJOS CIT</h4>
-            <p>Spa Caballeros, Club Internacional de Tenis</p>
-          </div>
-        </div>
-      </div>
-      <img src="https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=600&q=80" alt="Ubicación" style="width:100%;height:100%;min-height:260px;object-fit:cover;display:block;">
-    </div>
-  </div>
-
-  <!-- CTA -->
-  <div class="pg-section">
-    <div class="pg-card-cta">
-      <h2>¿Listo para ser parte de la familia TAJOS?</h2>
-      <p>Ven y descubrí por qué miles de clientes confían en nosotros para verse y sentirse mejor. Tu próximo corte perfecto te está esperando.</p>
-      <div class="btn-group">
-        <button class="btn-primary" onclick="bookService('agendar una cita')">Agendar Cita</button>
-        <button class="btn-outline" onclick="showHome(); setTimeout(()=>scrollToSection('locations'),100);">Ver Ubicaciones</button>
-      </div>
-    </div>
-  </div>
-
-</div>
-</div><!-- /page-about -->
-
-
-<!-- ════════════════════════════════════════
-     PÁGINA: FAQ
-════════════════════════════════════════ -->
-<div class="page-view" id="page-faq">
-<div class="container">
-
-  <!-- Header -->
-  <div class="page-header">
-    <button class="page-back" onclick="showHome()">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <div class="page-header-text">
-      <h1>Preguntas Frecuentes</h1>
-      <p>Encontrá respuestas a las dudas más comunes sobre TAJOS</p>
-    </div>
-  </div>
-
-  <!-- Respuestas Rápidas -->
-  <div class="pg-section">
-    <div class="pg-section-header">
-      <h2>Respuestas Rápidas</h2>
-    </div>
-    <div class="grid-3">
-      <div class="pg-card"><div class="quick-card">
-        <div class="icon-box"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-        <h3>¿Cuáles son sus horarios?</h3>
-        <p>Lun–Vie: 9:00–20:00<br>Sáb: 8:00–21:00<br>Dom: CERRADO</p>
-      </div></div>
-      <div class="pg-card"><div class="quick-card">
-        <div class="icon-box"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.35 2 2 0 0 1 3.6 1.15h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.75a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
-        <h3>¿Cómo los contacto?</h3>
-        <p>WhatsApp: (+595) 982-473-078<br>o visitanos en persona</p>
-      </div></div>
-      <div class="pg-card"><div class="quick-card">
-        <div class="icon-box"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-        <h3>¿Cuánto dura una cita?</h3>
-        <p>Corte básico: 30–45 min<br>Corte + barba: 60–75 min<br>Servicios especiales: 90+ min</p>
-      </div></div>
-    </div>
-  </div>
-
-  <!-- Categoría 1: Citas y Reservas -->
-  <div class="faq-cat pg-section">
-    <div class="faq-cat-header">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span>Citas y Reservas</span>
-    </div>
-    <div class="faq-items">
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Cómo puedo agendar una cita?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Podés agendar tu cita de varias formas: enviando un mensaje por WhatsApp al (+595) 982-473-078, o visitándonos en persona en cualquiera de nuestras sucursales. También estamos desarrollando un sistema de reservas en línea que estará disponible próximamente.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Con cuánta anticipación debo reservar?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Recomendamos reservar con al menos 2–3 días de anticipación, especialmente para fines de semana. Para servicios especiales como afeitado tradicional o tratamientos capilares, te sugerimos reservar con una semana de anticipación.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Puedo cambiar o cancelar mi cita?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Sí, podés modificar o cancelar tu cita. Te pedimos que nos avises con al menos 4 horas de anticipación para poder ofrecer el horario a otros clientes. Las cancelaciones de último minuto pueden estar sujetas a una penalización.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Qué pasa si llego tarde a mi cita?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Entendemos que a veces surgen imprevistos. Si llegás con menos de 15 minutos de retraso, haremos nuestro mejor esfuerzo para atenderte. Con más de 15 minutos de retraso es posible que tengamos que reprogramar tu cita.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Categoría 2: Servicios y Precios -->
-  <div class="faq-cat pg-section">
-    <div class="faq-cat-header">
-      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-      <span>Servicios y Precios</span>
-    </div>
-    <div class="faq-items">
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Qué servicios ofrecen?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Ofrecemos una amplia gama de servicios: cortes clásicos y modernos, afeitado tradicional con navaja, arreglo de barba y bigote, tratamientos capilares, lavado y peinado, y servicios especiales para eventos. Cada servicio incluye consulta personalizada.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Cuáles son sus precios?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Nuestros precios varían según el servicio y la sucursal. Como referencia: corte básico desde Gs. 75.000, corte premium desde Gs. 110.000, afeitado tradicional desde Gs. 65.000, combo corte + barba desde Gs. 140.000. Consultanos para información actualizada.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Ofrecen paquetes o promociones?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Sí, tenemos varios paquetes disponibles: membresías mensuales con descuentos, paquetes especiales para novios, promociones en temporadas, y descuentos para estudiantes y adultos mayores. Preguntá por nuestras ofertas actuales al contactarnos.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Incluyen productos en el servicio?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Todos nuestros servicios incluyen productos premium de marcas como American Crew, BaByliss y otras. Si deseás llevarte productos a casa, ofrecemos descuentos especiales para clientes de TAJOS.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Categoría 3: Políticas y Normas -->
-  <div class="faq-cat pg-section">
-    <div class="faq-cat-header">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span>Políticas y Normas</span>
-    </div>
-    <div class="faq-items">
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Atienden a niños?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">¡Por supuesto! Damos la bienvenida a clientes de todas las edades. Tenemos barberos especializados en cortes para niños y creamos un ambiente cómodo para los más pequeños. Recomendamos citas en horarios menos concurridos para mayor comodidad.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Necesito llevar algo específico?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">No necesitás traer nada especial. Proporcionamos todas las herramientas, productos y toallas necesarias. Solo vení con el cabello limpio y listo para tu transformación. Si tenés alguna alergia, por favor informanos al hacer la reserva.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Aceptan todas las formas de pago?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-        </button>
-        <div class="faq-a">Aceptamos efectivo y transferencias bancarias. Estamos trabajando para incorporar más métodos de pago próximamente. Consultanos sobre las opciones disponibles en cada sucursal.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Tienen estacionamiento disponible?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-        </button>
-        <div class="faq-a">En Denis Roa y Cottage contamos con opciones de estacionamiento en la zona. La sucursal CIT dispone del estacionamiento del Club Internacional de Tenis. Te recomendamos consultarnos antes de tu visita.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Categoría 4: TAJOS Academy -->
-  <div class="faq-cat pg-section">
-    <div class="faq-cat-header">
-      <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-7 10 7M6 11v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7"/></svg>
-      <span>TAJOS Academy</span>
-    </div>
-    <div class="faq-items">
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Necesito experiencia previa para inscribirme?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">No es necesaria experiencia previa para el programa de Barbería Clásica. Para los programas Moderno y Completo recomendamos conocimientos básicos. Durante la consulta de inscripción evaluamos tu nivel y te orientamos al programa más adecuado.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿El título tiene validez oficial?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Otorgamos un certificado de TAJOS Academy avalado por nuestra trayectoria en la industria. Consultanos sobre los procesos de homologación vigentes según tu región para mayor detalle.</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" onclick="toggleFaq(this)">
-          ¿Cuándo comienza el próximo ciclo?
-          <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="faq-a">Los ciclos comienzan cada dos meses. Los cupos son limitados, por lo que recomendamos inscribirse con anticipación. Contactanos para conocer las fechas disponibles y reservar tu lugar.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CTA Final -->
-  <div class="pg-section">
-    <div class="pg-card-cta">
-      <h2>¿Tenés otra pregunta?</h2>
-      <p>No encontraste lo que buscabas. Contactanos directamente y te responderemos a la brevedad.</p>
-      <div class="btn-group">
-        <button class="btn-primary" onclick="openWhatsApp()">Consultar por WhatsApp</button>
-        <button class="btn-outline" onclick="showPage('page-academy')">Ver TAJOS Academy</button>
-      </div>
-    </div>
-  </div>
-
-</div>
-</div><!-- /page-faq -->
-
-
-<!-- ─── FLOATING BUTTON ─── -->
-<div class="fab-wrap">
-  <div class="fab-menu" id="fabMenu">
-    <div class="fab-menu-header">
-      <span>Seleccioná un servicio</span>
-      <button class="fab-close" onclick="closeFabMenu()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <button class="service-btn" onclick="bookService('agendar un corte de cabello')"><span class="service-icon">✂️</span>Corte de cabello</button>
-    <button class="service-btn" onclick="bookService('agendar un arreglo de barba')"><span class="service-icon">💈</span>Arreglo de barba</button>
-    <button class="service-btn" onclick="bookService('agendar un corte + barba')"><span class="service-icon">🔥</span>Corte + Barba</button>
-    <button class="service-btn" onclick="bookService('agendar un ritual completo')"><span class="service-icon">⭐</span>Ritual completo</button>
-  </div>
-  <div class="fab-tooltip">Agendar cita</div>
-  <button class="fab" onclick="toggleFab()">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    <div class="fab-pulse"></div>
-  </button>
 </div>
 
 <script>
-// ── GALLERY ──
-let galleryPos = 0;
-const slides = document.querySelectorAll('.gallery-slide');
-let slidesPerView = () => window.innerWidth >= 900 ? 3 : window.innerWidth >= 600 ? 2 : 1;
-function updateGallery(){
-  const track = document.getElementById('galleryTrack');
-  const spv = slidesPerView();
-  const maxPos = Math.max(0, slides.length - spv);
-  galleryPos = Math.min(galleryPos, maxPos);
-  const w = track.parentElement.offsetWidth;
-  const gap = 20;
-  const slideW = (w - gap * (spv - 1)) / spv;
-  track.style.transform = `translateX(-${galleryPos * (slideW + gap)}px)`;
-}
-function galleryNext(){ galleryPos = Math.min(galleryPos + 1, slides.length - slidesPerView()); updateGallery(); }
-function galleryPrev(){ galleryPos = Math.max(galleryPos - 1, 0); updateGallery(); }
-window.addEventListener('resize', updateGallery);
+// ══════════════════════════════════════════════════════════════
+// CONFIGURACIÓN SUPABASE — reemplazar con tus valores reales
+// ══════════════════════════════════════════════════════════════
+const SUPA_URL='https://tgwhegmgchnttsmrhcfc.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnd2hlZ21nY2hudHRzbXJoY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODg1ODgsImV4cCI6MjA4OTQ2NDU4OH0.3g20p6yGber_j6HNB5oQqesOm_YgQ_fo9P2Yl2jGPbM';
 
-// ── PAGE ROUTING ──
-function showPage(pageId) {
-  document.getElementById('home-view').style.display = 'none';
-  document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
-  document.getElementById(pageId).classList.add('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function showHome() {
-  document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
-  document.getElementById('home-view').style.display = '';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-// ── NAVIGATION ──
-function scrollToSection(id){
-  const el = document.getElementById(id);
-  if(el) el.scrollIntoView({ behavior:'smooth' });
-  closeMenu();
-}
-function toggleMenu(){
-  const dd = document.getElementById('dropdown');
-  const ov = document.getElementById('menuOverlay');
-  const icon = document.getElementById('menuIcon');
-  const open = dd.classList.toggle('open');
-  ov.classList.toggle('open', open);
-  icon.innerHTML = open
-    ? '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
-    : '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>';
-}
-function closeMenu(){
-  document.getElementById('dropdown').classList.remove('open');
-  document.getElementById('menuOverlay').classList.remove('open');
-  document.getElementById('menuIcon').innerHTML = '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>';
-}
-
-// Active nav on scroll
-const navSectionIds = ['home','gallery','testimonials','locations','events'];
-const allSections   = ['home','brands','gallery','testimonials','locations','events'];
-const sectionToNav  = {home:'home',brands:'home',gallery:'gallery',testimonials:'testimonials',locations:'locations',events:'events'};
-window.addEventListener('scroll', () => {
-  if(document.querySelector('.page-view.active')) return;
-  const scrollY = window.scrollY + 120;
-  let current = 'home';
-  allSections.forEach(id => {
-    const el = document.getElementById(id);
-    if(el && el.offsetTop <= scrollY) current = id;
+const STORE_TABLE={
+  barberos:'barberos',clientes:'clientes',servicios:'servicios',productos:'productos',
+  turnos:'turnos',cobros:'cobros',usuarios:'usuarios',historial:'historial',
+  arqueos:'arqueos',barberoUsers:'barbero_users',adelantos:'adelantos',
+  egresos:'egresos',giftcards:'giftcards',categoriasServ:'categorias_serv',categoriasProd:'categorias_prod',
+  metodosPago:'metodos_pago',
+};
+const FIELD_TO_DB={
+  barberoId:'barbero_id',clienteId:'cliente_id',productoId:'producto_id',
+  fechaIngreso:'fecha_ingreso',ultimoAcceso:'ultimo_acceso',
+  metodoPago:'metodo_pago',ultimoUso:'ultimo_uso',
+  montoSolicitado:'monto_solicitado',montoAprobado:'monto_aprobado',
+  fechaSolicitud:'fecha_solicitud',notaSolicitud:'nota_solicitud',
+  notaAdmin:'nota_admin',fechaAprobacion:'fecha_aprobacion',
+  barberoNombre:'barbero_nombre',clienteNombre:'cliente_nombre',
+  registradoPor:'registrado_por',giftcardId:'giftcard_id',
+};
+const FIELD_FROM_DB=Object.fromEntries(Object.entries(FIELD_TO_DB).map(([k,v])=>[v,k]));
+const SUPA_COLS={
+  cobros:new Set(['id','cliente_id','barbero_id','fecha','hora','local','items','pagos','total','factura','giftcard_id','registrado_por','created_at']),
+  barberos:new Set(['id','nombre','apellido','fecha_ingreso','local','comision','email','activo','created_at','updated_at']),
+  barbero_users:new Set(['id','barbero_id','login','pin','activo','ultimo_acceso','created_at']),
+  clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
+  servicios:new Set(['id','nombre','precio','duracion','categoria','descripcion','activo','created_at','updated_at']),
+  productos:new Set(['id','nombre','precio','stock','categoria','descripcion','activo','created_at','updated_at']),
+  turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','created_at','updated_at']),
+  usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
+  historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
+  arqueos:new Set(['id','fecha','local','turno','cajero','detalle','total','nota','created_at']),
+  adelantos:new Set(['id','barbero_id','barbero_nombre','monto_solicitado','monto_aprobado','estado','fecha_solicitud','nota_solicitud','nota_admin','fecha_aprobacion','ts']),
+  egresos:new Set(['id','barbero_id','barbero_nombre','producto_id','producto','cantidad','monto','nota','registrado_por','fecha','created_at']),
+  giftcards:new Set(['id','codigo','cliente_id','valor','saldo','metodo_pago','nota','estado','fecha','ultimo_uso','created_at']),
+  categorias_serv:new Set(['id','nombre','created_at']),
+  categorias_prod:new Set(['id','nombre','created_at']),
+  metodos_pago:new Set(['id','nombre','icono','activo','orden','created_at']),
+};
+function toDbObj(obj,table){const allowed=table?SUPA_COLS[table]:null;const r={};for(const [k,v] of Object.entries(obj)){const dk=FIELD_TO_DB[k]||k;if(allowed&&!allowed.has(dk))continue;r[dk]=(v!==undefined&&v!==null)?v:null;}return r;}
+function fromDbObj(obj){
+  if(!obj)return null;
+  const r={};
+  for(const [k,v] of Object.entries(obj)){const ak=FIELD_FROM_DB[k]||k;r[ak]=v;}
+  if(r.id!==undefined)r.id=Number(r.id);
+  // Supabase puede devolver columnas JSONB como string — parsear si es necesario
+  ['pagos','items','detalle','egresosEfectivo','egresos_efectivo','acceso'].forEach(col=>{
+    if(typeof r[col]==='string'){try{r[col]=JSON.parse(r[col]);}catch(e){r[col]=[];}}
+    if(r[col]==null)r[col]=col==='acceso'?{}:[];
   });
-  const activeNav = sectionToNav[current] || 'home';
-  document.querySelectorAll('.nav-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', navSectionIds[i] === activeNav);
+  if(Array.isArray(r.pagos))r.pagos=r.pagos.map(p=>({...p,monto:parseFloat(p.monto)||0}));
+  if(Array.isArray(r.items))r.items=r.items.map(i=>({...i,precio:parseFloat(i.precio)||0}));
+  return r;
+}
+
+// Conectividad
+let _online=navigator.onLine;
+window.addEventListener('online',()=>{_online=true;syncPending();});
+window.addEventListener('offline',()=>{_online=false;});
+
+// Cola offline
+const PENDING_KEY='tajos_portal_pending';
+function getPending(){try{return JSON.parse(localStorage.getItem(PENDING_KEY)||'[]');}catch{return[];}}
+function savePending(ops){localStorage.setItem(PENDING_KEY,JSON.stringify(ops));}
+function addPending(op){const ops=getPending();ops.push(op);savePending(ops);}
+async function syncPending(){
+  const ops=getPending();if(!ops.length||!_online)return;
+  const remaining=[];
+  for(const op of ops){
+    try{
+      const tbl=STORE_TABLE[op.store]||op.store;
+      if(op.type==='insert'){const body=toDbObj(op.data,tbl);delete body.id;await supaFetch('POST',tbl,null,body);}
+      else if(op.type==='upsert'){const body=toDbObj(op.data,tbl);delete body.id;await supaFetch('PATCH',tbl,`id=eq.${op.data.id}`,body);}
+      else if(op.type==='delete'){await supaFetch('DELETE',tbl,`id=eq.${op.id}`);}
+    }catch(e){remaining.push(op);}
+  }
+  savePending(remaining);
+}
+
+// Supabase REST helper
+async function supaFetch(method,table,query,body,extraHeaders={}){
+  const url=`${SUPA_URL}/rest/v1/${table}${query?'?'+query:''}`;
+  const headers={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation',...extraHeaders};
+  const res=await fetch(url,{method,headers,body:body?JSON.stringify(body):undefined});
+  if(!res.ok){const err=await res.text();throw new Error(`Supabase ${method} ${table}: ${res.status} ${err}`);}
+  if(res.status===204)return null;
+  return res.json();
+}
+
+// IndexedDB (cache local / fallback offline)
+let db;
+const DB_NAME='TajosOS',DB_VER=4;
+function initDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      ['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos',
+       'barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd']
+        .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id',autoIncrement:true});});
+    };
+    r.onsuccess=e=>{db=e.target.result;res(db);};
+    r.onerror=e=>rej(e.target.error);
   });
+}
+const _idbAll=s=>new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
+const _idbGet=(s,id)=>new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).get(Number(id));r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
+const _idbAdd=(s,d)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).add(d);r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
+const _idbPut=(s,d)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).put(d);r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
+const _idbDel=(s,id)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).delete(Number(id));r.onsuccess=()=>res();r.onerror=e=>rej(e);});
+async function _idbReplaceAll(store,rows){
+  const existing=await _idbAll(store);
+  for(const item of existing)await _idbDel(store,item.id);
+  for(const item of rows){const copy={...item};if(!copy.id)delete copy.id;await _idbAdd(store,copy);}
+}
+
+// Capa hibrida publica
+async function dbAll(store){
+  const tbl=STORE_TABLE[store]||store;
+  if(_online){try{const rows=await supaFetch('GET',tbl,'select=*&order=id.asc');const mapped=(rows||[]).map(fromDbObj);_idbReplaceAll(store,mapped).catch(()=>{});return mapped;}catch(e){console.warn('dbAll fallback:',e);}}
+  return _idbAll(store);
+}
+async function dbGet(store,id){
+  const tbl=STORE_TABLE[store]||store;
+  if(_online){try{const rows=await supaFetch('GET',tbl,`id=eq.${id}&select=*`);if(rows&&rows.length){const item=fromDbObj(rows[0]);_idbPut(store,item).catch(()=>{});return item;}}catch(e){console.warn('dbGet fallback:',e);}}
+  return _idbGet(store,Number(id));
+}
+async function dbAdd(store,data){
+  const tbl=STORE_TABLE[store]||store;
+  const body=toDbObj({...data},tbl);delete body.id;
+  if(_online){try{const rows=await supaFetch('POST',tbl,null,body);if(rows&&rows.length){const saved=fromDbObj(rows[0]);_idbAdd(store,saved).catch(()=>{});return saved.id;}}catch(e){console.warn('dbAdd fallback:',e);}}
+  const localId=await _idbAdd(store,{...data});addPending({type:'insert',store,data:{...data,id:localId}});return localId;
+}
+async function dbPut(store,data){
+  const tbl=STORE_TABLE[store]||store;
+  const body=toDbObj({...data},tbl);delete body.id;
+  if(_online){try{await supaFetch('PATCH',tbl,`id=eq.${data.id}`,body);_idbPut(store,data).catch(()=>{});return;}catch(e){console.warn('dbPut fallback:',e);}}
+  await _idbPut(store,data);addPending({type:'upsert',store,data});
+}
+async function dbDel(store,id){
+  const tbl=STORE_TABLE[store]||store;
+  if(_online){try{await supaFetch('DELETE',tbl,`id=eq.${id}`);_idbDel(store,id).catch(()=>{});return;}catch(e){console.warn('dbDel fallback:',e);}}
+  await _idbDel(store,id);addPending({type:'delete',store,id});
+}
+
+// ══ STATE ══
+const ST={
+  barberoUser:null,  // barberoUser record
+  barbero:null,      // barbero record (vinculado)
+  agendaFecha:new Date(),
+  agendaVista:'dia', // 'dia' | 'semana'
+  reportePeriodo:'dia'
+};
+
+// ══ HELPERS ══
+const fmt=n=>'Gs. '+(n||0).toLocaleString('es-PY',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtD=d=>{if(!d)return '—';return new Date(d+'T00:00:00').toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric'});};
+const toDS=d=>d.toISOString().split('T')[0];
+const hoy=()=>toDS(new Date());
+const ahora=()=>{const n=new Date();return toDS(n)+' '+n.toTimeString().slice(0,5);};
+
+function getLunesDeSemana(d){
+  const dt=new Date(d);const day=dt.getDay();const diff=dt.getDate()-(day===0?6:day-1);
+  dt.setDate(diff);return dt;
+}
+function getDiasSemana(d){
+  const lunes=getLunesDeSemana(d);
+  return Array.from({length:7},(_,i)=>{const dt=new Date(lunes);dt.setDate(lunes.getDate()+i);return dt;});
+}
+
+function getPeriodoRange(periodo){
+  const td=hoy();
+  if(periodo==='dia')return{desde:td,hasta:td,label:'Hoy — '+fmtD(td)};
+  if(periodo==='semana'){
+    const dias=getDiasSemana(new Date());
+    const desde=toDS(dias[0]);const hasta=toDS(dias[6]);
+    return{desde,hasta,label:`Semana — ${fmtD(desde)} al ${fmtD(hasta)}`};
+  }
+  if(periodo==='mes'){
+    const now=new Date();
+    const diaActual=now.getDate();
+    // Hasta el día 5 inclusive: mostrar el mes anterior completo (del 1 al último día)
+    if(diaActual<=5){
+      const primerDiaMesAnt=new Date(now.getFullYear(),now.getMonth()-1,1);
+      const ultimoDiaMesAnt=new Date(now.getFullYear(),now.getMonth(),0);
+      const desde=toDS(primerDiaMesAnt);
+      const hasta=toDS(ultimoDiaMesAnt);
+      const nombreMes=primerDiaMesAnt.toLocaleDateString('es-PY',{month:'long',year:'numeric'});
+      return{desde,hasta,label:`${nombreMes.charAt(0).toUpperCase()+nombreMes.slice(1)} — ${fmtD(desde)} al ${fmtD(hasta)}`};
+    }
+    // A partir del día 6: mostrar desde el 01 del mes actual hasta hoy
+    const desde=td.slice(0,7)+'-01';
+    return{desde,hasta:td,label:`Este mes — ${fmtD(desde)} al ${fmtD(td)}`};
+  }
+  return{desde:td,hasta:td,label:'Hoy'};
+}
+
+// ══ CLOCK ══
+function updClock(){
+  const n=new Date();
+  const c=document.getElementById('topbarClock');const d=document.getElementById('topbarDate');
+  if(c)c.textContent=n.toLocaleTimeString('es-PY',{hour:'2-digit',minute:'2-digit'});
+  if(d)d.textContent=n.toLocaleDateString('es-PY',{weekday:'short',day:'numeric',month:'short'});
+}
+setInterval(updClock,1000);updClock();
+
+// ══ AUTH ══
+async function doLogin(){
+  const login=document.getElementById('loginUser').value.trim().toLowerCase();
+  const pin=document.getElementById('loginPin').value;
+  const errEl=document.getElementById('loginError');
+  const btn=document.getElementById('btnLoginPortal');
+  if(!login||!pin){errEl.textContent='❌ Ingresa tu usuario y PIN';errEl.classList.add('show');return;}
+  btn.textContent='Verificando...';btn.disabled=true;
+  errEl.classList.remove('show');
+  try{
+    const bUsers=await dbAll('barberoUsers');
+    const bu=bUsers.find(u=>u.login===login&&u.pin===pin&&u.activo!==false);
+    if(!bu){
+      errEl.textContent='❌ Usuario o PIN incorrecto';
+      errEl.classList.add('show');
+      btn.textContent='Ingresar';btn.disabled=false;return;
+    }
+    const bId=Number(bu.barberoId||bu.barbero_id);
+    const barbero=await dbGet('barberos',bId);
+    if(!barbero){
+      errEl.textContent='❌ No se encontro el perfil de barbero. Contacta al administrador.';
+      errEl.classList.add('show');
+      btn.textContent='Ingresar';btn.disabled=false;return;
+    }
+    ST.barberoUser=bu;ST.barbero=barbero;
+    bu.ultimoAcceso=ahora();await dbPut('barberoUsers',bu);
+    showApp();
+  }catch(e){
+    console.error('Login error:',e);
+    errEl.textContent='❌ Error de conexion. Verifica tu internet e intenta de nuevo.';
+    errEl.classList.add('show');
+  }finally{btn.textContent='Ingresar';btn.disabled=false;}
+}
+
+function showApp(){
+  sessionStorage.setItem('tajos_bid', String(ST.barbero.id));
+  sessionStorage.setItem('tajos_buid', String(ST.barberoUser.id));
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.add('show');
+  document.getElementById('topbarUser').textContent=ST.barbero.nombre+' '+ST.barbero.apellido+' · '+
+    (ST.barbero.local==1?'Central':ST.barbero.local==2?'Superseis':'Ambas');
+  navigate('agenda');
+}
+
+function confirmLogout(){if(confirm('¿Cerrar sesión?'))logout();}
+function logout(){
+  ST.barberoUser=null;ST.barbero=null;
+  sessionStorage.removeItem('tajos_bid');
+  sessionStorage.removeItem('tajos_buid');
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPin').value='';
+}
+
+// ══ NAVIGATION ══
+document.querySelectorAll('.nav-tab[data-page]').forEach(el=>{
+  el.addEventListener('click',()=>navigate(el.dataset.page));
 });
 
-// ── MODALS ──
-function openModal(id){ document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
-function closeModal(id){ document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
-function closeModalOutside(e, id){ if(e.target.id === id) closeModal(id); }
-document.addEventListener('keydown', e => {
-  if(e.key==='Escape'){
-    document.querySelectorAll('.modal-backdrop.open').forEach(m => { m.classList.remove('open'); document.body.style.overflow=''; });
-  }
-});
+function navigate(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  const pg=document.getElementById('page-'+page);if(!pg)return;
+  pg.classList.add('active');
+  const tab=document.querySelector(`.nav-tab[data-page="${page}"]`);if(tab)tab.classList.add('active');
+  if(page==='agenda')renderAgenda();
+  if(page==='servicios'){document.getElementById('servFechaFiltro').value=hoy();renderServicios();}
+  if(page==='reportes'){setPeriodo('dia',document.querySelector('.period-tab'));renderReportes();}
+  if(page==='adelantos')renderAdelantos();
+}
 
-// ── FAB ──
-let fabOpen = false;
-function toggleFab(){ fabOpen = !fabOpen; document.getElementById('fabMenu').classList.toggle('open', fabOpen); }
-function closeFabMenu(){ fabOpen = false; document.getElementById('fabMenu').classList.remove('open'); }
-function bookService(svc){ window.open(`https://wa.me/595982473078?text=${encodeURIComponent('Hola, me gustaría ' + svc)}`, '_blank'); closeFabMenu(); }
-function openWhatsApp(){ window.open('https://wa.me/595982473078?text=' + encodeURIComponent('Hola, me gustaría hacer una consulta:'), '_blank'); }
+// ══ MODALS ══
+function openModal(id){const el=document.getElementById(id);if(el)el.classList.add('show');}
+function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('show');}
+function closeModalOut(e,id){if(e.target===document.getElementById(id))closeModal(id);}
 
-// ── FAQ ACCORDION ──
-function toggleFaq(btn) {
-  const item = btn.closest('.faq-item');
-  const answer = item.querySelector('.faq-a');
-  const isOpen = btn.classList.contains('open');
-  // close all in same category
-  btn.closest('.faq-items').querySelectorAll('.faq-q.open').forEach(q => {
-    q.classList.remove('open');
-    q.nextElementSibling.classList.remove('open');
-  });
-  if(!isOpen){
-    btn.classList.add('open');
-    answer.classList.add('open');
+// ══ TOAST ══
+function toast(msg,type='info'){
+  const icons={success:'✅',error:'❌',info:'⚡'};
+  const el=document.createElement('div');
+  el.className=`toast toast-${type}`;
+  el.innerHTML=`<span>${icons[type]||'ℹ'}</span><span>${msg}</span>`;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300);},3200);
+}
+
+// ══ AGENDA ══
+const HORAS=[];for(let h=8;h<=20;h++){HORAS.push(String(h).padStart(2,'0')+':00');if(h<20)HORAS.push(String(h).padStart(2,'0')+':30');}
+
+function setVistaAgenda(v){
+  ST.agendaVista=v;
+  document.getElementById('btnVistaDia').className=v==='dia'?'btn btn-gold btn-sm':'btn btn-ghost btn-sm';
+  document.getElementById('btnVistaSemana').className=v==='semana'?'btn btn-gold btn-sm':'btn btn-outline btn-sm';
+  renderAgenda();
+}
+
+function navAgenda(delta){
+  const d=new Date(ST.agendaFecha);
+  if(ST.agendaVista==='dia')d.setDate(d.getDate()+delta);
+  else d.setDate(d.getDate()+(delta*7));
+  ST.agendaFecha=d;renderAgenda();
+}
+
+function goHoy(){ST.agendaFecha=new Date();renderAgenda();}
+
+async function renderAgenda(){
+  const bId=Number(ST.barbero.id);
+  const turnos=await dbAll('turnos');
+  const clientes=await dbAll('clientes');
+  const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
+
+  if(ST.agendaVista==='dia'){
+    const fecha=toDS(ST.agendaFecha);
+    document.getElementById('agendaDateLabel').textContent=
+      ST.agendaFecha.toLocaleDateString('es-PY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    document.getElementById('agendaSubtitle').textContent='Vista diaria';
+    const misTurnos=turnos.filter(t=>Number(t.barberoId||t.barbero_id)===bId&&t.fecha===fecha);
+    let html='<div style="display:grid;grid-template-columns:64px 1fr;min-width:320px">';
+    HORAS.forEach(hora=>{
+      const t=misTurnos.find(t=>t.hora===hora);
+      html+=`<div class="time-label">${hora}</div>`;
+      if(t){
+        const cn=cMap[t.clienteId]||t.clienteNombre||'Sin nombre';
+        const sl=(t.servicios||[]).join(', ')||'—';
+        const badge=t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold';
+        html+=`<div style="padding:4px 8px">
+          <div class="slot-cell slot-occupied" onclick="verTurno(${t.id})">
+            <div style="font-weight:700;margin-bottom:2px">${cn}</div>
+            <div style="font-size:.78rem;color:var(--text-muted)">${sl}</div>
+            <span class="badge ${badge}" style="font-size:.65rem;margin-top:3px">${t.estado||'pendiente'}</span>
+          </div></div>`;
+      }else{
+        html+=`<div style="padding:4px 8px"><div class="slot-cell slot-empty">sin turno</div></div>`;
+      }
+    });
+    html+='</div>';
+    document.getElementById('agendaContent').innerHTML=html;
+  } else {
+    // Vista semanal
+    const dias=getDiasSemana(ST.agendaFecha);
+    const desde=toDS(dias[0]);const hasta=toDS(dias[6]);
+    document.getElementById('agendaDateLabel').textContent=
+      `${dias[0].toLocaleDateString('es-PY',{day:'numeric',month:'short'})} — ${dias[6].toLocaleDateString('es-PY',{day:'numeric',month:'short',year:'numeric'})}`;
+    document.getElementById('agendaSubtitle').textContent='Vista semanal (Lun–Dom)';
+    const misTurnos=turnos.filter(t=>Number(t.barberoId||t.barbero_id)===bId&&t.fecha>=desde&&t.fecha<=hasta);
+    const DIAS_LABEL=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+    const cols=`64px repeat(7,minmax(100px,1fr))`;
+    let html=`<div style="min-width:800px">`;
+    // Header
+    html+=`<div style="display:grid;grid-template-columns:${cols};position:sticky;top:0;z-index:5;background:var(--bg-raised);border-bottom:1px solid var(--border)">`;
+    html+=`<div style="padding:10px;text-align:center;font-size:.7rem;color:var(--text-dim)">HORA</div>`;
+    dias.forEach((d,i)=>{
+      const esHoy=toDS(d)===hoy();
+      html+=`<div style="padding:8px;text-align:center;font-family:var(--font-cond);font-weight:700;font-size:.82rem;color:${esHoy?'var(--gold-light)':'var(--gold)'};${esHoy?'background:rgba(201,148,10,.08);':''}">${DIAS_LABEL[i]}<br><span style="font-size:.9rem">${d.getDate()}</span></div>`;
+    });
+    html+=`</div>`;
+    HORAS.forEach(hora=>{
+      html+=`<div style="display:grid;grid-template-columns:${cols};border-bottom:1px solid rgba(201,148,10,.05)">`;
+      html+=`<div class="time-label" style="padding:10px 6px;border-right:1px solid var(--border)">${hora}</div>`;
+      dias.forEach(d=>{
+        const fecha=toDS(d);
+        const t=misTurnos.find(t=>t.fecha===fecha&&t.hora===hora);
+        if(t){
+          const cn=cMap[t.clienteId]||t.clienteNombre||'—';
+          const badge=t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold';
+          html+=`<div style="padding:3px 5px">
+            <div class="slot-cell slot-occupied" onclick="verTurno(${t.id})" style="font-size:.74rem">
+              <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cn}</div>
+              <span class="badge ${badge}" style="font-size:.6rem">${t.estado||'pend.'}</span>
+            </div></div>`;
+        }else{
+          html+=`<div style="padding:3px 5px"><div style="min-height:44px;border-radius:4px;background:rgba(255,255,255,.01);border:1px dashed rgba(201,148,10,.07)"></div></div>`;
+        }
+      });
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+    document.getElementById('agendaContent').innerHTML=`<div style="overflow-x:auto">${html}</div>`;
   }
 }
 
-// ── GALLERY FILTER ──
-function filterGallery(cat, el) {
-  document.querySelectorAll('.photo-grid .photo-item').forEach(item => {
-    item.style.display = (cat === 'todos' || item.dataset.cat === cat) ? '' : 'none';
-  });
-  document.querySelectorAll('.photo-grid').length; // noop
-  el.closest('div').querySelectorAll('.badge-pill').forEach(b => b.classList.remove('active-pill'));
-  el.classList.add('active-pill');
+async function verTurno(id){
+  const t=await dbGet('turnos',id);if(!t)return;
+  const clientes=await dbAll('clientes');
+  const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
+  const badge=t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold';
+  document.getElementById('detalleTurnoContent').innerHTML=`
+    <div class="grid-2" style="gap:14px;margin-bottom:14px">
+      <div><div class="form-label">Cliente</div><div style="font-weight:600">${cMap[t.clienteId]||t.clienteNombre||'—'}</div></div>
+      <div><div class="form-label">Fecha y Hora</div><div style="font-weight:600">${fmtD(t.fecha)} ${t.hora}</div></div>
+      <div><div class="form-label">Servicios</div><div>${(t.servicios||[]).join(', ')||'—'}</div></div>
+      <div><div class="form-label">Estado</div><span class="badge ${badge}">${t.estado||'pendiente'}</span></div>
+    </div>
+    ${t.notas?`<div class="alert alert-info">${t.notas}</div>`:''}`;
+  openModal('modalDetalleTurno');
 }
+// ══ SERVICIOS ══
+async function renderServicios(){
+  const bId=Number(ST.barbero.id);
+  const pct=(ST.barbero.comision||50)/100;
+  const cobros=await dbAll('cobros');
+  cobros.sort((a,b)=>b.fecha>a.fecha?1:-1);
+  const clientes=await dbAll('clientes');
+  const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
+  const td=hoy();
+  const fechaFiltro=document.getElementById('servFechaFiltro').value||td;
+  // Normalizar barberoId a número para evitar mismatch string/number con Supabase
+  const misCobros=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===bId);
+  const cobrosHoy=misCobros.filter(c=>c.fecha===td);
+  const cobrosMes=misCobros.filter(c=>c.fecha&&c.fecha.startsWith(td.slice(0,7)));
+  const cobrosFiltered=misCobros.filter(c=>c.fecha===fechaFiltro);
+
+  // Stats — comisión calculada sobre ítems de servicio (no sobre total del cobro)
+  const comHoy=cobrosHoy.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0),0);
+  const cntHoy=cobrosHoy.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').length,0);
+  const comMes=cobrosMes.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0),0);
+  const cntMes=cobrosMes.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').length,0);
+  document.getElementById('srvComHoy').textContent=fmt(comHoy);
+  document.getElementById('srvCntHoy').textContent=cntHoy;
+  document.getElementById('srvComMes').textContent=fmt(comMes);
+  document.getElementById('srvCntMes').textContent=cntMes;
+
+  // Tabla
+  const tbody=document.getElementById('serviciosTbody');
+  if(!cobrosFiltered.length){
+    tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><div class="icon">✂</div><p>Sin servicios en esta fecha</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=cobrosFiltered.sort((a,b)=>(b.hora||'')>(a.hora||'')?1:-1).map(co=>{
+    const svcs=(co.items||[]).filter(i=>i.tipo==='servicio').map(i=>i.nombre).join(', ')||'—';
+    const prodsComis=(co.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).map(i=>i.nombre).join(', ')||'—';
+    // Comisión = suma de precios de ítems de servicio × pct (no total del cobro)
+    const comision=(co.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0);
+    return `<tr>
+      <td>${fmtD(co.fecha)}</td>
+      <td>${co.hora||'—'}</td>
+      <td>${svcs}</td>
+      <td style="font-size:.8rem;color:var(--text-muted)">${prodsComis}</td>
+      <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(comision)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══ REPORTES ══
+function setPeriodo(p,el){
+  ST.reportePeriodo=p;
+  document.querySelectorAll('.period-tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderReportes();
+}
+
+async function renderReportes(){
+  const bId=Number(ST.barbero.id);
+  const pct=(ST.barbero.comision||50)/100;
+  const {desde,hasta,label}=getPeriodoRange(ST.reportePeriodo);
+  document.getElementById('reportePeriodoLabel').textContent=label;
+
+  const cobros=await dbAll('cobros');
+  const egresos=await dbAll('egresos');
+  const adelantos=await dbAll('adelantos');
+
+  const misCobros=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===bId&&c.fecha>=desde&&c.fecha<=hasta);
+  const misEgresos=egresos.filter(e=>Number(e.barberoId||e.barbero_id)===bId&&e.fecha>=desde&&e.fecha<=hasta);
+  const misAdelantos=adelantos.filter(a=>Number(a.barberoId||a.barbero_id)===bId&&a.estado==='aprobado'&&a.fechaAprobacion&&a.fechaAprobacion>=desde&&a.fechaAprobacion<=hasta);
+
+  // Comisiones por servicios
+  const comServ=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+i.precio*pct,0),0);
+  // Comisiones por productos
+  // Solo productos con comisionable===true generan 10% fijo
+  const PROD_COMIS_PCT=0.10;
+  const comProd=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+i.precio*PROD_COMIS_PCT,0),0);
+  // Egresos/consumos
+  const totalEgresos=misEgresos.reduce((s,e)=>s+(e.monto||0),0);
+  // Adelantos
+  const totalAdelantos=misAdelantos.reduce((s,a)=>s+(a.montoAprobado||0),0);
+  // Neto
+  const neto=(comServ+comProd)-totalEgresos-totalAdelantos;
+
+  document.getElementById('rpComServ').textContent=fmt(comServ);
+  document.getElementById('rpComProd').textContent=fmt(comProd);
+  document.getElementById('rpEgresos').textContent=fmt(totalEgresos);
+  document.getElementById('rpAdelantos').textContent=fmt(totalAdelantos);
+  document.getElementById('rpNeto').textContent=fmt(neto);
+  document.getElementById('rpNeto').style.color=neto>=0?'var(--gold-light)':'#e74c3c';
+
+  // Tabla servicios
+  const servRows=[];
+  misCobros.forEach(co=>{
+    (co.items||[]).filter(i=>i.tipo==='servicio').forEach(i=>{
+      servRows.push({fecha:co.fecha,nombre:i.nombre,precio:i.precio,comision:i.precio*pct});
+    });
+  });
+  document.getElementById('rpServTbody').innerHTML=servRows.length?
+    servRows.sort((a,b)=>b.fecha>a.fecha?1:-1).map(r=>`<tr>
+      <td>${fmtD(r.fecha)}</td><td>${r.nombre}</td>
+      <td style="font-family:var(--font-cond);color:var(--text-muted)">${fmt(r.precio)}</td>
+      <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(r.comision)}</td>
+    </tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin servicios en este período</p></div></td></tr>';
+
+  // Tabla productos vendidos
+  const prodRows=[];
+  misCobros.forEach(co=>{
+    (co.items||[]).filter(i=>i.tipo==='producto').forEach(i=>{
+      const comisionProd=i.comisionable===true?(i.precio*PROD_COMIS_PCT):0;
+      prodRows.push({fecha:co.fecha,nombre:i.nombre,precio:i.precio,comision:comisionProd,comisionable:i.comisionable===true});
+    });
+  });
+  document.getElementById('rpProdTbody').innerHTML=prodRows.length?
+    prodRows.sort((a,b)=>b.fecha>a.fecha?1:-1).map(r=>`<tr>
+      <td>${fmtD(r.fecha)}</td><td>${r.nombre}</td>
+      <td style="font-family:var(--font-cond);color:var(--text-muted)">${fmt(r.precio)}</td>
+      <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(r.comision)}</td>
+    </tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin productos vendidos</p></div></td></tr>';
+
+  // Tabla egresos
+  document.getElementById('rpEgresosTbody').innerHTML=misEgresos.length?
+    misEgresos.sort((a,b)=>b.fecha>a.fecha?1:-1).map(e=>`<tr>
+      <td>${fmtD(e.fecha)}</td><td>${e.producto}</td><td>${e.cantidad||1}</td>
+      <td style="font-family:var(--font-cond);font-weight:700;color:#e74c3c">${fmt(e.monto)}</td>
+    </tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin egresos registrados</p></div></td></tr>';
+
+  // Tabla adelantos
+  document.getElementById('rpAdelantosTbody').innerHTML=misAdelantos.length?
+    misAdelantos.sort((a,b)=>b.fechaAprobacion>a.fechaAprobacion?1:-1).map(a=>`<tr>
+      <td>${fmtD(a.fechaAprobacion)}</td>
+      <td style="font-family:var(--font-cond);font-weight:700;color:#e74c3c">${fmt(a.montoAprobado)}</td>
+      <td style="font-size:.82rem;color:var(--text-muted)">${a.notaAdmin||'—'}</td>
+    </tr>`).join(''):'<tr><td colspan="3"><div class="empty-state"><p>Sin adelantos en este período</p></div></td></tr>';
+}
+
+// ══ ADELANTOS ══
+async function renderAdelantos(){
+  const bId=Number(ST.barbero.id);
+  const adelantos=await dbAll('adelantos');
+  const misAdelantos=adelantos.filter(a=>Number(a.barberoId||a.barbero_id)===bId).sort((a,b)=>b.fechaSolicitud>a.fechaSolicitud?1:-1);
+  const td=hoy().slice(0,7);
+
+  const pendienteTotal=misAdelantos.filter(a=>a.estado==='pendiente').reduce((s,a)=>s+(a.montoSolicitado||0),0);
+  const mesTotal=misAdelantos.filter(a=>a.estado==='aprobado'&&a.fechaAprobacion&&a.fechaAprobacion.startsWith(td)).reduce((s,a)=>s+(a.montoAprobado||0),0);
+
+  document.getElementById('adelPendiente').textContent=fmt(pendienteTotal);
+  document.getElementById('adelMes').textContent=fmt(mesTotal);
+
+  const tbody=document.getElementById('adelantosTbody');
+  if(!misAdelantos.length){
+    tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><div class="icon">💸</div><p>Sin solicitudes de adelanto</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=misAdelantos.map(a=>{
+    const badgeMap={pendiente:'badge-yellow',aprobado:'badge-green',rechazado:'badge-red'};
+    const labelMap={pendiente:'⏳ Pendiente',aprobado:'✅ Aprobado',rechazado:'❌ Rechazado'};
+    return `<tr>
+      <td>${fmtD(a.fechaSolicitud)}</td>
+      <td style="font-family:var(--font-cond);font-weight:700">${fmt(a.montoSolicitado)}</td>
+      <td style="font-family:var(--font-cond);font-weight:700;color:${a.estado==='aprobado'?'#e74c3c':'var(--text-muted)'}">${a.montoAprobado?fmt(a.montoAprobado):'—'}</td>
+      <td><span class="badge ${badgeMap[a.estado]||'badge-gray'}">${labelMap[a.estado]||a.estado}</span></td>
+      <td style="font-size:.82rem;color:var(--text-muted)">${a.notaAdmin||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function solicitarAdelanto(){
+  const monto=parseFloat(document.getElementById('adelMontoSolicitud').value)||0;
+  const nota=document.getElementById('adelNotaSolicitud').value.trim();
+  if(monto<1000)return toast('Ingresa un monto válido (mínimo Gs. 1.000)','error');
+  await dbAdd('adelantos',{
+    barberoId:ST.barbero.id,
+    barberoNombre:ST.barbero.nombre+' '+ST.barbero.apellido,
+    montoSolicitado:monto,
+    montoAprobado:null,
+    estado:'pendiente',
+    fechaSolicitud:hoy(),
+    notaSolicitud:nota,
+    notaAdmin:'',
+    fechaAprobacion:null
+  });
+  toast('Solicitud enviada. El administrador la revisará.','success');
+  closeModal('modalSolicitarAdelanto');
+  document.getElementById('adelMontoSolicitud').value='';
+  document.getElementById('adelNotaSolicitud').value='';
+  renderAdelantos();
+}
+
+// ══ SEED: crear barberoUsers si no existen ══
+async function seedBarberoUsers(){
+  const bUsers=await dbAll('barberoUsers');
+  if(bUsers.length>0)return;
+  const barbs=await dbAll('barberos');
+  if(!barbs.length)return;
+  for(const b of barbs){
+    const bId=b.id;
+    const loginName=(b.nombre||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
+    if(!loginName)continue;
+    if(!bUsers.find(u=>Number(u.barberoId||u.barbero_id)===Number(bId)))
+      await dbAdd('barberoUsers',{barberoId:bId,login:loginName,pin:'1234',activo:true,ultimoAcceso:''});
+  }
+  if(barbs.length)toast('Accesos creados con PIN 1234. Cambialos desde la app admin.','info');
+}
+
+// ══ INIT ══
+initDB()
+  .then(async()=>{
+    await seedBarberoUsers();
+    document.getElementById('servFechaFiltro').value=hoy();
+    // Restaurar sesion si existe
+    const bid=sessionStorage.getItem('tajos_bid');
+    const buid=sessionStorage.getItem('tajos_buid');
+    if(bid&&buid){
+      try{
+        const barbero=await dbGet('barberos',bid);
+        const bUser=await dbGet('barberoUsers',buid);
+        if(barbero&&bUser){ST.barbero=barbero;ST.barberoUser=bUser;showApp();}
+      }catch(e){sessionStorage.removeItem('tajos_bid');sessionStorage.removeItem('tajos_buid');}
+    }
+  })
+  .catch(err=>{
+    console.error('DB Error:',err);
+  });  
 </script>
 </body>
 </html>
