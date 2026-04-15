@@ -277,6 +277,7 @@ tbody tr:last-child td{border-bottom:none;}
   <div class="nav-item admin-only" data-page="barberos"><span class="icon">💈</span>Barberos</div>
   <div class="nav-item" data-page="servicios"><span class="icon">🗂</span>Catálogo</div>
   <div class="nav-item" data-page="consumos"><span class="icon">🧴</span>Consumos</div>
+  <div class="nav-item admin-only" data-page="inventario"><span class="icon">📦</span>Inventario</div>
   <div class="sidebar-section-label admin-only">Admin</div>
   <div class="nav-item admin-only" data-page="usuarios"><span class="icon">🔐</span>Usuarios</div>
   <div class="nav-item admin-only" data-page="historial"><span class="icon">📜</span>Historial</div>
@@ -574,6 +575,35 @@ tbody tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+
+<!-- INVENTARIO -->
+<div class="page" id="page-inventario">
+  <div class="section-header">
+    <div>
+      <div class="section-title">INVENTARIO</div>
+      <div class="section-sub" id="invSubtitulo">Stock de productos</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select class="form-control" id="invFiltroLocal" style="width:150px" onchange="renderInventario()">
+        <option value="0">Todas las sucursales</option>
+        <option value="1">Central</option>
+        <option value="2">Superseis</option>
+      </select>
+      <select class="form-control" id="invFiltroCategoria" style="width:170px" onchange="renderInventario()">
+        <option value="">Todas las categorías</option>
+      </select>
+      <input type="text" class="form-control" id="invBuscar" placeholder="Buscar..." style="width:150px" oninput="renderInventario()">
+      <button class="btn btn-outline" onclick="exportarInventarioXLSX()">📊 Exportar XLSX</button>
+    </div>
+  </div>
+  <div class="grid-4" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-label">Total productos</div><div class="stat-value" id="invStatTotal">0</div><div class="stat-icon">📦</div></div>
+    <div class="stat-card"><div class="stat-label">Sin stock</div><div class="stat-value" id="invStatSinStock" style="color:var(--danger)">0</div><div class="stat-icon">⚠</div></div>
+    <div class="stat-card"><div class="stat-label">Stock bajo (&lt;5)</div><div class="stat-value" id="invStatBajo" style="color:#e67e22">0</div><div class="stat-icon">📉</div></div>
+    <div class="stat-card"><div class="stat-label">Valor total estimado</div><div class="stat-value" id="invStatValor" style="font-size:1.3rem">Gs. 0</div><div class="stat-icon">💰</div></div>
+  </div>
+  <div class="card"><div id="invContenido"></div></div>
+</div>
 
 <!-- GIFTCARDS -->
 <div class="page" id="page-giftcards">
@@ -905,29 +935,29 @@ tbody tr:last-child td{border-bottom:none;}
             <div style="font-family:var(--font-cond);font-weight:700">JSON</div>
             <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px">Liviano · Recomendado</div>
           </div>
-          <div class="pay-method" id="fmtXLSX" onclick="selFmt('XLSX')" style="flex:1">
-            <span style="font-size:1.4rem;display:block;margin-bottom:4px">📊</span>
-            <div style="font-family:var(--font-cond);font-weight:700">XLSX</div>
-            <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px">Excel · Multi-hoja</div>
+          <div class="pay-method" id="fmtXML" onclick="selFmt('XML')" style="flex:1">
+            <span style="font-size:1.4rem;display:block;margin-bottom:4px">&lt;/&gt;</span>
+            <div style="font-family:var(--font-cond);font-weight:700">XML</div>
+            <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px">Legible · Compatible</div>
           </div>
         </div>
         <div id="backupResumen" style="background:var(--bg-raised);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:.85rem;color:var(--text-muted)">Cargando...</div>
         <button class="btn btn-gold" style="width:100%;padding:12px" onclick="exportarBackup()">⬇ Descargar Backup</button>
         <div class="divider" style="margin:14px 0"></div>
         <div style="font-family:var(--font-cond);font-size:.8rem;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">🗂 Archivado de Historial</div>
-        <div class="alert alert-warning" style="margin-bottom:10px;font-size:.82rem">Exporta como XLSX y elimina de la base de datos todos los registros del historial con más de 30 días.</div>
+        <div class="alert alert-warning" style="margin-bottom:10px;font-size:.82rem">Exporta como XML y elimina de la base de datos todos los registros del historial con más de 30 días.</div>
         <button class="btn btn-outline" style="width:100%" onclick="archivarHistorialAntiguo()">📦 Archivar historial &gt;30 días</button>
       </div>
       <div id="backupTabImportar" style="display:none">
         <div class="alert alert-danger" style="margin-bottom:14px">⚠ <strong>Atención:</strong> Importar un backup <strong>reemplazará todos los datos actuales</strong>.</div>
-        <div class="form-group"><label class="form-label">Seleccionar archivo de backup</label><input type="file" class="form-control" id="backupFileInput" accept=".json" onchange="previewBackup(this)"></div>
+        <div class="form-group"><label class="form-label">Seleccionar archivo de backup</label><input type="file" class="form-control" id="backupFileInput" accept=".json,.xml" onchange="previewBackup(this)"></div>
         <div id="backupPreview" style="display:none;background:var(--bg-raised);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:.85rem"></div>
         <button class="btn btn-danger" style="width:100%;padding:12px" id="btnImportar" disabled onclick="importarBackup()">⬆ Restaurar desde Backup</button>
       </div>
       <div id="backupTabInfo" style="display:none">
         <div class="card" style="margin-bottom:14px"><div class="card-title">☁ ¿Cómo funciona el almacenamiento?</div><p style="font-size:.88rem;color:var(--text-muted);line-height:1.6">Los datos se guardan en <strong style="color:var(--gold-light)">Supabase (nube)</strong> como fuente principal. El navegador mantiene una copia local en <strong style="color:var(--text-main)">IndexedDB</strong> como caché y fallback offline. Cuando la conexión vuelve, las operaciones pendientes se sincronizan automáticamente.</p></div>
         <div class="card" style="margin-bottom:14px"><div class="card-title">⚠ Consideraciones</div><div style="font-size:.85rem;color:var(--text-muted);line-height:1.8">• Sin conexión a internet, los datos se guardan <strong style="color:var(--gold-light)">localmente y se sincronizan al reconectar</strong><br>• La caché local se actualiza automáticamente al abrir cada sección<br>• Si limpiás la caché del navegador, los datos en Supabase no se pierden</div></div>
-        <div class="card"><div class="card-title">✅ Buenas prácticas</div><div style="font-size:.85rem;color:var(--text-muted);line-height:1.8">• Aún se recomienda exportar un backup <strong style="color:var(--text-main)">al final de cada jornada</strong> como respaldo adicional<br>• Usa JSON para respaldo técnico, XLSX para abrir en Excel con múltiples hojas<br>• El indicador verde/rojo en la esquina inferior derecha muestra el estado de conexión con Supabase</div></div>
+        <div class="card"><div class="card-title">✅ Buenas prácticas</div><div style="font-size:.85rem;color:var(--text-muted);line-height:1.8">• Aún se recomienda exportar un backup <strong style="color:var(--text-main)">al final de cada jornada</strong> como respaldo adicional<br>• Usa JSON para uso general, XML si necesitas abrir en Excel<br>• El indicador verde/rojo en la esquina inferior derecha muestra el estado de conexión con Supabase</div></div>
       </div>
     </div>
   </div>
@@ -947,7 +977,7 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="modal-footer" style="justify-content:space-between">
       <button class="btn btn-ghost" onclick="salirSinBackup()">Salir sin backup</button>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" onclick="exportarRapido('XLSX')">⬇ XLSX</button>
+        <button class="btn btn-outline" onclick="exportarRapido('XML')">⬇ XML</button>
         <button class="btn btn-gold" onclick="exportarRapido('JSON')">⬇ JSON y Salir</button>
       </div>
     </div>
@@ -1313,6 +1343,29 @@ const METODOS_DEFAULT=[
 ];
 let METODOS=[...METODOS_DEFAULT];
 
+// ══ STOCK POR SUCURSAL ══
+// El campo stock en Supabase es JSONB: {"1": 10, "2": 5}
+// Estos helpers son la única interfaz para leer/escribir stock.
+function getStockLocal(p, local){
+  const l=String(local!=null?local:ST.localActivo);
+  const s=p.stock;
+  if(s&&typeof s==='object') return Number(s[l]??0);
+  // fallback: si stock es número (datos legacy), asignarlo a sucursal 1
+  if(typeof s==='number') return l==='1'?s:0;
+  return 0;
+}
+function setStockLocal(p, cantidad, local){
+  const l=String(local!=null?local:ST.localActivo);
+  if(!p.stock||typeof p.stock!=='object') p.stock={};
+  p.stock={...p.stock,[l]:Math.max(0,Number(cantidad))};
+  return p;
+}
+function stockTotal(p){
+  const s=p.stock;
+  if(!s||typeof s!=='object') return typeof s==='number'?s:0;
+  return Object.values(s).reduce((t,v)=>t+Number(v||0),0);
+}
+
 async function cargarMetodos(){
   try{
     const rows=await dbAll('metodosPago');
@@ -1469,7 +1522,7 @@ async function logAct(accion){
 }
 
 // ══ NAVIGATION ══
-const TITLES={dashboard:'Dashboard',agenda:'Agenda',caja:'Caja',clientes:'Clientes',barberos:'Barberos',servicios:'Catálogo',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',reportes:'Reportes'};
+const TITLES={dashboard:'Dashboard',agenda:'Agenda',caja:'Caja',clientes:'Clientes',barberos:'Barberos',servicios:'Catálogo',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',reportes:'Reportes',inventario:'Inventario'};
 document.querySelectorAll('.nav-item[data-page]').forEach(el=>el.addEventListener('click',()=>{navigate(el.dataset.page);closeSidebar();}));
 
 function navigate(page){
@@ -1491,6 +1544,7 @@ function navigate(page){
   if(page==='reportes'){_aplicarRestriccionReporteLocal();generarReporte();}
   if(page==='giftcards')renderGiftcards();
   if(page==='consumos')renderConsumos();
+  if(page==='inventario')renderInventario();
 }
 
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('visible');}
@@ -1770,7 +1824,8 @@ async function renderCatalogo(){
   </div>`).join(''):'<div class="empty-state" style="grid-column:1/-1"><div class="icon">🪓</div><p>No hay servicios</p></div>';
 
   document.getElementById('productosList').innerHTML=prods.length?prods.map(p=>{
-    const sc=p.stock<=0?'stock-out':p.stock<5?'stock-low':'stock-ok';
+    const _stk=getStockLocal(p);
+    const sc=_stk<=0?'stock-out':_stk<5?'stock-low':'stock-ok';
     return `<div class="card" style="padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div style="font-family:var(--font-cond);font-weight:700;font-size:.95rem">${p.nombre}</div>
@@ -1780,8 +1835,9 @@ async function renderCatalogo(){
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
         ${p.categoria?`<span class="badge badge-gray" style="font-size:.7rem">${p.categoria}</span>`:''}
         ${p.comisionable?`<span class="badge badge-green" style="font-size:.7rem">&#10003; Comisionable 10%</span>`:''}
-        <span style="font-size:.78rem;color:var(--text-muted)">Stock:</span>
-        <span class="stock-badge ${sc}">${p.stock??0}</span>
+        <span style="font-size:.78rem;color:var(--text-muted)">${localNombre(ST.localActivo)}:</span>
+        <span class="stock-badge ${sc}">${_stk}</span>
+        <span style="font-size:.72rem;color:var(--text-dim)">· Total: ${stockTotal(p)}</span>
       </div>
       <div class="divider" style="margin:10px 0"></div>
       <div style="display:flex;gap:6px">
@@ -1829,17 +1885,31 @@ async function eliminarServicio(id){
 
 async function guardarProducto(){
   const id=document.getElementById('prodEditId').value;
-  const data={nombre:document.getElementById('prodNombre').value.trim(),precio:+document.getElementById('prodPrecio').value||0,stock:+document.getElementById('prodStock').value||0,categoria:document.getElementById('prodCategoria')?.value||'',descripcion:document.getElementById('prodDesc').value.trim(),comisionable:document.getElementById('prodComisionable')?.checked||false};
+  const _stockVal=+document.getElementById('prodStock').value||0;
+  const data={nombre:document.getElementById('prodNombre').value.trim(),precio:+document.getElementById('prodPrecio').value||0,categoria:document.getElementById('prodCategoria')?.value||'',descripcion:document.getElementById('prodDesc').value.trim(),comisionable:document.getElementById('prodComisionable')?.checked||false};
   if(!data.nombre)return toast('El nombre es requerido','error');
-  if(id){data.id=+id;await dbPut('productos',data);await logAct(`Editó producto: ${data.nombre}`);toast('Producto actualizado','success');}
-  else{await dbAdd('productos',data);await logAct(`Creó producto: ${data.nombre}`);toast('Producto creado','success');}
+  if(id){
+    // Editar: preservar stock de otras sucursales, solo actualizar la activa
+    const ex=await dbGet('productos',+id)||{};
+    data.stock=typeof ex.stock==='object'?{...ex.stock}:{};
+    data.stock[String(ST.localActivo)]=_stockVal;
+    data.id=+id;await dbPut('productos',data);
+    await logAct(`Editó producto: ${data.nombre}`);toast('Producto actualizado','success');
+  }else{
+    // Nuevo: stock 0 en todas las sucursales, valor en la activa
+    data.stock={};
+    [1,2].forEach(s=>data.stock[String(s)]=0);
+    data.stock[String(ST.localActivo)]=_stockVal;
+    await dbAdd('productos',data);
+    await logAct(`Creó producto: ${data.nombre}`);toast('Producto creado','success');
+  }
   closeModal('modalNuevoProducto');document.getElementById('prodEditId').value='';renderCatalogo();populateSels();
 }
 
 async function editarProducto(id){
   const p=await dbGet('productos',id);if(!p)return;
   document.getElementById('prodEditId').value=id;document.getElementById('prodNombre').value=p.nombre;
-  document.getElementById('prodPrecio').value=p.precio;document.getElementById('prodStock').value=p.stock||0;
+  document.getElementById('prodPrecio').value=p.precio;document.getElementById('prodStock').value=getStockLocal(p);
   document.getElementById('prodDesc').value=p.descripcion||'';
   ST._pendingProdCat=p.categoria||'';
   const cbComis=document.getElementById('prodComisionable');if(cbComis)cbComis.checked=!!p.comisionable;
@@ -1854,7 +1924,7 @@ async function eliminarProducto(id){
 async function populateStockSel(){
   const prods=await dbAll('productos');
   const sel=document.getElementById('stockProductoSel');
-  sel.innerHTML=prods.map(p=>`<option value="${p.id}" data-stock="${p.stock||0}">${p.nombre} (Stock: ${p.stock||0})</option>`).join('');
+  sel.innerHTML=prods.map(p=>{const _sl=getStockLocal(p);return`<option value="${p.id}" data-stock="${_sl}">${p.nombre} (${localNombre(ST.localActivo)}: ${_sl} · Total: ${stockTotal(p)})</option>`;}).join('');
   updateStockActual();
 }
 function updateStockActual(){
@@ -1867,9 +1937,12 @@ async function ingresarStock(){
   const cant=+document.getElementById('stockCantidad').value||0;
   const notas=document.getElementById('stockNotas').value.trim();
   if(!prodId||cant<=0)return toast('Selecciona producto y cantidad válida','error');
-  const p=await dbGet('productos',prodId);p.stock=(p.stock||0)+cant;await dbPut('productos',p);
-  await logAct(`Ingresó ${cant} unidades de "${p.nombre}" al stock${notas?' ('+notas+')':''}`);
-  toast(`Stock de "${p.nombre}" → ${p.stock} u.`,'success');
+  const p=await dbGet('productos',prodId);
+  const _ant=getStockLocal(p);
+  setStockLocal(p,_ant+cant);
+  await dbPut('productos',p);
+  await logAct(`Ingresó ${cant} u. de "${p.nombre}" en ${localNombre(ST.localActivo)}${notas?' ('+notas+')':''}`);
+  toast(`Stock de "${p.nombre}" (${localNombre(ST.localActivo)}) → ${_ant+cant} u.`,'success');
   closeModal('modalIngresoProducto');renderCatalogo();populateSels();
 }
 // ══ CLIENTES ══
@@ -2365,7 +2438,10 @@ async function guardarCobro(){
   for(const item of ST.cobroItems){
     if(item.tipo==='producto'&&item.id){
       const p=await dbGet('productos',item.id);
-      if(p&&(p.stock||0)>0){p.stock=Math.max(0,p.stock-1);await dbPut('productos',p);}
+      if(p){
+        const _s=getStockLocal(p);
+        if(_s>0){setStockLocal(p,_s-1);await dbPut('productos',p);}
+      }
     }
   }
   const facturaAmt=parseFloat(document.getElementById('cobroFactura')?.value)||0;
@@ -3033,7 +3109,7 @@ async function populateSels(){
   const cSel=document.getElementById('cobroServicio');
   if(cSel)cSel.innerHTML='<option value="">Seleccionar servicio...</option>'+svcs.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(s=>`<option value='${JSON.stringify({id:s.id,nombre:s.nombre,precio:s.precio,comision:s.comision??50})}'>${s.nombre} — ${fmt(s.precio)}</option>`).join('');
   const pSel=document.getElementById('cobroProducto');
-  if(pSel)pSel.innerHTML='<option value="">Seleccionar producto...</option>'+[...prods].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(p=>`<option value='${JSON.stringify({id:p.id,nombre:p.nombre,precio:p.precio,comisionable:!!p.comisionable})}'>${p.nombre} — ${fmt(p.precio)} (Stock: ${p.stock||0})${p.comisionable?' ★':''}</option>`).join('');
+  if(pSel)pSel.innerHTML='<option value="">Seleccionar producto...</option>'+[...prods].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(p=>{const _sl=getStockLocal(p);return`<option value='${JSON.stringify({id:p.id,nombre:p.nombre,precio:p.precio,comisionable:!!p.comisionable})}'>${p.nombre} — ${fmt(p.precio)} (Stock: ${_sl})${p.comisionable?' ★':''}</option>`;}).join('');
   // Reporte: solo barberos de locales permitidos
   const rb=document.getElementById('reporteBarbero');
   if(rb)rb.innerHTML='<option value="0">Todos los barberos</option>'+bo;
@@ -3055,7 +3131,7 @@ function switchBackupTab(tab,el){
   if(tab==='exportar')cargarResumenBackup();
 }
 
-function selFmt(fmt){_bkpFmt=fmt;document.getElementById('fmtJSON').classList.toggle('active',fmt==='JSON');const xEl=document.getElementById('fmtXLSX');if(xEl)xEl.classList.toggle('active',fmt==='XLSX');}
+function selFmt(fmt){_bkpFmt=fmt;document.getElementById('fmtJSON').classList.toggle('active',fmt==='JSON');document.getElementById('fmtXML').classList.toggle('active',fmt==='XML');}
 
 async function cargarResumenBackup(){
   const labels={barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',productos:'Productos',turnos:'Turnos',cobros:'Cobros',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',barberoUsers:'Accesos Portal Barberos',adelantos:'Adelantos',egresos:'Egresos/Consumos',giftcards:'Giftcards'};
@@ -3078,12 +3154,12 @@ async function exportarBackup(){
     descargar(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`tajos_backup_${ts}_${user}.json`);
     await logAct('Exportó backup en formato JSON');toast('Backup JSON descargado','success');
   }else{
-    await exportarBackupXLSX(data,ts,user);
-    await logAct('Exportó backup en formato XLSX');toast('Backup XLSX descargado','success');
+    descargar(new Blob([jsonAXML(data)],{type:'application/xml'}),`tajos_backup_${ts}_${user}.xml`);
+    await logAct('Exportó backup en formato XML');toast('Backup XML descargado','success');
   }
 }
 
-async function exportarRapido(f){_bkpFmt=(f==='XML'?'XLSX':f);await exportarBackup();closeModal('modalRecordatorioBackup');await doLogout();}
+async function exportarRapido(f){_bkpFmt=f;await exportarBackup();closeModal('modalRecordatorioBackup');await doLogout();}
 
 async function archivarHistorialAntiguo(){
   // Exporta historial >30 días como XML y lo elimina de la DB
@@ -3092,10 +3168,16 @@ async function archivarHistorialAntiguo(){
   const viejos=logs.filter(l=>l.fecha<limDS);
   if(!viejos.length){toast('No hay registros de historial con más de 30 días','info');return;}
   // Generar XML del archivo
+  const esc=v=>v==null?'':String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TajosHistorialArchivo fecha="${new Date().toISOString()}" registros="${viejos.length}">\n`;
+  viejos.forEach(l=>{
+    xml+=`  <registro id="${esc(l.id)}">\n`;
+    Object.entries(l).filter(([k])=>k!=='id').forEach(([k,v])=>{xml+=`    <${k}>${esc(v)}</${k}>\n`;});
+    xml+=`  </registro>\n`;
+  });
+  xml+=`</TajosHistorialArchivo>`;
   const ts=hoy();
-  // Generar XLSX del archivo de historial
-  const cols=viejos.length?Object.keys(viejos[0]):['id','usuario','nombre','rol','accion','fecha','hora'];
-  _xlsxDescargar([{nombre:'Historial Archivado',filas:viejos,cols}],`tajos_historial_archivo_${ts}`);
+  descargar(new Blob([xml],{type:'application/xml'}),`tajos_historial_archivo_${ts}.xml`);
   // Eliminar de la DB
   for(const l of viejos)await dbDel('historial',l.id);
   await logAct(`Archivó y eliminó ${viejos.length} registros de historial anteriores a ${limDS}`);
@@ -3123,97 +3205,23 @@ async function verificarAlertaMensual(){
 
 function descargar(blob,nombre){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nombre;a.click();URL.revokeObjectURL(a.href);}
 
-// ══ XLSX BACKUP (SheetJS) ══
-// Convierte un valor a string seguro para celda
-function _xlsxVal(v){
-  if(v==null)return '';
-  if(typeof v==='object')return JSON.stringify(v);
-  return v;
-}
-
-// Genera y descarga un .xlsx real con SheetJS.
-// hojas: [{nombre, filas:[], cols:[]}]
-async function _xlsxDescargar(hojas, nombreArchivo){
-  // Cargar SheetJS dinámicamente si no está disponible
-  if(!window.XLSX){
-    await new Promise((res,rej)=>{
-      const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-      s.onload=res;s.onerror=rej;
-      document.head.appendChild(s);
-    });
-  }
-  const wb=window.XLSX.utils.book_new();
-
-  hojas.forEach(({nombre,filas,cols})=>{
-    if(!filas||!filas.length){
-      // Hoja vacía con cabecera
-      const ws=window.XLSX.utils.aoa_to_sheet([cols||[]]);
-      window.XLSX.utils.book_append_sheet(wb,ws,nombre.slice(0,31));
-      return;
-    }
-    // Cabeceras + filas
-    const cabecera=cols||Object.keys(filas[0]||{});
-    const aoa=[cabecera,...filas.map(row=>cabecera.map(k=>_xlsxVal(row[k])))];
-    const ws=window.XLSX.utils.aoa_to_sheet(aoa);
-
-    // Estilo de cabecera: negrita + fondo oscuro dorado
-    const range=window.XLSX.utils.decode_range(ws['!ref']||'A1');
-    for(let c=range.s.c;c<=range.e.c;c++){
-      const addr=window.XLSX.utils.encode_cell({r:0,c});
-      if(!ws[addr])continue;
-      ws[addr].s={
-        font:{bold:true,color:{rgb:'FFFFFF'}},
-        fill:{fgColor:{rgb:'1A2744'}},
-        alignment:{horizontal:'center'},
-        border:{bottom:{style:'thin',color:{rgb:'C9940A'}}}
-      };
-    }
-    // Ancho automático por columna (máx 40 chars)
-    ws['!cols']=cabecera.map((k,ci)=>{
-      const maxLen=Math.min(40,Math.max(
-        String(k).length,
-        ...filas.slice(0,50).map(r=>String(_xlsxVal(r[k])).length)
-      ));
-      return {wch:maxLen+2};
-    });
-    // Filtros automáticos en la fila de cabecera
-    ws['!autofilter']={ref:`A1:${window.XLSX.utils.encode_col(cabecera.length-1)}1`};
-
-    window.XLSX.utils.book_append_sheet(wb,ws,nombre.slice(0,31));
-  });
-
-  const buf=window.XLSX.write(wb,{type:'array',bookType:'xlsx',cellStyles:true});
-  descargar(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${nombreArchivo}.xlsx`);
-}
-
-// Genera el backup completo como XLSX multi-hoja
-async function exportarBackupXLSX(data, ts, user){
-  const labels={
-    barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',
-    productos:'Productos',turnos:'Turnos',cobros:'Cobros',
-    usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',
-    barberoUsers:'Accesos Portal',adelantos:'Adelantos',
-    egresos:'Consumos',giftcards:'Giftcards',cajaTurnos:'Caja Turnos'
-  };
-  // Hoja de portada
-  const portada=[
-    ['TAJOS · Backup completo'],
-    [`Generado: ${new Date().toLocaleString('es-PY')}`],
-    [`Usuario: ${user}`],
-    [],
-    ['Tabla','Registros'],
-    ...STORES.map(s=>[labels[s]||s,(data[s]||[]).length])
-  ];
-
-  const hojas=[{nombre:'📋 Resumen',filas:portada.slice(4),cols:['Tabla','Registros']}];
-  // Una hoja por tabla
+function jsonAXML(data){
+  const esc=v=>v==null?'':String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TAJOS version="2.0" fecha="${esc(data._meta?.fecha)}">\n`;
   for(const store of STORES){
-    const filas=data[store]||[];
-    const nombre=(labels[store]||store).slice(0,31);
-    hojas.push({nombre,filas});
+    const arr=data[store]||[];xml+=`  <${store} total="${arr.length}">\n`;
+    arr.forEach(item=>{
+      xml+=`    <registro id="${esc(item.id)}">\n`;
+      Object.entries(item).filter(([k])=>k!=='id').forEach(([k,v])=>{
+        if(Array.isArray(v))xml+=`      <${k}>${v.map(x=>typeof x==='object'&&x?`<item>${Object.entries(x).map(([ek,ev])=>`<${ek}>${esc(ev)}</${ek}>`).join('')}</item>`:`<item>${esc(x)}</item>`).join('')}</${k}>\n`;
+        else if(typeof v==='object'&&v)xml+=`      <${k}>${Object.entries(v).map(([ek,ev])=>`<${ek}>${esc(ev)}</${ek}>`).join('')}</${k}>\n`;
+        else xml+=`      <${k}>${esc(v)}</${k}>\n`;
+      });
+      xml+=`    </registro>\n`;
+    });
+    xml+=`  </${store}>\n`;
   }
-  await _xlsxDescargar(hojas,`tajos_backup_${ts}_${user}`);
+  return xml+`</TAJOS>`;
 }
 
 async function previewBackup(input){
@@ -3222,7 +3230,8 @@ async function previewBackup(input){
   try{
     const text=await file.text();let data;
     if(file.name.endsWith('.json'))data=JSON.parse(text);
-    else{prev.innerHTML='<span style="color:#e74c3c">Solo se restaura desde .json (el .xlsx es solo lectura en Excel)</span>';prev.style.display='block';btn.disabled=true;return;}
+    else if(file.name.endsWith('.xml'))data=xmlAJSON(text);
+    else{prev.innerHTML='<span style="color:#e74c3c">Formato no soportado (.json o .xml)</span>';prev.style.display='block';btn.disabled=true;return;}
     const labels={barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',productos:'Productos',turnos:'Turnos',cobros:'Cobros',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',barberoUsers:'Accesos Portal Barberos',adelantos:'Adelantos',egresos:'Egresos/Consumos',giftcards:'Giftcards'};
     prev.innerHTML=`<div style="font-family:var(--font-cond);font-size:.8rem;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">✅ Archivo válido — ${file.name}</div>`+
       STORES.map(s=>`<div style="display:flex;justify-content:space-between;padding:3px 0"><span>${labels[s]||s}</span><span style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${(data[s]||[]).length}</span></div>`).join('')+
@@ -3816,6 +3825,140 @@ async function guardarCajaInicial(){
 function omitirCajaInicial(){
   localStorage.setItem(getCajaKey(),'skipped');
   document.getElementById('modalCajaInicial').classList.remove('visible');
+}
+
+// ══ INVENTARIO ══
+async function renderInventario(){
+  const prods=await dbAll('productos');
+  const activos=prods.filter(p=>p.activo!==false);
+  const lf=+document.getElementById('invFiltroLocal')?.value||0;
+  const catF=document.getElementById('invFiltroCategoria')?.value||'';
+  const buscar=(document.getElementById('invBuscar')?.value||'').toLowerCase().trim();
+
+  // Subtítulo dinámico
+  const sub=document.getElementById('invSubtitulo');
+  if(sub) sub.textContent=lf>0?`Stock — ${localNombre(lf)}`:'Stock de todas las sucursales';
+
+  // Poblar selector de categorías
+  const cats=[...new Set(activos.map(p=>p.categoria||'Sin categoría'))].sort((a,b)=>a.localeCompare(b,'es'));
+  const catSel=document.getElementById('invFiltroCategoria');
+  if(catSel){
+    const cur=catSel.value;
+    catSel.innerHTML='<option value="">Todas las categorías</option>'+
+      cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+  }
+
+  // Filtrar
+  let lista=activos;
+  if(catF) lista=lista.filter(p=>(p.categoria||'Sin categoría')===catF);
+  if(buscar) lista=lista.filter(p=>p.nombre.toLowerCase().includes(buscar)||(p.descripcion||'').toLowerCase().includes(buscar));
+  lista.sort((a,b)=>{
+    const cc=(a.categoria||'Sin categoría').localeCompare(b.categoria||'Sin categoría','es');
+    return cc!==0?cc:a.nombre.localeCompare(b.nombre,'es');
+  });
+
+  // Función de stock según el selector: sucursal específica o total
+  const getStk=p=>lf>0?getStockLocal(p,lf):stockTotal(p);
+
+  // Stats
+  document.getElementById('invStatTotal').textContent=lista.length;
+  document.getElementById('invStatSinStock').textContent=lista.filter(p=>getStk(p)<=0).length;
+  document.getElementById('invStatBajo').textContent=lista.filter(p=>getStk(p)>0&&getStk(p)<5).length;
+  document.getElementById('invStatValor').textContent=fmt(lista.reduce((s,p)=>s+getStk(p)*p.precio,0));
+
+  if(!lista.length){
+    document.getElementById('invContenido').innerHTML=
+      '<div class="empty-state"><div class="icon">📦</div><p>No hay productos</p></div>';
+    return;
+  }
+
+  // Cabeceras de columnas: una por sucursal si se ve todo, o solo la seleccionada
+  const sucCols=lf>0
+    ?[{id:lf,label:localNombre(lf)}]
+    :[{id:1,label:'Central'},{id:2,label:'Superseis'},{id:0,label:'Total'}];
+
+  const thSuc=sucCols.map(s=>`<th style="text-align:center">${s.label}</th>`).join('');
+  const tdSuc=p=>sucCols.map(s=>{
+    const v=s.id===0?stockTotal(p):getStockLocal(p,s.id);
+    const sc=v<=0?'stock-out':v<5?'stock-low':'stock-ok';
+    return `<td style="text-align:center"><span class="stock-badge ${sc}" style="font-size:.8rem">${v}</span></td>`;
+  }).join('');
+
+  // Agrupar por categoría
+  const grupos={};
+  lista.forEach(p=>{const cat=p.categoria||'Sin categoría';if(!grupos[cat])grupos[cat]=[];grupos[cat].push(p);});
+
+  document.getElementById('invContenido').innerHTML=
+    Object.entries(grupos).map(([cat,items])=>`
+      <div style="margin-bottom:28px">
+        <div style="font-family:var(--font-cond);font-size:.78rem;font-weight:700;color:var(--gold);
+          letter-spacing:2px;text-transform:uppercase;padding:6px 0 5px;
+          border-bottom:1px solid var(--border-strong);margin-bottom:6px">${cat}</div>
+        <div class="table-wrap"><table>
+          <thead><tr>
+            <th>Producto</th>
+            <th>Descripción</th>
+            <th style="text-align:right">Precio</th>
+            ${thSuc}
+            <th style="text-align:right">Valor</th>
+          </tr></thead>
+          <tbody>${items.map(p=>`<tr>
+            <td><strong>${p.nombre}</strong></td>
+            <td style="color:var(--text-muted);font-size:.82rem">${p.descripcion||'—'}</td>
+            <td style="text-align:right;font-family:var(--font-cond)">${fmt(p.precio)}</td>
+            ${tdSuc(p)}
+            <td style="text-align:right;font-family:var(--font-cond);color:var(--gold-light)">${fmt(getStk(p)*p.precio)}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>`).join('');
+}
+
+async function exportarInventarioXLSX(){
+  const prods=(await dbAll('productos')).filter(p=>p.activo!==false)
+    .sort((a,b)=>{
+      const cc=(a.categoria||'').localeCompare(b.categoria||'','es');
+      return cc!==0?cc:a.nombre.localeCompare(b.nombre,'es');
+    });
+  const lf=+document.getElementById('invFiltroLocal')?.value||0;
+  const catF=document.getElementById('invFiltroCategoria')?.value||'';
+  const buscar=(document.getElementById('invBuscar')?.value||'').toLowerCase().trim();
+  let lista=prods;
+  if(catF) lista=lista.filter(p=>(p.categoria||'Sin categoría')===catF);
+  if(buscar) lista=lista.filter(p=>p.nombre.toLowerCase().includes(buscar));
+
+  // Columnas de stock según selector
+  const sucDef=lf>0?[{id:lf,label:localNombre(lf)}]:[{id:1,label:'Central'},{id:2,label:'Superseis'},{id:0,label:'Total'}];
+  const sucCols=sucDef.map(s=>s.label);
+  const cols=['Categoría','Producto','Descripción','Precio (Gs.)',...sucCols,'Valor (Gs.)'];
+
+  const toFila=p=>{
+    const f={'Categoría':p.categoria||'Sin categoría','Producto':p.nombre,'Descripción':p.descripcion||'','Precio (Gs.)':Math.round(p.precio)};
+    sucDef.forEach(s=>{f[s.label]=s.id===0?stockTotal(p):getStockLocal(p,s.id);});
+    const stk=lf>0?getStockLocal(p,lf):stockTotal(p);
+    f['Valor (Gs.)']=Math.round(stk*p.precio);
+    return f;
+  };
+
+  const grupos={};
+  lista.forEach(p=>{const cat=p.categoria||'Sin categoría';if(!grupos[cat])grupos[cat]=[];grupos[cat].push(p);});
+
+  const hojas=[{nombre:'📋 Resumen',cols,filas:lista.map(toFila)}];
+  Object.entries(grupos).forEach(([cat,items])=>hojas.push({nombre:cat.slice(0,31),cols,filas:items.map(toFila)}));
+
+  const stk=p=>lf>0?getStockLocal(p,lf):stockTotal(p);
+  hojas.push({nombre:'📊 Totales',cols:['Concepto','Valor'],filas:[
+    {'Concepto':'Total productos','Valor':lista.length},
+    {'Concepto':'Unidades en stock','Valor':lista.reduce((s,p)=>s+stk(p),0)},
+    {'Concepto':'Sin stock','Valor':lista.filter(p=>stk(p)<=0).length},
+    {'Concepto':'Stock bajo (<5)','Valor':lista.filter(p=>stk(p)>0&&stk(p)<5).length},
+    {'Concepto':'Valor total estimado (Gs.)','Valor':Math.round(lista.reduce((s,p)=>s+stk(p)*p.precio,0))},
+    {'Concepto':'Vista','Valor':lf>0?localNombre(lf):'Todas las sucursales'},
+    {'Concepto':'Generado','Valor':new Date().toLocaleString('es-PY')},
+  ]});
+
+  const label=lf>0?localNombre(lf).toLowerCase().replace(' ','_'):'todas';
+  await _xlsxDescargar(hojas,`inventario_tajos_${label}_${hoy()}`);
+  toast('Inventario exportado correctamente','success');
 }
 
 // ══ INIT ══
