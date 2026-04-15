@@ -270,7 +270,6 @@ tbody tr:last-child td{border-bottom:none;}
             <button class="btn btn-ghost btn-sm" onclick="navAgenda(1)">▶</button>
             <button class="btn btn-outline btn-sm" onclick="goHoy()">Hoy</button>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨</button>
         </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
@@ -287,7 +286,6 @@ tbody tr:last-child td{border-bottom:none;}
         </div>
         <div style="display:flex;gap:8px" class="no-print">
           <input type="date" class="form-control" id="servFechaFiltro" style="width:160px" onchange="renderServicios()">
-          <button class="btn btn-outline btn-sm" onclick="window.print()">🖨</button>
         </div>
       </div>
       <div class="grid-4" style="margin-bottom:20px">
@@ -300,7 +298,7 @@ tbody tr:last-child td{border-bottom:none;}
         <div class="card-title">Detalle de Cobros</div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Fecha</th><th>Hora</th><th>Cliente</th><th>Servicios</th><th>Productos</th><th>Facturado</th><th>Tu Comisión</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Hora</th><th>Servicios</th><th>Productos (comisionables)</th><th>Tu Comisión</th></tr></thead>
             <tbody id="serviciosTbody"></tbody>
           </table>
         </div>
@@ -311,27 +309,11 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="page" id="page-reportes">
       <div class="section-header">
         <div><div class="section-title">REPORTES</div><div class="section-sub">Ingresos y egresos</div></div>
-        <button class="btn btn-outline btn-sm no-print" onclick="window.print()">🖨 Imprimir</button>
       </div>
       <div class="period-tabs no-print">
         <div class="period-tab active" onclick="setPeriodo('dia',this)">Hoy</div>
         <div class="period-tab" onclick="setPeriodo('semana',this)">Esta Semana</div>
         <div class="period-tab" onclick="setPeriodo('mes',this)">Este Mes</div>
-        <div class="period-tab" onclick="setPeriodo('semestre',this)">Semestre</div>
-        <div class="period-tab" onclick="setPeriodo('custom',this)">&#128197; Personalizado</div>
-      </div>
-      <div id="rpCustomRange" style="display:none;margin-bottom:16px;padding:14px 16px;background:var(--bg-raised);border-radius:var(--radius);border:1px solid var(--border)">
-        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-          <div>
-            <div style="font-size:.72rem;color:var(--text-muted);font-family:var(--font-cond);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">Desde</div>
-            <input type="date" id="rpCustomDesde" class="form-control" style="width:160px" onchange="renderReportes()">
-          </div>
-          <div>
-            <div style="font-size:.72rem;color:var(--text-muted);font-family:var(--font-cond);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px">Hasta</div>
-            <input type="date" id="rpCustomHasta" class="form-control" style="width:160px" onchange="renderReportes()">
-          </div>
-          <button class="btn btn-gold btn-sm" onclick="renderReportes()">Generar</button>
-        </div>
       </div>
       <div id="reportePeriodoLabel" style="font-family:var(--font-cond);font-size:.85rem;color:var(--text-muted);margin-bottom:16px"></div>
 
@@ -455,9 +437,7 @@ tbody tr:last-child td{border-bottom:none;}
 // CONFIGURACIÓN SUPABASE — reemplazar con tus valores reales
 // ══════════════════════════════════════════════════════════════
 const SUPA_URL='https://tgwhegmgchnttsmrhcfc.supabase.co';
-
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnd2hlZ21nY2hudHRzbXJoY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODg1ODgsImV4cCI6MjA4OTQ2NDU4OH0.3g20p6yGber_j6HNB5oQqesOm_YgQ_fo9P2Yl2jGPbM';
-
 
 const STORE_TABLE={
   barberos:'barberos',clientes:'clientes',servicios:'servicios',productos:'productos',
@@ -635,19 +615,20 @@ function getPeriodoRange(periodo){
     return{desde,hasta,label:`Semana — ${fmtD(desde)} al ${fmtD(hasta)}`};
   }
   if(periodo==='mes'){
+    const now=new Date();
+    const diaActual=now.getDate();
+    // Hasta el día 5 inclusive: mostrar el mes anterior completo (del 1 al último día)
+    if(diaActual<=5){
+      const primerDiaMesAnt=new Date(now.getFullYear(),now.getMonth()-1,1);
+      const ultimoDiaMesAnt=new Date(now.getFullYear(),now.getMonth(),0);
+      const desde=toDS(primerDiaMesAnt);
+      const hasta=toDS(ultimoDiaMesAnt);
+      const nombreMes=primerDiaMesAnt.toLocaleDateString('es-PY',{month:'long',year:'numeric'});
+      return{desde,hasta,label:`${nombreMes.charAt(0).toUpperCase()+nombreMes.slice(1)} — ${fmtD(desde)} al ${fmtD(hasta)}`};
+    }
+    // A partir del día 6: mostrar desde el 01 del mes actual hasta hoy
     const desde=td.slice(0,7)+'-01';
     return{desde,hasta:td,label:`Este mes — ${fmtD(desde)} al ${fmtD(td)}`};
-  }
-  if(periodo==='semestre'){
-    const dt=new Date();dt.setMonth(dt.getMonth()-5);dt.setDate(1);
-    const desde=toDS(dt);
-    return{desde,hasta:td,label:`Semestre — ${fmtD(desde)} al ${fmtD(td)}`};
-  }
-  if(periodo==='custom'){
-    const desde=document.getElementById('rpCustomDesde')?.value||td.slice(0,7)+'-01';
-    const hasta=document.getElementById('rpCustomHasta')?.value||td;
-    if(!desde||!hasta)return{desde:td,hasta:td,label:'Seleccioná las fechas'};
-    return{desde,hasta,label:`Personalizado — ${fmtD(desde)} al ${fmtD(hasta)}`};
   }
   return{desde:td,hasta:td,label:'Hoy'};
 }
@@ -887,21 +868,19 @@ async function renderServicios(){
   // Tabla
   const tbody=document.getElementById('serviciosTbody');
   if(!cobrosFiltered.length){
-    tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="icon">✂</div><p>Sin servicios en esta fecha</p></div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><div class="icon">✂</div><p>Sin servicios en esta fecha</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML=cobrosFiltered.sort((a,b)=>(b.hora||'')>(a.hora||'')?1:-1).map(co=>{
     const svcs=(co.items||[]).filter(i=>i.tipo==='servicio').map(i=>i.nombre).join(', ')||'—';
-    const prods=(co.items||[]).filter(i=>i.tipo==='producto').map(i=>i.nombre).join(', ')||'—';
+    const prodsComis=(co.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).map(i=>i.nombre).join(', ')||'—';
     // Comisión = suma de precios de ítems de servicio × pct (no total del cobro)
     const comision=(co.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0);
     return `<tr>
       <td>${fmtD(co.fecha)}</td>
       <td>${co.hora||'—'}</td>
-      <td>${cMap[co.clienteId||co.cliente_id]||'Sin registro'}</td>
       <td>${svcs}</td>
-      <td style="font-size:.8rem;color:var(--text-muted)">${prods}</td>
-      <td style="font-family:var(--font-cond);color:var(--text-muted)">${fmt(co.total)}</td>
+      <td style="font-size:.8rem;color:var(--text-muted)">${prodsComis}</td>
       <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(comision)}</td>
     </tr>`;
   }).join('');
@@ -912,16 +891,6 @@ function setPeriodo(p,el){
   ST.reportePeriodo=p;
   document.querySelectorAll('.period-tab').forEach(t=>t.classList.remove('active'));
   if(el)el.classList.add('active');
-  const customDiv=document.getElementById('rpCustomRange');
-  if(customDiv)customDiv.style.display=p==='custom'?'block':'none';
-  if(p==='custom'){
-    // Precargar fechas por defecto: primer día del mes hasta hoy
-    const desdeEl=document.getElementById('rpCustomDesde');
-    const hastaEl=document.getElementById('rpCustomHasta');
-    if(desdeEl&&!desdeEl.value)desdeEl.value=hoy().slice(0,7)+'-01';
-    if(hastaEl&&!hastaEl.value)hastaEl.value=hoy();
-    return; // renderReportes se dispara desde los inputs o el botón Generar
-  }
   renderReportes();
 }
 
@@ -1091,7 +1060,6 @@ initDB()
   })
   .catch(err=>{
     console.error('DB Error:',err);
-    alert('Error al inicializar. Verifica tu conexion a internet e intenta recargar.');
   });  
 </script>
 </body>
