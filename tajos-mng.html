@@ -225,7 +225,7 @@ tbody tr:last-child td{border-bottom:none;}
 .pay-method:hover{border-color:var(--gold-dim);}
 .pay-method.active{background:var(--gold-glow);border-color:var(--gold);color:var(--gold-light);}
 .agenda-header-cell{padding:10px;border-right:1px solid var(--border);font-family:var(--font-cond);font-weight:700;font-size:.8rem;color:var(--gold);text-transform:uppercase;display:flex;flex-direction:column;gap:2px;}
-.agenda-cell{padding:4px 6px;border-right:1px solid var(--border);border-bottom:1px solid rgba(201,148,10,.06);min-height:48px;display:flex;align-items:center;font-size:.82rem;}
+.agenda-cell{padding:4px 6px;border-right:1px solid var(--border);border-bottom:1px solid rgba(201,148,10,.06);min-height:48px;height:48px;display:flex;align-items:center;font-size:.82rem;}
 .agenda-cell.time-col{font-family:var(--font-cond);font-size:.78rem;color:var(--text-muted);justify-content:center;background:var(--bg-raised);position:sticky;left:0;z-index:4;min-width:60px;}
 .agenda-slot{width:100%;min-height:40px;border-radius:6px;padding:5px 8px;font-size:.78rem;cursor:pointer;transition:opacity .15s;}
 .agenda-slot:hover{opacity:.85;}
@@ -270,7 +270,7 @@ tbody tr:last-child td{border-bottom:none;}
   </div>
   <div class="sidebar-section-label">Principal</div>
   <div class="nav-item active" data-page="dashboard"><span class="icon">📊</span>Dashboard</div>
-  <div class="nav-item cajero-only" data-page="agenda"><span class="icon">📅</span>Agenda</div>
+  <div class="nav-item" data-page="agenda"><span class="icon">📅</span>Agenda</div>
   <div class="nav-item cajero-only" data-page="caja"><span class="icon">💰</span>Caja &amp; Cobro</div>
   <div class="sidebar-section-label">Gestión</div>
   <div class="nav-item" data-page="clientes"><span class="icon">👥</span>Clientes</div>
@@ -283,7 +283,7 @@ tbody tr:last-child td{border-bottom:none;}
   <div class="nav-item admin-only" data-page="historial"><span class="icon">📜</span>Historial</div>
   <div class="nav-item admin-only" data-page="arqueos"><span class="icon">🏦</span>Arqueos</div>
   <div class="sidebar-section-label">Reportes</div>
-  <div class="nav-item" data-page="reportes"><span class="icon">📈</span>Reportes</div>
+  <div class="nav-item admin-only" data-page="reportes"><span class="icon">📈</span>Reportes</div>
   <div class="nav-item" data-page="giftcards"><span class="icon">🎁</span>Giftcards</div>
   <div style="height:6px"></div>
   <div style="padding:0 16px 6px;font-size:.65rem;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-cond)">Sucursal Activa</div>
@@ -334,16 +334,17 @@ tbody tr:last-child td{border-bottom:none;}
 
 <!-- AGENDA -->
 <div class="page" id="page-agenda">
-  <div class="section-header">
-    <div><div class="section-title">AGENDA</div><div class="section-sub" id="agendaLocalLabel">Central</div></div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <div class="cal-nav">
+  <div class="section-header" style="flex-direction:row;justify-content:flex-start;gap:10px;flex-wrap:wrap;align-items:center">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div><div class="section-title" style="font-size:1rem">AGENDA</div><div class="section-sub" id="agendaLocalLabel" style="font-size:.75rem">Central</div></div>
+      <div class="cal-nav" style="margin-left:8px">
         <button class="btn btn-ghost btn-sm" onclick="cambiarDiaAgenda(-1)">◀</button>
-        <div class="cal-date" id="agendaFechaLabel"></div>
+        <div class="cal-date" id="agendaFechaLabel" style="font-size:.85rem;min-width:160px;text-align:center"></div>
         <button class="btn btn-ghost btn-sm" onclick="cambiarDiaAgenda(1)">▶</button>
       </div>
       <button class="btn btn-outline btn-sm" onclick="irHoyAgenda()">Hoy</button>
-      <button class="btn btn-gold" onclick="openModal('modalNuevoTurno')">＋ Turno</button>
+      <button class="btn btn-outline btn-sm" onclick="abrirModalBloqueo()">🚫 Bloquear horario</button>
+      <button class="btn btn-gold btn-sm" onclick="openModal('modalNuevoTurno')">＋ Turno</button>
     </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden"><div id="agendaGrid" style="overflow-x:auto"></div></div>
@@ -557,8 +558,8 @@ tbody tr:last-child td{border-bottom:none;}
     <button class="btn btn-gold" onclick="openModal('modalNuevoConsumo')">＋ Registrar Consumo</button>
   </div>
   <div class="grid-3" style="margin-bottom:20px">
-    <div class="stat-card"><div class="stat-label">Consumos este mes</div><div class="stat-value" id="consMes">0</div><div class="stat-icon">🧴</div></div>
-    <div class="stat-card"><div class="stat-label">Monto mes</div><div class="stat-value" id="consMonto">Gs. 0</div><div class="stat-icon">💸</div></div>
+    <div class="stat-card"><div class="stat-label">Consumos hoy</div><div class="stat-value" id="consMes">0</div><div class="stat-icon">🧴</div></div>
+    <div class="stat-card"><div class="stat-label">Monto hoy</div><div class="stat-value" id="consMonto">Gs. 0</div><div class="stat-icon">💸</div></div>
     <div class="stat-card"><div class="stat-label">Barberos con consumo</div><div class="stat-value" id="consBarbs">0</div><div class="stat-icon">💈</div></div>
   </div>
   <div class="card">
@@ -935,10 +936,10 @@ tbody tr:last-child td{border-bottom:none;}
             <div style="font-family:var(--font-cond);font-weight:700">JSON</div>
             <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px">Liviano · Recomendado</div>
           </div>
-          <div class="pay-method" id="fmtXML" onclick="selFmt('XML')" style="flex:1">
-            <span style="font-size:1.4rem;display:block;margin-bottom:4px">&lt;/&gt;</span>
-            <div style="font-family:var(--font-cond);font-weight:700">XML</div>
-            <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px">Legible · Compatible</div>
+          <div class="pay-method" id="fmtXLSX" onclick="selFmt('XLSX')" style="flex:1">
+            <span style="font-size:1.4rem;display:block;margin-bottom:4px">📊</span>
+            <div style="font-family:var(--font-cond);font-weight:700">XLSX</div>
+            <div style="font-size:.72rem;color:var(--text-muted);margin-top:3px">Excel · Multi-hoja</div>
           </div>
         </div>
         <div id="backupResumen" style="background:var(--bg-raised);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:.85rem;color:var(--text-muted)">Cargando...</div>
@@ -977,7 +978,7 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="modal-footer" style="justify-content:space-between">
       <button class="btn btn-ghost" onclick="salirSinBackup()">Salir sin backup</button>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline" onclick="exportarRapido('XML')">⬇ XML</button>
+        <button class="btn btn-outline" onclick="exportarRapido('XLSX')">⬇ XLSX</button>
         <button class="btn btn-gold" onclick="exportarRapido('JSON')">⬇ JSON y Salir</button>
       </div>
     </div>
@@ -1458,6 +1459,7 @@ function showApp(){
   }
   // Restringir selector de sucursal en Reportes para cajeros con una sola sucursal
   _aplicarRestriccionReporteLocal();
+  _cargarBloqueos();
   navigate('dashboard');
   populateSels();
   setTimeout(mostrarCajaInicialSiNecesario,600);
@@ -1543,7 +1545,11 @@ function navigate(page){
   if(page==='arqueos')renderArqueosAdmin();
   if(page==='reportes'){_aplicarRestriccionReporteLocal();generarReporte();}
   if(page==='giftcards')renderGiftcards();
-  if(page==='consumos')renderConsumos();
+  if(page==='consumos'){
+    const fd=document.getElementById('consFiltroFecha');
+    if(fd&&!fd.value) fd.value=hoy();
+    renderConsumos();
+  }
   if(page==='inventario')renderInventario();
 }
 
@@ -1557,6 +1563,7 @@ function selectLocal(n){
   document.getElementById('dashLocalLabel').textContent=localNombre(n)+' · Resumen del día';
   document.getElementById('agendaLocalLabel').textContent=localNombre(n);
   document.getElementById('cajaLocalLabel').textContent=localNombre(n);
+  _cargarBloqueos();
   refreshDash();renderAgenda();refreshCaja();
 }
 
@@ -1804,7 +1811,31 @@ async function renderCatalogo(){
   let svcs=await dbAll('servicios');let prods=await dbAll('productos');
   svcs=[...svcs].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
   prods=[...prods].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+  const isAdmin=ST.user?.rol==='admin';
   const catC={corte:'badge-gold',barba:'badge-blue',combo:'badge-green',ritual:'badge-purple',otro:'badge-gray'};
+
+  // Cajero: vista simple de solo lectura — tabla con nombre, categoría, precio
+  if(!isAdmin){
+    // Ocultar botones de creación
+    document.querySelectorAll('.cat-admin-btn').forEach(el=>el.style.display='none');
+    const mkTable=(items,tipo)=>{
+      if(!items.length) return '<div class="empty-state"><div class="icon">📋</div><p>Sin registros</p></div>';
+      return `<div class="table-wrap"><table>
+        <thead><tr><th>Nombre</th><th>Categoría</th><th style="text-align:right">Precio</th>${tipo==='servicio'?'<th style="text-align:right">Duración</th>':''}</tr></thead>
+        <tbody>${items.map(x=>`<tr>
+          <td><strong>${x.nombre}</strong>${x.descripcion?`<div style="font-size:.75rem;color:var(--text-muted)">${x.descripcion}</div>`:''}</td>
+          <td><span class="badge ${catC[x.categoria]||'badge-gray'}" style="font-size:.7rem">${x.categoria||'—'}</span></td>
+          <td style="text-align:right;font-family:var(--font-cond);font-weight:700">${fmt(x.precio)}</td>
+          ${tipo==='servicio'?`<td style="text-align:right;color:var(--text-muted)">${x.duracion} min</td>`:''}
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    };
+    document.getElementById('serviciosList').innerHTML=mkTable(svcs,'servicio');
+    document.getElementById('productosList').innerHTML=mkTable(prods,'producto');
+    return;
+  }
+  // Admin: mostrar botones de creación
+  document.querySelectorAll('.cat-admin-btn').forEach(el=>el.style.display='');
   document.getElementById('serviciosList').innerHTML=svcs.length?svcs.map(s=>`<div class="card" style="padding:16px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
       <div><div style="font-family:var(--font-cond);font-weight:700;font-size:.95rem">${s.nombre}</div>
@@ -2192,41 +2223,155 @@ async function switchDtB(tab,el){
 function cambiarDiaAgenda(d){const dt=new Date(ST.agendaFecha);dt.setDate(dt.getDate()+d);ST.agendaFecha=dt;renderAgenda();}
 function irHoyAgenda(){ST.agendaFecha=new Date();renderAgenda();}
 
-async function renderAgenda(){
-  const fecha=toDS(ST.agendaFecha);
-  document.getElementById('agendaFechaLabel').textContent=ST.agendaFecha.toLocaleDateString('es-PY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const barbs=await dbAll('barberos');
-  const bf=barbs.filter(b=>b.local==ST.localActivo||b.local==0);
-  const turnos=await dbAll('turnos');
-  const td=turnos.filter(t=>t.fecha===fecha&&t.local==ST.localActivo);
-  const cl=await dbAll('clientes');const cMap={};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
-  if(!bf.length){document.getElementById('agendaGrid').innerHTML='<div class="empty-state"><div class="icon">💈</div><p>No hay barberos en esta sucursal</p></div>';return;}
-  const cols=`60px repeat(${bf.length},minmax(140px,1fr))`;
-  let html=`<div style="display:grid;grid-template-columns:${cols};position:sticky;top:0;z-index:5;background:var(--bg-raised);border-bottom:1px solid var(--border)">
-    <div class="agenda-header-cell" style="min-width:60px"><span style="color:var(--text-dim)">HORA</span></div>`;
-  bf.forEach(b=>{html+=`<div class="agenda-header-cell">${b.nombre}<br><span style="font-weight:400;color:var(--text-muted);font-size:.72rem">${b.apellido}</span></div>`;});
-  html+=`</div>`;
-  HORAS.forEach(hora=>{
-    html+=`<div style="display:grid;grid-template-columns:${cols}"><div class="agenda-cell time-col">${hora}</div>`;
-    bf.forEach(b=>{
-      const t=td.find(t=>t.hora===hora&&Number(t.barberoId||t.barbero_id)===Number(b.id));
-      if(t){
-        const sl=(t.servicios||[]).join(', ')||'—';
-        const cn=cMap[String(t.clienteId||t.cliente_id||'')]||t.clienteNombre||'Sin nombre';
-        html+=`<div class="agenda-cell"><div class="agenda-slot occupied" onclick="verDetTurno(${t.id})">
-          <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cn}</div>
-          <div style="font-size:.72rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sl}</div>
-          <span class="badge ${t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold'}" style="font-size:.65rem;padding:1px 5px">${t.estado||'pendiente'}</span>
-        </div></div>`;
-      }else{
-        html+=`<div class="agenda-cell"><div class="agenda-slot empty" onclick="preFillTurno('${fecha}','${hora}',${b.id})">+ Turno</div></div>`;
-      }
-    });
-    html+=`</div>`;
-  });
-  document.getElementById('agendaGrid').innerHTML=`<div style="min-width:${60+bf.length*140}px">${html}</div>`;
+// Calcula slots de 30min que ocupa un turno según sus servicios
+function _turnoSlots(serviciosNombres, catalogo){
+  const mins=(serviciosNombres||[]).reduce((s,n)=>{
+    const svc=catalogo.find(x=>x.nombre===n);
+    return s+(svc&&svc.duracion>0?svc.duracion:30);
+  },0);
+  return Math.max(1,Math.ceil(Math.max(30,mins)/30));
+}
+// Suma N slots de 30min a una hora HH:MM
+function _addSlots(hora,n){
+  const [h,m]=hora.split(':').map(Number);
+  const t=h*60+m+n*30;
+  return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
 }
 
+async function renderAgenda(){
+  const fecha=toDS(ST.agendaFecha);
+  document.getElementById('agendaFechaLabel').textContent=
+    ST.agendaFecha.toLocaleDateString('es-PY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  const barbs  = await dbAll('barberos');
+  const bf     = barbs.filter(b=>b.local==ST.localActivo||b.local==0);
+  const turnos = await dbAll('turnos');
+  const td     = turnos.filter(t=>t.fecha===fecha&&t.local==ST.localActivo);
+  const cl     = await dbAll('clientes');
+  const cMap   = {};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
+  const svcs   = await dbAll('servicios');
+  const blqs   = (ST._bloqueos||[]).filter(b=>b.fecha===fecha&&Number(b.local)===Number(ST.localActivo));
+
+  if(!bf.length){
+    document.getElementById('agendaGrid').innerHTML=
+      '<div class="empty-state"><div class="icon">💈</div><p>No hay barberos en esta sucursal</p></div>';
+    return;
+  }
+
+  // ── Pre-calcular slots de cada turno ──────────────────────────────
+  td.forEach(t=>{
+    t._slots = _turnoSlots(t.servicios, svcs);
+  });
+  blqs.forEach(bl=>{
+    const [hd,md]=bl.desde.split(':').map(Number);
+    const [hf,mf]=bl.hasta.split(':').map(Number);
+    bl._slots = Math.max(1,((hf*60+mf)-(hd*60+md))/30);
+  });
+
+  // skipMap: slots que NO se renderizan (cubiertos por span)
+  const skipMap = {};
+  td.forEach(t=>{
+    const bid=Number(t.barberoId||t.barbero_id);
+    for(let i=1;i<t._slots;i++) skipMap[bid+'|'+_addSlots(t.hora,i)]=true;
+  });
+  blqs.forEach(bl=>{
+    const bid=Number(bl.barberoId);
+    for(let i=1;i<bl._slots;i++) skipMap[bid+'|blq|'+_addSlots(bl.desde,i)]=true;
+  });
+  const blqStart=new Set(blqs.map(bl=>Number(bl.barberoId)+'|'+bl.desde));
+
+  // ── Construir UN SOLO grid container ─────────────────────────────
+  // Cada celda se posiciona con grid-column y grid-row explícitos.
+  // grid-row:span N funciona porque todas las celdas están en el mismo grid.
+  const colTpl = `60px repeat(${bf.length},minmax(140px,1fr))`;
+  const rowTpl = `40px repeat(${HORAS.length},48px)`;
+  let cells = '';
+
+  // Fila 0: cabeceras
+  cells += `<div style="grid-column:1;grid-row:1;position:sticky;top:0;left:0;z-index:10;
+    background:var(--bg-raised);border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-cond);font-size:.72rem;color:var(--text-dim)">HORA</div>`;
+  bf.forEach((b,ci)=>{
+    cells += `<div style="grid-column:${ci+2};grid-row:1;position:sticky;top:0;z-index:9;
+      background:var(--bg-raised);border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+      padding:8px 10px;display:flex;flex-direction:column;gap:2px;
+      font-family:var(--font-cond);font-weight:700;font-size:.8rem;color:var(--gold);text-transform:uppercase">
+      ${b.nombre}<span style="font-weight:400;color:var(--text-muted);font-size:.72rem;text-transform:none">${b.apellido}</span></div>`;
+  });
+
+  // Filas de horas
+  HORAS.forEach((hora,ri)=>{
+    const gridRow = ri+2;
+
+    // Columna hora — sticky izquierda
+    cells += `<div style="grid-column:1;grid-row:${gridRow};position:sticky;left:0;z-index:4;
+      background:var(--bg-raised);border-right:1px solid var(--border);
+      border-bottom:1px solid rgba(201,148,10,.06);
+      display:flex;align-items:center;justify-content:center;
+      font-family:var(--font-cond);font-size:.78rem;color:var(--text-muted);min-width:60px">${hora}</div>`;
+
+    bf.forEach((b,ci)=>{
+      const bid     = Number(b.id);
+      const gridCol = ci+2;
+      const keyT    = bid+'|'+hora;
+      const keyB    = bid+'|blq|'+hora;
+
+      // Cubierto por span previo — no renderizar
+      if(skipMap[keyT]||skipMap[keyB]) return;
+
+      // Bloqueo que comienza aquí
+      if(blqStart.has(bid+'|'+hora)){
+        const bl=blqs.find(x=>Number(x.barberoId)===bid&&x.desde===hora);
+        if(bl){
+          cells += `<div style="grid-column:${gridCol};grid-row:${gridRow}/span ${bl._slots};
+            padding:2px;border-right:1px solid var(--border);border-bottom:1px solid rgba(201,148,10,.06)">
+            <div style="height:100%;background:rgba(180,40,40,.13);border:1px dashed #e74c3c;border-radius:6px;
+              display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer"
+              onclick="eliminarBloqueo('${bl.id}')">
+              <span style="font-size:.75rem;font-weight:700;color:#e74c3c">🚫 Bloqueado</span>
+              <span style="font-size:.68rem;color:var(--text-muted)">${bl.desde}–${bl.hasta}</span>
+              ${bl.motivo?`<span style="font-size:.65rem;color:var(--text-dim)">${bl.motivo}</span>`:''}
+              <span style="font-size:.6rem;color:#e74c3c;margin-top:2px">✕ eliminar</span>
+            </div></div>`;
+        }
+        return;
+      }
+
+      // Turno que comienza aquí
+      const t=td.find(t=>t.hora===hora&&Number(t.barberoId||t.barbero_id)===bid);
+      if(t){
+        const span   = t._slots||1;
+        const durMin = span*30;
+        const sl     = (t.servicios||[]).join(', ')||'—';
+        const cn     = cMap[String(t.clienteId||t.cliente_id||'')]||t.clienteNombre||'Sin nombre';
+        const bCls   = t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':t.estado==='en_atencion'?'badge-blue':'badge-gold';
+        const bTxt   = t.estado==='en_atencion'?'En atención':t.estado||'pendiente';
+        cells += `<div style="grid-column:${gridCol};grid-row:${gridRow}/span ${span};
+          padding:2px;border-right:1px solid var(--border);border-bottom:1px solid rgba(201,148,10,.06)">
+          <div class="agenda-slot occupied" onclick="verDetTurno(${t.id})"
+            style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center">
+            <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cn}</div>
+            <div style="font-size:.72rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sl}</div>
+            <div style="font-size:.68rem;color:var(--text-dim);margin-top:2px">${hora} · ${durMin} min</div>
+            <span class="badge ${bCls}" style="font-size:.65rem;padding:1px 5px;margin-top:4px;align-self:flex-start">${bTxt}</span>
+          </div></div>`;
+        return;
+      }
+
+      // Celda vacía
+      cells += `<div style="grid-column:${gridCol};grid-row:${gridRow};
+        padding:4px 6px;border-right:1px solid var(--border);border-bottom:1px solid rgba(201,148,10,.06)">
+        <div class="agenda-slot empty" onclick="preFillTurno('${fecha}','${hora}',${bid})">+ Turno</div>
+        </div>`;
+    });
+  });
+
+  const minW = 60+bf.length*140;
+  document.getElementById('agendaGrid').innerHTML=`<div style="min-width:${minW}px;
+    display:grid;grid-template-columns:${colTpl};grid-template-rows:${rowTpl};position:relative">
+    ${cells}</div>`;
+}
 function populateTurnoHoras(){document.getElementById('turnoHora').innerHTML=HORAS.map(h=>`<option value="${h}">${h}</option>`).join('');}
 function preFillTurno(fecha,hora,bId){document.getElementById('turnoFecha').value=fecha;populateTurnoHoras();document.getElementById('turnoHora').value=hora;document.getElementById('turnoBarbero').value=bId;document.getElementById('turnoLocal').value=ST.localActivo;openModal('modalNuevoTurno');}
 
@@ -2248,10 +2393,12 @@ async function verDetTurno(id){
     <div class="form-group"><label class="form-label">Estado</label>
       <select class="form-control" id="turnoEstadoSel" style="width:200px">
         <option value="pendiente"${t.estado==='pendiente'?' selected':''}>Pendiente</option>
+        <option value="en_atencion"${t.estado==='en_atencion'?' selected':''}>En atención</option>
         <option value="completado"${t.estado==='completado'?' selected':''}>Completado</option>
         <option value="cancelado"${t.estado==='cancelado'?' selected':''}>Cancelado</option>
       </select></div>`;
   const puedeCobrar=t.estado!=='completado'&&t.estado!=='cancelado';
+  const estadoLabel={pendiente:'Pendiente',en_atencion:'En atención',completado:'Completado',cancelado:'Cancelado'};
   document.getElementById('detTurnoFooter').innerHTML=`
     <button class="btn btn-danger btn-sm" onclick="eliminarTurno(${t.id})">&#128465; Eliminar</button>
     <button class="btn btn-ghost" onclick="closeModal('modalDetalleTurno')">Cerrar</button>
@@ -2360,8 +2507,23 @@ async function guardarTurno(){
   if(!bId)return toast('Selecciona un barbero','error');
   if(!fecha)return toast('Selecciona una fecha','error');
   const all=await dbAll('turnos');
-  if(all.find(t=>t.fecha===fecha&&t.hora===hora&&Number(t.barberoId||t.barbero_id)===Number(bId)&&t.local==local&&t.estado!=='cancelado'))
-    return toast('Este barbero ya tiene un turno a esa hora','error');
+  const svcsAll=await dbAll('servicios');
+  const nuevoSlots=_turnoSlots(ST.turnoServTemp,svcsAll);
+  const horasNuevo=new Set();
+  for(let i=0;i<nuevoSlots;i++) horasNuevo.add(_addSlots(hora,i));
+  const conflicto=all.filter(t=>t.fecha===fecha&&Number(t.barberoId||t.barbero_id)===Number(bId)&&t.local==local&&t.estado!=='cancelado')
+    .some(t=>{const s=_turnoSlots(t.servicios,svcsAll);for(let i=0;i<s;i++){if(horasNuevo.has(_addSlots(t.hora,i)))return true;}return false;});
+  if(conflicto) return toast('Conflicto: el barbero ya tiene un turno que ocupa ese horario','error');
+  // Verificar conflicto con bloqueos
+  const blqActivos=(ST._bloqueos||[]).filter(b=>b.fecha===fecha&&Number(b.barberoId)===Number(bId));
+  const blqConf=blqActivos.some(b=>{
+    const [hd,md]=b.desde.split(':').map(Number);const [hf,mf]=b.hasta.split(':').map(Number);
+    let cur=hd*60+md;while(cur<hf*60+mf){
+      const lbl=String(Math.floor(cur/60)).padStart(2,'0')+':'+String(cur%60).padStart(2,'0');
+      if(horasNuevo.has(lbl))return true;cur+=30;
+    }return false;
+  });
+  if(blqConf) return toast('Ese horario está bloqueado para el barbero','error');
   const cl=await dbAll('clientes');const c=cl.find(x=>x.id===cId);
   const barbs=await dbAll('barberos');const b=barbs.find(x=>x.id===bId);
   const serviciosGuardados=[...ST.turnoServTemp];
@@ -3131,7 +3293,7 @@ function switchBackupTab(tab,el){
   if(tab==='exportar')cargarResumenBackup();
 }
 
-function selFmt(fmt){_bkpFmt=fmt;document.getElementById('fmtJSON').classList.toggle('active',fmt==='JSON');document.getElementById('fmtXML').classList.toggle('active',fmt==='XML');}
+function selFmt(fmt){_bkpFmt=fmt;document.getElementById('fmtJSON').classList.toggle('active',fmt==='JSON');const xEl=document.getElementById('fmtXLSX');if(xEl)xEl.classList.toggle('active',fmt==='XLSX');}
 
 async function cargarResumenBackup(){
   const labels={barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',productos:'Productos',turnos:'Turnos',cobros:'Cobros',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',barberoUsers:'Accesos Portal Barberos',adelantos:'Adelantos',egresos:'Egresos/Consumos',giftcards:'Giftcards'};
@@ -3154,12 +3316,135 @@ async function exportarBackup(){
     descargar(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`tajos_backup_${ts}_${user}.json`);
     await logAct('Exportó backup en formato JSON');toast('Backup JSON descargado','success');
   }else{
-    descargar(new Blob([jsonAXML(data)],{type:'application/xml'}),`tajos_backup_${ts}_${user}.xml`);
-    await logAct('Exportó backup en formato XML');toast('Backup XML descargado','success');
+    await exportarBackupXLSX(data,ts,user);
+    await logAct('Exportó backup en formato XLSX');toast('Backup XLSX descargado','success');
   }
 }
 
-async function exportarRapido(f){_bkpFmt=f;await exportarBackup();closeModal('modalRecordatorioBackup');await doLogout();}
+async function exportarRapido(f){_bkpFmt=(f==='XML'?'XLSX':f);await exportarBackup();closeModal('modalRecordatorioBackup');await doLogout();}
+
+async function archivarHistorialAntiguo(){
+  // Exporta historial >30 días como XML y lo elimina de la DB
+  const logs=await dbAll('historial');
+  const limite=new Date();limite.setDate(limite.getDate()-30);const limDS=toDS(limite);
+  const viejos=logs.filter(l=>l.fecha<limDS);
+  if(!viejos.length){toast('No hay registros de historial con más de 30 días','info');return;}
+  // Generar XML del archivo
+  const esc=v=>v==null?'':String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TajosHistorialArchivo fecha="${new Date().toISOString()}" registros="${viejos.length}">\n`;
+  viejos.forEach(l=>{
+    xml+=`  <registro id="${esc(l.id)}">\n`;
+    Object.entries(l).filter(([k])=>k!=='id').forEach(([k,v])=>{xml+=`    <${k}>${esc(v)}</${k}>\n`;});
+    xml+=`  </registro>\n`;
+  });
+  xml+=`</TajosHistorialArchivo>`;
+  const ts=hoy();
+  descargar(new Blob([xml],{type:'application/xml'}),`tajos_historial_archivo_${ts}.xml`);
+  // Eliminar de la DB
+  for(const l of viejos)await dbDel('historial',l.id);
+  await logAct(`Archivó y eliminó ${viejos.length} registros de historial anteriores a ${limDS}`);
+  toast(`Archivados y eliminados ${viejos.length} registros (>${30} días)`,'success');
+  if(document.getElementById('page-historial')?.classList.contains('active'))renderHistorial();
+}
+
+async function verificarAlertaMensual(){
+  // Mostrar alerta si estamos en los últimos 3 días del mes
+  const hm=new Date();
+  const ultimoDia=new Date(hm.getFullYear(),hm.getMonth()+1,0).getDate();
+  const diasRestantes=ultimoDia-hm.getDate();
+  if(diasRestantes>2)return;
+  const clave=`alertaMes_${hoy().slice(0,7)}`;
+  if(localStorage.getItem(clave))return;
+  localStorage.setItem(clave,'shown');
+  const logs=await dbAll('historial');
+  const limite=new Date();limite.setDate(limite.getDate()-30);const limDS=toDS(limite);
+  const viejos=logs.filter(l=>l.fecha<limDS).length;
+  const msg=viejos>0
+    ? `⚠ Fin de mes próximo. Hay ${viejos} registros de historial con más de 30 días. Se recomienda archivarlos desde Backup → Exportar.`
+    : `📅 Fin de mes en ${diasRestantes} día(s). Recordá hacer el backup mensual.`;
+  setTimeout(()=>toast(msg,'info'),2000);
+}
+
+function descargar(blob,nombre){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nombre;a.click();URL.revokeObjectURL(a.href);}
+
+// ── XLSX helper (SheetJS CDN) ──
+function _xlsxVal(v){
+  if(v==null)return'';
+  if(typeof v==='object')return JSON.stringify(v);
+  return v;
+}
+async function _xlsxDescargarBackup(hojas,nombreArchivo){
+  if(!window.XLSX){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload=res;s.onerror=rej;document.head.appendChild(s);
+    });
+  }
+  const wb=window.XLSX.utils.book_new();
+  hojas.forEach(({nombre,filas,cols})=>{
+    const cabecera=cols||Object.keys(filas[0]||{});
+    const aoa=[cabecera,...(filas||[]).map(row=>cabecera.map(k=>_xlsxVal(row[k])))];
+    const ws=window.XLSX.utils.aoa_to_sheet(aoa);
+    // Estilo cabecera
+    const range=window.XLSX.utils.decode_range(ws['!ref']||'A1');
+    for(let c=range.s.c;c<=range.e.c;c++){
+      const addr=window.XLSX.utils.encode_cell({r:0,c});
+      if(!ws[addr])continue;
+      ws[addr].s={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1A2744'}},alignment:{horizontal:'center'}};
+    }
+    // Ancho automático
+    ws['!cols']=cabecera.map((k,ci)=>{
+      const maxLen=Math.min(40,Math.max(String(k).length,...(filas||[]).slice(0,50).map(r=>String(_xlsxVal(r[k])).length)));
+      return{wch:maxLen+2};
+    });
+    ws['!autofilter']={ref:`A1:${window.XLSX.utils.encode_col(cabecera.length-1)}1`};
+    window.XLSX.utils.book_append_sheet(wb,ws,nombre.slice(0,31));
+  });
+  const buf=window.XLSX.write(wb,{type:'array',bookType:'xlsx',cellStyles:true});
+  descargar(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${nombreArchivo}.xlsx`);
+}
+async function exportarBackupXLSX(data,ts,user){
+  const labels={barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',productos:'Productos',
+    turnos:'Turnos',cobros:'Cobros',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',
+    cajaTurnos:'Caja Turnos',barberoUsers:'Accesos Portal',adelantos:'Adelantos',egresos:'Consumos',giftcards:'Giftcards'};
+  const hojas=[{
+    nombre:'📋 Resumen',cols:['Tabla','Registros'],
+    filas:STORES.map(s=>({'Tabla':labels[s]||s,'Registros':(data[s]||[]).length}))
+  }];
+  for(const store of STORES){
+    hojas.push({nombre:(labels[store]||store).slice(0,31),filas:data[store]||[]});
+  }
+  await _xlsxDescargarBackup(hojas,`tajos_backup_${ts}_${user}`);
+}
+
+async function cargarResumenBackup(){
+  const labels={barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',productos:'Productos',turnos:'Turnos',cobros:'Cobros',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',barberoUsers:'Accesos Portal Barberos',adelantos:'Adelantos',egresos:'Egresos/Consumos',giftcards:'Giftcards'};
+  const counts={};for(const s of STORES){const d=await dbAll(s);counts[s]=d.length;}
+  document.getElementById('backupResumen').innerHTML=`<div style="font-family:var(--font-cond);font-size:.8rem;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Contenido del backup</div>`+
+    Object.entries(counts).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(201,148,10,.06)"><span>${labels[k]||k}</span><span style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${v}</span></div>`).join('')+
+    `<div style="margin-top:10px;font-size:.78rem;color:var(--text-dim)">Fecha: ${new Date().toLocaleString('es-PY')}</div>`;
+}
+
+async function recolectarDatos(){
+  const data={_meta:{version:'2.0',sistema:'TAJOS',fecha:new Date().toISOString()}};
+  for(const s of STORES)data[s]=await dbAll(s);
+  return data;
+}
+
+async function exportarBackup(){
+  const data=await recolectarDatos();
+  const ts=hoy();const user=ST.user?.login||'sistema';
+  if(_bkpFmt==='JSON'){
+    descargar(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`tajos_backup_${ts}_${user}.json`);
+    await logAct('Exportó backup en formato JSON');toast('Backup JSON descargado','success');
+  }else{
+    await exportarBackupXLSX(data,ts,user);
+    await logAct('Exportó backup en formato XLSX');toast('Backup XLSX descargado','success');
+  }
+}
+
+async function exportarRapido(f){_bkpFmt=(f==='XML'?'XLSX':f);await exportarBackup();closeModal('modalRecordatorioBackup');await doLogout();}
 
 async function archivarHistorialAntiguo(){
   // Exporta historial >30 días como XML y lo elimina de la DB
@@ -3554,6 +3839,16 @@ async function guardarConsumo(){
     cantidad:cant,monto,nota,
     fecha:hoy(),registradoPor:ST.user?.login||'?'
   });
+  // Descontar del stock del producto (consumo = venta al barbero)
+  if(prod.id){
+    const pObj=await dbGet('productos',prod.id);
+    if(pObj){
+      // Para consumos usamos la sucursal del barbero o la activa
+      const localBarb=b?.local&&b.local!==0?b.local:ST.localActivo;
+      const stk=getStockLocal(pObj,localBarb);
+      if(stk>0){setStockLocal(pObj,Math.max(0,stk-cant),localBarb);await dbPut('productos',pObj);}
+    }
+  }
   await logAct(`Registró consumo de "${prod.nombre}" (x${cant}) para ${b?b.nombre:'?'} · ${fmt(monto)}`);
   toast('Consumo registrado','success');
   closeModal('modalNuevoConsumo');
@@ -3573,17 +3868,16 @@ async function renderConsumos(){
   }
   const filtBarb=filtBarbSel?.value||'';
   const filtFecha=document.getElementById('consFiltroFecha')?.value||'';
-  const mesActual=hoy().slice(0,7);
-  const mesList=egresos.filter(e=>e.fecha&&e.fecha.startsWith(mesActual));
-  // Stats
+  // Stats y lista del día activo en el filtro (hoy si no hay filtro)
+  const diaActivo=filtFecha||hoy();
+  const diaList=egresos.filter(e=>e.fecha===diaActivo);
   const statEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  statEl('consMes',mesList.length);
-  statEl('consMonto',fmt(mesList.reduce((s,e)=>s+(e.monto||0),0)));
-  statEl('consBarbs',new Set(mesList.map(e=>e.barberoId)).size);
-  // Filtered list
-  let lista=[...egresos];
+  statEl('consMes',diaList.length);
+  statEl('consMonto',fmt(diaList.reduce((s,e)=>s+(e.monto||0),0)));
+  statEl('consBarbs',new Set(diaList.map(e=>e.barberoId||e.barbero_id)).size);
+  // Lista filtrada por día activo + barbero opcional
+  let lista=egresos.filter(e=>e.fecha===diaActivo);
   if(filtBarb)lista=lista.filter(e=>Number(e.barberoId||e.barbero_id)===Number(filtBarb));
-  if(filtFecha)lista=lista.filter(e=>e.fecha===filtFecha);
   lista.sort((a,b)=>b.ts>a.ts?1:-1);
   const tbody=document.getElementById('consumosTbody');
   if(!lista.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">🧴</div><p>Sin consumos registrados</p></div></td></tr>';return;}
@@ -3961,6 +4255,88 @@ async function exportarInventarioXLSX(){
   toast('Inventario exportado correctamente','success');
 }
 
+// ══ BLOQUEOS DE AGENDA ══
+// Bloqueos almacenados en memoria (ST._bloqueos).
+// Para persistencia entre sesiones, se guardan en localStorage por local.
+function _blqKey(){return'tajos_bloqueos_l'+ST.localActivo;}
+function _cargarBloqueos(){
+  try{ST._bloqueos=JSON.parse(localStorage.getItem(_blqKey())||'[]');}
+  catch(e){ST._bloqueos=[];}
+}
+function _guardarBloqueos(){
+  localStorage.setItem(_blqKey(),JSON.stringify(ST._bloqueos||[]));
+}
+
+function abrirModalBloqueo(){
+  _cargarBloqueos();
+  const barbs=Array.from(document.querySelectorAll('#agendaGrid .agenda-header-cell')).slice(1);
+  // Poblar selector de barberos desde ST
+  const sel=document.getElementById('blqBarbero');
+  if(sel){
+    dbAll('barberos').then(bs=>{
+      const bf=bs.filter(b=>b.local==ST.localActivo||b.local==0);
+      sel.innerHTML='<option value="">Seleccionar barbero...</option>'+
+        bf.map(b=>`<option value="${b.id}">${b.nombre} ${b.apellido}</option>`).join('');
+    });
+  }
+  // Default fecha = fecha de la agenda
+  const fd=document.getElementById('blqFecha');
+  if(fd) fd.value=toDS(ST.agendaFecha);
+  // Poblar selectores de hora
+  const horasOpts=HORAS.map(h=>`<option value="${h}">${h}</option>`).join('');
+  const dSel=document.getElementById('blqDesde');if(dSel)dSel.innerHTML=horasOpts;
+  const hSel=document.getElementById('blqHasta');if(hSel)hSel.innerHTML=horasOpts;
+  // Poblar lista de bloqueos existentes
+  _renderBloqueosList();
+  openModal('modalBloqueo');
+}
+
+function _renderBloqueosList(){
+  _cargarBloqueos();
+  const cont=document.getElementById('blqLista');if(!cont)return;
+  const blqs=(ST._bloqueos||[]).filter(b=>b.local==ST.localActivo);
+  if(!blqs.length){cont.innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:8px 0">Sin bloqueos registrados</div>';return;}
+  dbAll('barberos').then(bs=>{
+    const bMap={};bs.forEach(b=>bMap[String(b.id)]=b.nombre);
+    cont.innerHTML=blqs.sort((a,b)=>a.fecha>b.fecha?1:-1).map(bl=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:.8rem;color:var(--text-muted);min-width:85px">${fmtD(bl.fecha)}</span>
+        <span style="font-size:.82rem;font-weight:600;flex:1">${bMap[String(bl.barberoId)]||'?'}</span>
+        <span style="font-size:.8rem;color:var(--gold)">${bl.desde}–${bl.hasta}</span>
+        ${bl.motivo?`<span style="font-size:.75rem;color:var(--text-dim)">${bl.motivo}</span>`:''}
+        <button class="btn btn-danger btn-sm" style="padding:2px 8px" onclick="eliminarBloqueo('${bl.id}')">✕</button>
+      </div>`).join('');
+  });
+}
+
+function guardarBloqueo(){
+  const bId=document.getElementById('blqBarbero')?.value;
+  const fecha=document.getElementById('blqFecha')?.value;
+  const desde=document.getElementById('blqDesde')?.value;
+  const hasta=document.getElementById('blqHasta')?.value;
+  const motivo=document.getElementById('blqMotivo')?.value.trim()||'';
+  if(!bId)return toast('Selecciona un barbero','error');
+  if(!fecha)return toast('Selecciona una fecha','error');
+  if(!desde||!hasta||desde>=hasta)return toast('Horario inválido (desde debe ser menor que hasta)','error');
+  _cargarBloqueos();
+  const blq={id:Date.now().toString(),barberoId:+bId,fecha,desde,hasta,motivo,local:ST.localActivo};
+  ST._bloqueos=[...(ST._bloqueos||[]),blq];
+  _guardarBloqueos();
+  logAct(`Bloqueó agenda: ${desde}–${hasta} del ${fecha} para barbero ${bId}`);
+  toast('Horario bloqueado','success');
+  _renderBloqueosList();
+  renderAgenda();
+}
+
+function eliminarBloqueo(id){
+  _cargarBloqueos();
+  ST._bloqueos=(ST._bloqueos||[]).filter(b=>b.id!==String(id));
+  _guardarBloqueos();
+  toast('Bloqueo eliminado','info');
+  _renderBloqueosList();
+  renderAgenda();
+}
+
 // ══ INIT ══
 initDB().then(async()=>{
   await cargarMetodos();
@@ -3981,6 +4357,47 @@ initDB().then(async()=>{
   alert('Error al inicializar la base de datos. Recarga la página.');
 });
 </script>
+
+<!-- MODAL BLOQUEO DE AGENDA -->
+<div class="modal-overlay" id="modalBloqueo">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">🚫 Bloquear horario de agenda</div>
+      <button class="modal-close" onclick="closeModal('modalBloqueo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2" style="gap:12px;margin-bottom:12px">
+        <div class="form-group">
+          <label class="form-label">Barbero *</label>
+          <select class="form-control" id="blqBarbero"><option value="">Seleccionar...</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha *</label>
+          <input type="date" class="form-control" id="blqFecha">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Desde *</label>
+          <select class="form-control" id="blqDesde"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hasta *</label>
+          <select class="form-control" id="blqHasta"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Motivo (opcional)</label>
+        <input type="text" class="form-control" id="blqMotivo" placeholder="Ej: Almuerzo, Cita médica...">
+      </div>
+      <div class="divider" style="margin:14px 0"></div>
+      <div style="font-family:var(--font-cond);font-size:.75rem;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Bloqueos registrados</div>
+      <div id="blqLista" style="max-height:180px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalBloqueo')">Cerrar</button>
+      <button class="btn btn-gold" onclick="guardarBloqueo()">Agregar bloqueo</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL GESTIÓN ADELANTOS (ADMIN) -->
 <div class="modal-overlay" id="modalGestionAdelantos" onclick="closeModalOutside(event,'modalGestionAdelantos')">
