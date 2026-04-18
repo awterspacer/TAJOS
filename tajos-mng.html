@@ -1330,7 +1330,7 @@ async function dbDel(store,id){
 }
 
 // ══ STATE ══
-const ST={localActivo:1,agendaFecha:new Date(),turnoServTemp:[],cobroItems:[],cobroPagos:[],user:null,_gcAplicada:null,_pendingServCat:null,_pendingProdCat:null};
+const ST={localActivo:1,agendaFecha:new Date(),turnoServTemp:[],cobroItems:[],cobroPagos:[],user:null,_gcAplicada:null,_pendingServCat:null,_pendingProdCat:null,turnoActivo:null};
 const HORAS=[];for(let h=8;h<=20;h++){HORAS.push(String(h).padStart(2,'0')+':00');if(h<20)HORAS.push(String(h).padStart(2,'0')+':30');}
 // METODOS: fallback hardcodeado con IDs descriptivos (siempre se usan como clave en cobros)
 const METODOS_DEFAULT=[
@@ -1430,7 +1430,9 @@ async function doLogin(){
 }
 
 function showApp(){
-  sessionStorage.setItem('tajos_uid', String(ST.user.id));
+  if(!ST.turnoActivo) ST.turnoActivo=new Date().getHours()<14?1:2;
+  sessionStorage.setItem('tajos_uid',   String(ST.user.id));
+  sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
   document.getElementById('loginScreen').classList.remove('visible');
   document.getElementById('app').classList.add('visible');
   const u=ST.user;
@@ -1510,7 +1512,9 @@ async function logoutConfirm(){await showRecordatorioBackup();}
 async function doLogout(){
   await logAct('Cierre de sesión');
   ST.user=null;
+  ST.turnoActivo=null;
   sessionStorage.removeItem('tajos_uid');
+  sessionStorage.removeItem('tajos_turno');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('loginScreen').classList.add('visible');
   document.getElementById('loginUser').value='';
@@ -1520,7 +1524,10 @@ async function doLogout(){
 async function logAct(accion){
   if(!ST.user)return;
   const u=ST.user;const n=new Date();
-  await dbAdd('historial',{usuario:u.login,nombre:u.nombre+' '+u.apellido,rol:u.rol,accion,fecha:toDS(n),hora:n.toTimeString().slice(0,5)});
+  await dbAdd('historial',{
+    usuario:u.login,nombre:u.nombre+' '+u.apellido,rol:u.rol,
+    accion,fecha:toDS(n),hora:n.toTimeString().slice(0,5),ts:n.toISOString()
+  }).catch(e=>console.warn('logAct:',e));
 }
 
 // ══ NAVIGATION ══
@@ -2347,14 +2354,18 @@ async function renderAgenda(){
         const cn     = cMap[String(t.clienteId||t.cliente_id||'')]||t.clienteNombre||'Sin nombre';
         const bCls   = t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':t.estado==='en_atencion'?'badge-blue':'badge-gold';
         const bTxt   = t.estado==='en_atencion'?'En atención':t.estado||'pendiente';
+        const isCompact=span===1;
         cells += `<div style="grid-column:${gridCol};grid-row:${gridRow}/span ${span};
           padding:2px;border-right:1px solid var(--border);border-bottom:1px solid rgba(201,148,10,.06)">
           <div class="agenda-slot occupied" onclick="verDetTurno(${t.id})"
-            style="height:100%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center">
-            <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cn}</div>
-            <div style="font-size:.72rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sl}</div>
-            <div style="font-size:.68rem;color:var(--text-dim);margin-top:2px">${hora} · ${durMin} min</div>
-            <span class="badge ${bCls}" style="font-size:.65rem;padding:1px 5px;margin-top:4px;align-self:flex-start">${bTxt}</span>
+            style="height:100%;box-sizing:border-box;padding:${isCompact?'2px 5px':'5px 8px'};
+              display:flex;flex-direction:${isCompact?'row':'column'};
+              align-items:${isCompact?'center':'flex-start'};justify-content:${isCompact?'space-between':'center'};gap:2px">
+            <div style="font-weight:700;font-size:${isCompact?'.7rem':'.78rem'};
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">${cn}</div>
+            ${isCompact?'':`<div style="font-size:.68rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sl}</div>
+            <div style="font-size:.65rem;color:var(--text-dim)">${hora}·${durMin}min</div>`}
+            <span class="badge ${bCls}" style="font-size:.6rem;padding:1px 4px;flex-shrink:0">${bTxt}</span>
           </div></div>`;
         return;
       }
@@ -2410,7 +2421,8 @@ async function verDetTurno(id){
 async function actualizarTurnoEstado(id){
   const t=await dbGet('turnos',id);
   t.estado=document.getElementById('turnoEstadoSel').value;
-  await dbPut('turnos',t);await logAct(`Cambió turno a: ${t.estado}`);
+  await dbPut('turnos',t);
+  await logAct(`Cambió estado de turno · ${t.fecha||'?'} ${t.hora||''} · Cliente: ${t.clienteNombre||'sin nombre'} · Nuevo estado: ${t.estado}`);
   toast('Estado actualizado','success');
   // Si se marcó como completado, ofrecer cobrar directamente
   if(t.estado==='completado'){
@@ -2447,8 +2459,11 @@ async function cobrarDesdeTurno(turnoId){
 }
 
 async function eliminarTurno(id){
+  const t=await dbGet('turnos',id);
   if(!confirm('¿Eliminar este turno?'))return;
-  await dbDel('turnos',id);await logAct('Eliminó un turno');
+  await dbDel('turnos',id);
+  const barbs=await dbAll('barberos');const b=barbs.find(x=>Number(x.id)===Number(t?.barberoId||t?.barbero_id));
+  await logAct(`Eliminó turno · Fecha: ${t?.fecha||'?'} ${t?.hora||''} · Barbero: ${b?b.nombre+' '+b.apellido:'?'} · Cliente: ${t?.clienteNombre||'sin nombre'}`);
   toast('Eliminado','info');closeModal('modalDetalleTurno');renderAgenda();refreshDash();
 }
 
@@ -2512,7 +2527,20 @@ async function guardarTurno(){
   const horasNuevo=new Set();
   for(let i=0;i<nuevoSlots;i++) horasNuevo.add(_addSlots(hora,i));
   const conflicto=all.filter(t=>t.fecha===fecha&&Number(t.barberoId||t.barbero_id)===Number(bId)&&t.local==local&&t.estado!=='cancelado')
-    .some(t=>{const s=_turnoSlots(t.servicios,svcsAll);for(let i=0;i<s;i++){if(horasNuevo.has(_addSlots(t.hora,i)))return true;}return false;});
+    .some(t=>{
+      const s=_turnoSlots(t.servicios,svcsAll);
+      for(let i=0;i<s;i++){
+        const slotEx=_addSlots(t.hora,i);
+        if(!horasNuevo.has(slotEx)) continue;
+        // El slot coincide — verificar si es el slot de fin del existente
+        // y a la vez el slot de inicio del nuevo (inicio del nuevo = hora).
+        // En ese caso NO hay conflicto: el nuevo turno empieza cuando el anterior termina.
+        const horaFinExistente=_addSlots(t.hora,s);
+        if(slotEx===hora&&hora===horaFinExistente) continue;
+        return true;
+      }
+      return false;
+    });
   if(conflicto) return toast('Conflicto: el barbero ya tiene un turno que ocupa ese horario','error');
   // Verificar conflicto con bloqueos
   const blqActivos=(ST._bloqueos||[]).filter(b=>b.fecha===fecha&&Number(b.barberoId)===Number(bId));
@@ -2644,7 +2672,7 @@ async function refreshCaja(){
   document.getElementById('cajaEfectivo').textContent=fmt(ef);
   document.getElementById('cajaDigital').textContent=fmt(dig);
   // Leer caja inicial siempre desde caja_turnos
-  const turno=getTurnoActual();
+  const turno=await getTurnoDeRegistro();
   const ct=await getCajaTurno(fecha,Number(ST.localActivo),Number(turno))||{cajaInicial:0,egresosEfectivo:[]};
   const cajaIni=ct.cajaInicial||ct.caja_inicial||0;
   const egresosEfCt=(ct.egresosEfectivo||[]).reduce((s,e)=>s+(e.monto||0),0);
@@ -2726,15 +2754,19 @@ async function verDetCobro(id){
 
 async function eliminarCobro(id){
   const co=await dbGet('cobros',id);if(!confirm('¿Eliminar este cobro?'))return;
-  await dbDel('cobros',id);await logAct(`Eliminó cobro de ${fmt(co.total)}`);
-  toast('Cobro eliminado','info');refreshCaja();refreshDash();
+  const barbs=await dbAll('barberos');const cl=await dbAll('clientes');
+  const b=barbs.find(x=>Number(x.id)===Number(co?.barberoId||co?.barbero_id));
+  const c=cl.find(x=>Number(x.id)===Number(co?.clienteId||co?.cliente_id));
+  await dbDel('cobros',id);
+  await logAct(`Eliminó cobro · ${fmt(co?.total||0)} · Fecha: ${co?.fecha||'?'} ${co?.hora||''} · Barbero: ${b?b.nombre+' '+b.apellido:'?'} · Cliente: ${c?c.nombre+' '+c.apellido:co?.clienteNombre||'sin registro'}`);
+  toast('Cobro eliminado','info');await refreshCaja();await refreshDash();
 }
 // ══ ARQUEO ══
 async function renderArqueo(){
   const td=hoy();const cobros=await dbAll('cobros');
   const isAdmin=ST.user?.rol==='admin';
-  const turno=getTurnoActual();
-  const turnoLabel=turno===1?'Turno 1 (8–14h)':'Turno 2 (14–20h)';
+  const turno=await getTurnoDeRegistro();
+  const turnoLabel=`Turno ${turno}`;
   const h=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo));
   const arqs=await dbAll('arqueos');
   const aqActual=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&a.turno==turno)||{notas:'',turno,cerrado:false};
@@ -2917,7 +2949,7 @@ async function agregarEgresoEf(){
   const monto=parseFloat(document.getElementById('aqEgresoMonto')?.value)||0;
   if(!concepto)return toast('Ingresá un concepto para el egreso','error');
   if(monto<=0)return toast('El monto debe ser mayor a 0','error');
-  const ct=await getCajaTurno(hoy(),ST.localActivo,getTurnoActual());
+  const ct=await getCajaTurno(hoy(),ST.localActivo,await getTurnoDeRegistro());
   const lista=(ct?.egresosEfectivo||[]);
   lista.push({concepto,monto,hora:new Date().toTimeString().slice(0,5)});
   await saveCajaTurno({egresosEfectivo:lista});
@@ -2930,7 +2962,7 @@ async function agregarEgresoEf(){
 
 // Quitar egreso de efectivo por índice
 async function quitarEgresoEf(idx){
-  const ct=await getCajaTurno(hoy(),ST.localActivo,getTurnoActual());
+  const ct=await getCajaTurno(hoy(),ST.localActivo,await getTurnoDeRegistro());
   if(!ct)return;
   const lista=(ct.egresosEfectivo||[]);
   lista.splice(idx,1);
@@ -2963,8 +2995,8 @@ function updDiferenciaEntrega(){
 // Función base que persiste el arqueo — usada por actualizar y cerrar
 async function _persistirArqueo(cerrar){
   const td=hoy();
-  const turno=getTurnoActual();
-  const turnoLabel=turno===1?'Turno 1':'Turno 2';
+  const turno=await getTurnoDeRegistro();
+  const turnoLabel=`Turno ${turno}`;
   // Leer caja_turnos — fuente de verdad para cajaInicial y egresos
   const ct=await getCajaTurno(td,Number(ST.localActivo),Number(turno))||{cajaInicial:0,egresosEfectivo:[]};
   const cajaInicial=ct.cajaInicial||ct.caja_inicial||0;
@@ -3893,9 +3925,10 @@ async function renderConsumos(){
 }
 
 async function eliminarConsumo(id){
+  const eg=await dbGet('egresos',id);
   if(!confirm('¿Eliminar este registro de consumo?'))return;
   await dbDel('egresos',id);
-  await logAct('Eliminó un registro de consumo');
+  await logAct(`Eliminó consumo · Producto: ${eg?.producto||'?'} (x${eg?.cantidad||1}) · Barbero: ${eg?.barberoNombre||eg?.barbero_nombre||'?'} · ${fmt(eg?.monto||0)}`);
   toast('Consumo eliminado','info');
   renderConsumos();
 }
@@ -4046,8 +4079,17 @@ async function buscarYAplicarGiftcard(){
 
 // ══ CAJA INICIAL ══
 function getTurnoActual(){
-  const h=new Date().getHours();
-  return h<14?1:2;
+  return ST.turnoActivo||(new Date().getHours()<14?1:2);
+}
+async function getTurnoDeRegistro(){
+  if(ST.turnoActivo) return ST.turnoActivo;
+  const rows=await dbAll('cajaTurnos');
+  const hoyStr=hoy(),local=Number(ST.localActivo);
+  const abierto=rows.find(r=>r.fecha===hoyStr&&Number(r.local)===local&&!(r.horaCierre||r.hora_cierre));
+  if(abierto) return Number(abierto.turno);
+  const any=[...rows].filter(r=>r.fecha===hoyStr&&Number(r.local)===local).sort((a,b)=>Number(b.turno)-Number(a.turno))[0];
+  if(any) return Number(any.turno);
+  return new Date().getHours()<14?1:2;
 }
 // ══════════════════════════════════════════════════════════════
 // [31] CAJA INICIAL — tabla caja_turnos separada de arqueos
@@ -4068,7 +4110,7 @@ async function saveCajaTurno(updates){
   const td=updates.fecha||hoy();
   const local=updates.local!=null?updates.local:ST.localActivo;
   const turno=updates.turno!=null?updates.turno:getTurnoActual();
-  const turnoLabel=turno===1?'Turno 1':'Turno 2';
+  const turnoLabel=`Turno ${turno}`;
   const ex=await getCajaTurno(td,local,turno);
   const merged={
     fecha:td,local,turno,turnoLabel,
@@ -4309,7 +4351,7 @@ function _renderBloqueosList(){
   });
 }
 
-function guardarBloqueo(){
+async function guardarBloqueo(){
   const bId=document.getElementById('blqBarbero')?.value;
   const fecha=document.getElementById('blqFecha')?.value;
   const desde=document.getElementById('blqDesde')?.value;
@@ -4322,16 +4364,18 @@ function guardarBloqueo(){
   const blq={id:Date.now().toString(),barberoId:+bId,fecha,desde,hasta,motivo,local:ST.localActivo};
   ST._bloqueos=[...(ST._bloqueos||[]),blq];
   _guardarBloqueos();
-  logAct(`Bloqueó agenda: ${desde}–${hasta} del ${fecha} para barbero ${bId}`);
+  await logAct(`Bloqueó horario de agenda · Barbero ID ${bId} · ${fecha} · ${desde}–${hasta}${motivo?' ('+motivo+')':''}`);
   toast('Horario bloqueado','success');
   _renderBloqueosList();
   renderAgenda();
 }
 
-function eliminarBloqueo(id){
+async function eliminarBloqueo(id){
   _cargarBloqueos();
+  const bl=(ST._bloqueos||[]).find(b=>b.id===String(id));
   ST._bloqueos=(ST._bloqueos||[]).filter(b=>b.id!==String(id));
   _guardarBloqueos();
+  await logAct(`Eliminó bloqueo de agenda · ${bl?.fecha||'?'} · ${bl?.desde||'?'}–${bl?.hasta||'?'}${bl?.motivo?' ('+bl.motivo+')':''}`);
   toast('Bloqueo eliminado','info');
   _renderBloqueosList();
   renderAgenda();
@@ -4348,9 +4392,15 @@ initDB().then(async()=>{
   if(savedUId){
     try{
       const u=await dbGet('usuarios',savedUId);
-      if(u&&u.estado==='activo'){ST.user=u;showApp();}
-      else{sessionStorage.removeItem('tajos_uid');}
-    }catch(e){sessionStorage.removeItem('tajos_uid');}
+      if(u&&u.estado==='activo'){
+        ST.user=u;
+        const _st=sessionStorage.getItem('tajos_turno');
+        if(_st) ST.turnoActivo=Number(_st);
+        showApp();
+      }else{
+        sessionStorage.removeItem('tajos_uid');sessionStorage.removeItem('tajos_turno');
+      }
+    }catch(e){sessionStorage.removeItem('tajos_uid');sessionStorage.removeItem('tajos_turno');}
   }
 }).catch(err=>{
   console.error('DB Error:',err);
