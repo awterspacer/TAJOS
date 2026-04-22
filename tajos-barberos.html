@@ -113,6 +113,7 @@ tbody tr:last-child td{border-bottom:none;}
 .badge-gold{background:rgba(201,148,10,.18);color:var(--gold-light);}
 .badge-green{background:rgba(39,174,96,.15);color:#2ecc71;}
 .badge-red{background:rgba(192,57,43,.15);color:#e74c3c;}
+.badge-blue{background:rgba(41,128,185,.15);color:#3498db;}
 .badge-blue{background:rgba(41,128,185,.2);color:#5dade2;}
 .badge-gray{background:rgba(255,255,255,.06);color:var(--text-muted);}
 .badge-yellow{background:rgba(241,196,15,.15);color:#f1c40f;}
@@ -445,6 +446,7 @@ const STORE_TABLE={
   arqueos:'arqueos',barberoUsers:'barbero_users',adelantos:'adelantos',
   egresos:'egresos',giftcards:'giftcards',categoriasServ:'categorias_serv',categoriasProd:'categorias_prod',
   metodosPago:'metodos_pago',
+  bloqueosAgenda:'bloqueos_agenda',
 };
 const FIELD_TO_DB={
   barberoId:'barbero_id',clienteId:'cliente_id',productoId:'producto_id',
@@ -474,6 +476,7 @@ const SUPA_COLS={
   categorias_serv:new Set(['id','nombre','created_at']),
   categorias_prod:new Set(['id','nombre','created_at']),
   metodos_pago:new Set(['id','nombre','icono','activo','orden','created_at']),
+  bloqueos_agenda:new Set(['id','local','barbero_id','fecha','desde','hasta','motivo','registrado_por','created_at']),
 };
 function toDbObj(obj,table){const allowed=table?SUPA_COLS[table]:null;const r={};for(const [k,v] of Object.entries(obj)){const dk=FIELD_TO_DB[k]||k;if(allowed&&!allowed.has(dk))continue;r[dk]=(v!==undefined&&v!==null)?v:null;}return r;}
 function fromDbObj(obj){
@@ -534,7 +537,7 @@ function initDB(){
     r.onupgradeneeded=e=>{
       const d=e.target.result;
       ['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos',
-       'barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd']
+       'barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda']
         .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id',autoIncrement:true});});
     };
     r.onsuccess=e=>{db=e.target.result;res(db);};
@@ -587,10 +590,49 @@ const ST={
   barbero:null,      // barbero record (vinculado)
   agendaFecha:new Date(),
   agendaVista:'dia', // 'dia' | 'semana'
-  reportePeriodo:'dia'
+  reportePeriodo:'dia',
+  _bloqueos:[]       // bloqueos de horario cargados desde localStorage
 };
 
 // ══ HELPERS ══
+
+// Slots de 30min que ocupa un turno según sus servicios
+function _turnoSlots(serviciosNombres, catalogo){
+  const mins=(serviciosNombres||[]).reduce((s,n)=>{
+    const svc=(catalogo||[]).find(x=>x.nombre===n);
+    return s+(svc&&svc.duracion>0?svc.duracion:30);
+  },0);
+  return Math.max(1,Math.ceil(Math.max(30,mins)/30));
+}
+// Suma N slots de 30min a una hora HH:MM
+function _addSlots(hora,n){
+  const [h,m]=hora.split(':').map(Number);
+  const t=h*60+m+n*30;
+  return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
+}
+// Badge CSS class según estado del turno
+function _badgeTurno(estado){
+  if(estado==='completado') return 'badge-green';
+  if(estado==='cancelado')  return 'badge-red';
+  if(estado==='en_atencion') return 'badge-blue';
+  return 'badge-gold';
+}
+// Label legible del estado
+function _labelTurno(estado){
+  if(estado==='en_atencion') return 'En atención';
+  return estado||'pendiente';
+}
+// Cargar bloqueos desde Supabase (tabla bloqueos_agenda).
+// Compartida entre portales: el admin los crea en tajos-mng,
+// el barbero los ve aquí en tiempo real.
+async function _cargarBloqueos(local){
+  try{
+    const rows=await dbAll('bloqueosAgenda');
+    // Sin filtro de local: el barbero ve los bloqueos de su barberoId
+    ST._bloqueos=rows;
+  }catch(e){ST._bloqueos=[];}
+}
+
 const fmt=n=>'Gs. '+(n||0).toLocaleString('es-PY',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD=d=>{if(!d)return '—';return new Date(d+'T00:00:00').toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric'});};
 const toDS=d=>d.toISOString().split('T')[0];
@@ -752,7 +794,10 @@ async function renderAgenda(){
   const bId=Number(ST.barbero.id);
   const turnos=await dbAll('turnos');
   const clientes=await dbAll('clientes');
+  const svcs=await dbAll('servicios');
   const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
+  // Cargar bloqueos desde Supabase
+  await _cargarBloqueos();
 
   if(ST.agendaVista==='dia'){
     const fecha=toDS(ST.agendaFecha);
@@ -760,26 +805,81 @@ async function renderAgenda(){
       ST.agendaFecha.toLocaleDateString('es-PY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     document.getElementById('agendaSubtitle').textContent='Vista diaria';
     const misTurnos=turnos.filter(t=>Number(t.barberoId||t.barbero_id)===bId&&t.fecha===fecha);
-    let html='<div style="display:grid;grid-template-columns:64px 1fr;min-width:320px">';
-    HORAS.forEach(hora=>{
+    const blqDia=(ST._bloqueos||[]).filter(b=>b.fecha===fecha&&Number(b.barberoId)===bId);
+
+    // Pre-calcular spans
+    misTurnos.forEach(t=>{t._slots=_turnoSlots(t.servicios,svcs);});
+    blqDia.forEach(bl=>{
+      const [hd,md]=bl.desde.split(':').map(Number);
+      const [hf,mf]=bl.hasta.split(':').map(Number);
+      bl._slots=Math.max(1,((hf*60+mf)-(hd*60+md))/30);
+    });
+    // skipMap: celdas cubiertas por span
+    const skipMap={};
+    misTurnos.forEach(t=>{for(let i=1;i<t._slots;i++)skipMap[_addSlots(t.hora,i)]=true;});
+    blqDia.forEach(bl=>{for(let i=1;i<bl._slots;i++)skipMap['blq|'+_addSlots(bl.desde,i)]=true;});
+    const blqStart=new Set(blqDia.map(b=>b.desde));
+
+    // Un único grid: columnas=64px+1fr, filas=40px header + 48px×HORAS
+    const rowTpl=`40px repeat(${HORAS.length},48px)`;
+    let cells='';
+    // Cabecera
+    cells+=`<div style="grid-column:1;grid-row:1;display:flex;align-items:center;justify-content:center;
+      font-size:.7rem;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--bg-raised)">HORA</div>`;
+    cells+=`<div style="grid-column:2;grid-row:1;display:flex;align-items:center;padding:0 10px;
+      font-family:var(--font-cond);font-weight:700;font-size:.82rem;color:var(--gold);
+      border-bottom:1px solid var(--border);background:var(--bg-raised)">${ST.barbero.nombre}</div>`;
+
+    HORAS.forEach((hora,ri)=>{
+      const gridRow=ri+2;
+      cells+=`<div style="grid-column:1;grid-row:${gridRow};display:flex;align-items:center;justify-content:center;
+        font-family:var(--font-cond);font-size:.78rem;color:var(--text-muted);
+        border-bottom:1px solid rgba(201,148,10,.06);border-right:1px solid var(--border)">${hora}</div>`;
+
+      if(skipMap[hora]||skipMap['blq|'+hora]) return;
+
+      // Bloqueo que empieza aquí
+      if(blqStart.has(hora)){
+        const bl=blqDia.find(b=>b.desde===hora);
+        if(bl){
+          cells+=`<div style="grid-column:2;grid-row:${gridRow}/span ${bl._slots};padding:3px;
+            border-bottom:1px solid rgba(201,148,10,.06)">
+            <div style="height:100%;background:rgba(180,40,40,.1);border:1px dashed #e74c3c;border-radius:6px;
+              display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <span style="font-size:.75rem;font-weight:700;color:#e74c3c">🚫 Bloqueado</span>
+              <span style="font-size:.68rem;color:var(--text-muted)">${bl.desde}–${bl.hasta}</span>
+              ${bl.motivo?`<span style="font-size:.65rem;color:var(--text-dim)">${bl.motivo}</span>`:''}
+            </div></div>`;
+          return;
+        }
+      }
+
       const t=misTurnos.find(t=>t.hora===hora);
-      html+=`<div class="time-label">${hora}</div>`;
       if(t){
-        const cn=cMap[t.clienteId]||t.clienteNombre||'Sin nombre';
+        const span=t._slots||1;
+        const isCompact=span===1;
+        const cn=cMap[t.clienteId||t.cliente_id]||t.clienteNombre||'Sin nombre';
         const sl=(t.servicios||[]).join(', ')||'—';
-        const badge=t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold';
-        html+=`<div style="padding:4px 8px">
-          <div class="slot-cell slot-occupied" onclick="verTurno(${t.id})">
-            <div style="font-weight:700;margin-bottom:2px">${cn}</div>
-            <div style="font-size:.78rem;color:var(--text-muted)">${sl}</div>
-            <span class="badge ${badge}" style="font-size:.65rem;margin-top:3px">${t.estado||'pendiente'}</span>
+        cells+=`<div style="grid-column:2;grid-row:${gridRow}/span ${span};padding:3px;
+          border-bottom:1px solid rgba(201,148,10,.06)">
+          <div class="slot-cell slot-occupied" onclick="verTurno(${t.id})"
+            style="height:100%;display:flex;flex-direction:${isCompact?'row':'column'};
+              align-items:${isCompact?'center':'flex-start'};justify-content:${isCompact?'space-between':'center'};
+              padding:${isCompact?'3px 6px':'6px 8px'};gap:3px">
+            <div style="font-weight:700;font-size:${isCompact?'.72rem':'.8rem'};
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">${cn}</div>
+            ${isCompact?'':`<div style="font-size:.72rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sl}</div>`}
+            <span class="badge ${_badgeTurno(t.estado)}" style="font-size:.6rem;padding:1px 4px;flex-shrink:0">${_labelTurno(t.estado)}</span>
           </div></div>`;
       }else{
-        html+=`<div style="padding:4px 8px"><div class="slot-cell slot-empty">sin turno</div></div>`;
+        cells+=`<div style="grid-column:2;grid-row:${gridRow};padding:3px;
+          border-bottom:1px solid rgba(201,148,10,.06)">
+          <div class="slot-cell slot-empty">sin turno</div></div>`;
       }
     });
-    html+='</div>';
-    document.getElementById('agendaContent').innerHTML=html;
+    document.getElementById('agendaContent').innerHTML=
+      `<div style="display:grid;grid-template-columns:64px 1fr;grid-template-rows:${rowTpl};
+        min-width:320px;position:relative">${cells}</div>`;
   } else {
     // Vista semanal
     const dias=getDiasSemana(ST.agendaFecha);
@@ -807,11 +907,10 @@ async function renderAgenda(){
         const t=misTurnos.find(t=>t.fecha===fecha&&t.hora===hora);
         if(t){
           const cn=cMap[t.clienteId]||t.clienteNombre||'—';
-          const badge=t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold';
           html+=`<div style="padding:3px 5px">
             <div class="slot-cell slot-occupied" onclick="verTurno(${t.id})" style="font-size:.74rem">
               <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cn}</div>
-              <span class="badge ${badge}" style="font-size:.6rem">${t.estado||'pend.'}</span>
+              <span class="badge ${_badgeTurno(t.estado)}" style="font-size:.6rem">${_labelTurno(t.estado)}</span>
             </div></div>`;
         }else{
           html+=`<div style="padding:3px 5px"><div style="min-height:44px;border-radius:4px;background:rgba(255,255,255,.01);border:1px dashed rgba(201,148,10,.07)"></div></div>`;
@@ -828,13 +927,13 @@ async function verTurno(id){
   const t=await dbGet('turnos',id);if(!t)return;
   const clientes=await dbAll('clientes');
   const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
-  const badge=t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold';
   document.getElementById('detalleTurnoContent').innerHTML=`
     <div class="grid-2" style="gap:14px;margin-bottom:14px">
-      <div><div class="form-label">Cliente</div><div style="font-weight:600">${cMap[t.clienteId]||t.clienteNombre||'—'}</div></div>
+      <div><div class="form-label">Cliente</div><div style="font-weight:600">${cMap[t.clienteId||t.cliente_id]||t.clienteNombre||'—'}</div></div>
       <div><div class="form-label">Fecha y Hora</div><div style="font-weight:600">${fmtD(t.fecha)} ${t.hora}</div></div>
       <div><div class="form-label">Servicios</div><div>${(t.servicios||[]).join(', ')||'—'}</div></div>
-      <div><div class="form-label">Estado</div><span class="badge ${badge}">${t.estado||'pendiente'}</span></div>
+      <div><div class="form-label">Duración</div><div>${(t._slots||1)*30} min</div></div>
+      <div><div class="form-label">Estado</div><span class="badge ${_badgeTurno(t.estado)}">${_labelTurno(t.estado)}</span></div>
     </div>
     ${t.notas?`<div class="alert alert-info">${t.notas}</div>`:''}`;
   openModal('modalDetalleTurno');
