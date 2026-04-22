@@ -4379,8 +4379,8 @@ async function guardarBloqueo(){
   _cargarBloqueos();
   const blq={id:Date.now().toString(),barberoId:+bId,fecha,desde,hasta,motivo,local:ST.localActivo};
   ST._bloqueos=[...(ST._bloqueos||[]),blq];
-  const blq={local:ST.localActivo,barberoId:+bId,fecha,desde,hasta,motivo,registradoPor:ST.user?.login||'?'};
-  await dbAdd('bloqueosAgenda',blq);
+  const blqDb={local:ST.localActivo,barberoId:+bId,fecha,desde,hasta,motivo,registradoPor:ST.user?.login||'?'};
+  await dbAdd('bloqueosAgenda',blqDb);
   await _cargarBloqueos();
   await logAct(`Bloqueó horario de agenda · Barbero ID ${bId} · ${fecha} · ${desde}–${hasta}${motivo?' ('+motivo+')':''}`);
   toast('Horario bloqueado','success');
