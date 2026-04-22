@@ -1051,6 +1051,7 @@ const STORE_TABLE = {
   categoriasServ: 'categorias_serv',
   categoriasProd: 'categorias_prod',
   metodosPago:    'metodos_pago',
+  bloqueosAgenda: 'bloqueos_agenda',
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -1076,6 +1077,8 @@ const FIELD_TO_DB = {
   efectivoEntregado:'efectivo_entregado',
   // Caja turnos
   cajaInicialConfirmada:'caja_inicial_confirmada',
+  horaInicio:'hora_inicio',
+  horaCierre:'hora_cierre',
 };
 const FIELD_FROM_DB = Object.fromEntries(Object.entries(FIELD_TO_DB).map(([k,v])=>[v,k]));
 
@@ -1090,7 +1093,8 @@ const SUPA_COLS={
   usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
   historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
   arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','cerrado','created_at']),
-  caja_turnos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','caja_inicial_confirmada','egresos_efectivo','created_at','updated_at']),
+  caja_turnos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','caja_inicial_confirmada','egresos_efectivo','hora_inicio','hora_cierre','created_at','updated_at']),
+  bloqueos_agenda:new Set(['id','local','barbero_id','fecha','desde','hasta','motivo','registrado_por','created_at']),
   adelantos:new Set(['id','barbero_id','barbero_nombre','monto_solicitado','monto_aprobado','estado','fecha_solicitud','nota_solicitud','nota_admin','fecha_aprobacion','ts']),
   egresos:new Set(['id','barbero_id','barbero_nombre','producto_id','producto','cantidad','monto','nota','registrado_por','fecha','created_at']),
   giftcards:new Set(['id','codigo','cliente_id','valor','saldo','metodo_pago','nota','estado','fecha','ultimo_uso','created_at']),
@@ -1396,7 +1400,7 @@ async function cargarMetodos(){
     }
   }catch(e){console.warn('cargarMetodos fallback:',e);}
 }
-const STORES=['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos','cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd'];
+const STORES=['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos','cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda'];
 const fmt=n=>'Gs. '+(n||0).toLocaleString('es-PY',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD=d=>{if(!d)return '';return new Date(d+'T00:00:00').toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric'});};
 const toDS=d=>d.toISOString().split('T')[0];
@@ -1433,6 +1437,9 @@ function showApp(){
   if(!ST.turnoActivo) ST.turnoActivo=new Date().getHours()<14?1:2;
   sessionStorage.setItem('tajos_uid',   String(ST.user.id));
   sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
+  if(ST.user.rol!=='admin'){
+    saveCajaTurno({horaInicio:new Date().toTimeString().slice(0,5)}).catch(()=>{});
+  }
   document.getElementById('loginScreen').classList.remove('visible');
   document.getElementById('app').classList.add('visible');
   const u=ST.user;
@@ -2673,7 +2680,16 @@ async function refreshCaja(){
   document.getElementById('cajaDigital').textContent=fmt(dig);
   // Leer caja inicial siempre desde caja_turnos
   const turno=await getTurnoDeRegistro();
-  const ct=await getCajaTurno(fecha,Number(ST.localActivo),Number(turno))||{cajaInicial:0,egresosEfectivo:[]};
+  let ct=await getCajaTurno(fecha,Number(ST.localActivo),Number(turno))||null;
+  // Si el turno actual no tiene caja inicial, mostrar referencia del turno anterior
+  const refEl=document.getElementById('cajaCajaInicialRef');
+  if((!ct||!(ct.cajaInicial||ct.caja_inicial))&&turno>1){
+    const ctAnt=await getCajaTurno(fecha,Number(ST.localActivo),turno-1);
+    const refMonto=ctAnt?.efectivoEntregado||ctAnt?.efectivo_entregado||0;
+    if(refMonto>0&&refEl)
+      refEl.innerHTML=`<span style="font-size:.75rem;color:var(--gold)">💡 Turno anterior entregó: <strong>${fmt(refMonto)}</strong></span>`;
+  }else if(refEl){refEl.innerHTML='';}
+  ct=ct||{cajaInicial:0,egresosEfectivo:[]};
   const cajaIni=ct.cajaInicial||ct.caja_inicial||0;
   const egresosEfCt=(ct.egresosEfectivo||[]).reduce((s,e)=>s+(e.monto||0),0);
   document.getElementById('cajaCajaInicial').textContent=fmt(cajaIni);
@@ -3036,7 +3052,9 @@ async function actualizarEstadoCaja(){
 async function guardarArqueo(){
   try{
     const {cajaInicial,efectivoEntregado}=await _persistirArqueo(true);
-    await logAct(`Guardó cierre de caja · ${localNombre(ST.localActivo)} · Caja: ${fmt(cajaInicial)} · Entregado: ${fmt(efectivoEntregado)}`);
+    const _hc=new Date().toTimeString().slice(0,5);
+    await saveCajaTurno({horaCierre:_hc});
+    await logAct(`Guardó cierre de caja · ${localNombre(ST.localActivo)} · Turno ${getTurnoActual()} · Caja: ${fmt(cajaInicial)} · Entregado: ${fmt(efectivoEntregado)} · Cierre: ${_hc}`);
     toast('Cierre de caja enviado al administrador','success');
     closeModal('modalArqueo');refreshCaja();
   }catch(e){toast('Error al guardar: '+e.message,'error');}
@@ -4087,8 +4105,8 @@ async function getTurnoDeRegistro(){
   const hoyStr=hoy(),local=Number(ST.localActivo);
   const abierto=rows.find(r=>r.fecha===hoyStr&&Number(r.local)===local&&!(r.horaCierre||r.hora_cierre));
   if(abierto) return Number(abierto.turno);
-  const any=[...rows].filter(r=>r.fecha===hoyStr&&Number(r.local)===local).sort((a,b)=>Number(b.turno)-Number(a.turno))[0];
-  if(any) return Number(any.turno);
+  const cerrados=[...rows].filter(r=>r.fecha===hoyStr&&Number(r.local)===local&&(r.horaCierre||r.hora_cierre)).sort((a,b)=>Number(b.turno)-Number(a.turno));
+  if(cerrados.length) return Number(cerrados[0].turno)+1;
   return new Date().getHours()<14?1:2;
 }
 // ══════════════════════════════════════════════════════════════
@@ -4118,6 +4136,8 @@ async function saveCajaTurno(updates){
     cajaInicial:updates.cajaInicial!=null?updates.cajaInicial:(ex?.cajaInicial||ex?.caja_inicial||0),
     cajaInicialConfirmada:updates.cajaInicialConfirmada!=null?updates.cajaInicialConfirmada:(ex?.cajaInicialConfirmada||ex?.caja_inicial_confirmada||false),
     egresosEfectivo:updates.egresosEfectivo!=null?updates.egresosEfectivo:(ex?.egresosEfectivo||[]),
+    horaInicio:updates.horaInicio!=null?updates.horaInicio:(ex?.horaInicio||ex?.hora_inicio||''),
+    horaCierre:updates.horaCierre!=null?updates.horaCierre:(ex?.horaCierre||ex?.hora_cierre||''),
   };
   if(ex){merged.id=ex.id;await dbPut('cajaTurnos',merged);}
   else{await dbAdd('cajaTurnos',merged);}
@@ -4298,19 +4318,16 @@ async function exportarInventarioXLSX(){
 }
 
 // ══ BLOQUEOS DE AGENDA ══
-// Bloqueos almacenados en memoria (ST._bloqueos).
-// Para persistencia entre sesiones, se guardan en localStorage por local.
-function _blqKey(){return'tajos_bloqueos_l'+ST.localActivo;}
-function _cargarBloqueos(){
-  try{ST._bloqueos=JSON.parse(localStorage.getItem(_blqKey())||'[]');}
-  catch(e){ST._bloqueos=[];}
+// Bloqueos persistidos en Supabase (tabla bloqueos_agenda).
+// Accesibles desde ambos portales en cualquier dispositivo.
+async function _cargarBloqueos(){
+  const rows=await dbAll('bloqueosAgenda');
+  ST._bloqueos=rows.filter(b=>Number(b.local)===Number(ST.localActivo));
 }
-function _guardarBloqueos(){
-  localStorage.setItem(_blqKey(),JSON.stringify(ST._bloqueos||[]));
-}
+function _guardarBloqueos(){ /* no-op: persistencia via Supabase */ }
 
-function abrirModalBloqueo(){
-  _cargarBloqueos();
+async function abrirModalBloqueo(){
+  await _cargarBloqueos();
   const barbs=Array.from(document.querySelectorAll('#agendaGrid .agenda-header-cell')).slice(1);
   // Poblar selector de barberos desde ST
   const sel=document.getElementById('blqBarbero');
@@ -4334,7 +4351,6 @@ function abrirModalBloqueo(){
 }
 
 function _renderBloqueosList(){
-  _cargarBloqueos();
   const cont=document.getElementById('blqLista');if(!cont)return;
   const blqs=(ST._bloqueos||[]).filter(b=>b.local==ST.localActivo);
   if(!blqs.length){cont.innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:8px 0">Sin bloqueos registrados</div>';return;}
@@ -4363,7 +4379,9 @@ async function guardarBloqueo(){
   _cargarBloqueos();
   const blq={id:Date.now().toString(),barberoId:+bId,fecha,desde,hasta,motivo,local:ST.localActivo};
   ST._bloqueos=[...(ST._bloqueos||[]),blq];
-  _guardarBloqueos();
+  const blq={local:ST.localActivo,barberoId:+bId,fecha,desde,hasta,motivo,registradoPor:ST.user?.login||'?'};
+  await dbAdd('bloqueosAgenda',blq);
+  await _cargarBloqueos();
   await logAct(`Bloqueó horario de agenda · Barbero ID ${bId} · ${fecha} · ${desde}–${hasta}${motivo?' ('+motivo+')':''}`);
   toast('Horario bloqueado','success');
   _renderBloqueosList();
@@ -4371,10 +4389,9 @@ async function guardarBloqueo(){
 }
 
 async function eliminarBloqueo(id){
-  _cargarBloqueos();
-  const bl=(ST._bloqueos||[]).find(b=>b.id===String(id));
-  ST._bloqueos=(ST._bloqueos||[]).filter(b=>b.id!==String(id));
-  _guardarBloqueos();
+  const bl=(ST._bloqueos||[]).find(b=>Number(b.id)===Number(id));
+  await dbDel('bloqueosAgenda',id);
+  await _cargarBloqueos();
   await logAct(`Eliminó bloqueo de agenda · ${bl?.fecha||'?'} · ${bl?.desde||'?'}–${bl?.hasta||'?'}${bl?.motivo?' ('+bl.motivo+')':''}`);
   toast('Bloqueo eliminado','info');
   _renderBloqueosList();
