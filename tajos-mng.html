@@ -2652,7 +2652,7 @@ async function guardarCobro(){
     await dbPut('giftcards',gcUsada);
     ST._gcAplicada=null;
   }
-  await dbAdd('cobros',{clienteId:cId,barberoId:bId,items:[...ST.cobroItems],pagos:ST.cobroPagos.map(p=>({metodo:p.metodo,monto:parseFloat(p.monto)||0})),total:tot,factura:facturaAmt,giftcardId:gcUsada?.id||null,fecha:toDS(now),hora:now.toTimeString().slice(0,5),local:ST.localActivo,registradoPor:ST.user?.login||'?',cajero:ST.user?.login||'?'});
+  await dbAdd('cobros',{clienteId:cId,barberoId:bId,items:[...ST.cobroItems],pagos:ST.cobroPagos.map(p=>({metodo:p.metodo,monto:parseFloat(p.monto)||0})),total:tot,factura:facturaAmt,giftcardId:gcUsada?.id||null,fecha:toDS(now),hora:now.toTimeString().slice(0,5),local:ST.localActivo,turno:getTurnoActual(),registradoPor:ST.user?.login||'?',cajero:ST.user?.login||'?'});
   await logAct(`Registró cobro de ${fmt(tot)} · Cliente: ${c?c.nombre+' '+c.apellido:'sin registro'} · Barbero: ${b?b.nombre+' '+b.apellido:'?'}`);
   toast('Cobro registrado','success');closeModal('modalNuevoCobro');
   if(window._turnoACobrar){
@@ -2783,7 +2783,7 @@ async function renderArqueo(){
   const isAdmin=ST.user?.rol==='admin';
   const turno=await getTurnoDeRegistro();
   const turnoLabel=`Turno ${turno}`;
-  const h=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo));
+  const h=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo)&&Number(c.turno)===Number(turno));
   const arqs=await dbAll('arqueos');
   const aqActual=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&a.turno==turno)||{notas:'',turno,cerrado:false};
   // Leer caja inicial y egresos SIEMPRE desde caja_turnos (fuente de verdad)
@@ -2818,7 +2818,7 @@ async function renderArqueo(){
         const egEf=ctA.egresosEfectivo||[];
         const totEgEf=egEf.reduce((s,e)=>s+(e.monto||0),0);
         const efEnt=a.efectivoEntregado||0;
-        const cobsTurno=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo));
+        const cobsTurno=cobros.filter(c=>c.fecha===td&&Number(c.local)===Number(ST.localActivo)&&Number(c.turno)===Number(a.turno));
         const efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
         const efEsperado=ini+efCobros-totEgEf;
         const diferencia=efEnt-efEsperado;
