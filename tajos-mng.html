@@ -1434,9 +1434,10 @@ async function doLogin(){
 }
 
 function showApp(){
-  if(!ST.turnoActivo) ST.turnoActivo=new Date().getHours()<14?1:2;
-  sessionStorage.setItem('tajos_uid',   String(ST.user.id));
-  sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
+  if(!ST.turnoActivo) ST.turnoActivo=1;
+    sessionStorage.setItem('tajos_uid',               String(ST.user.id));
+    sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
+    sessionStorage.setItem('tajos_fecha', hoy());
   if(ST.user.rol!=='admin'){
     saveCajaTurno({horaInicio:new Date().toTimeString().slice(0,5)}).catch(()=>{});
   }
@@ -1514,18 +1515,29 @@ function _aplicarRestriccionReporteLocal(){
   }
 }
 
-async function logoutConfirm(){await showRecordatorioBackup();}
-
 async function doLogout(){
+  try{
+    await saveCajaTurno({
+      turno: Number(ST.turnoActivo),
+      horaCierre: new Date().toTimeString().slice(0,5)
+    });
+  }catch(e){
+    console.warn('No se pudo cerrar cajaTurno:', e);
+  }
+
   await logAct('Cierre de sesión');
-  ST.user=null;
-  ST.turnoActivo=null;
+
+  ST.user = null;
+  ST.turnoActivo = null;
+
   sessionStorage.removeItem('tajos_uid');
   sessionStorage.removeItem('tajos_turno');
+  sessionStorage.removeItem('tajos-fecha');
+
   document.getElementById('app').classList.remove('visible');
   document.getElementById('loginScreen').classList.add('visible');
-  document.getElementById('loginUser').value='';
-  document.getElementById('loginPass').value='';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
 }
 
 async function logAct(accion){
@@ -2652,7 +2664,23 @@ async function guardarCobro(){
     await dbPut('giftcards',gcUsada);
     ST._gcAplicada=null;
   }
-  await dbAdd('cobros',{clienteId:cId,barberoId:bId,items:[...ST.cobroItems],pagos:ST.cobroPagos.map(p=>({metodo:p.metodo,monto:parseFloat(p.monto)||0})),total:tot,factura:facturaAmt,giftcardId:gcUsada?.id||null,fecha:toDS(now),hora:now.toTimeString().slice(0,5),local:ST.localActivo,turno:getTurnoActual(),registradoPor:ST.user?.login||'?',cajero:ST.user?.login||'?'});
+  await dbAdd('cobros',{
+  clienteId:cId,
+  barberoId:bId,
+  items:[...ST.cobroItems],
+    pagos:ST.cobroPagos.map(p=>({
+    metodo:p.metodo,
+    monto:parseFloat(p.monto)||0})),
+  total:tot,
+  factura:facturaAmt,
+  giftcardId:gcUsada?.id||null,
+  fecha:toDS(now),
+  hora:now.toTimeString().slice(0,5),
+  local:ST.localActivo,
+  turno:getTurnoDeRegistro(),
+  registradoPor:ST.user?.login||'?',
+  cajero:ST.user?.login||'?'
+  });
   await logAct(`Registró cobro de ${fmt(tot)} · Cliente: ${c?c.nombre+' '+c.apellido:'sin registro'} · Barbero: ${b?b.nombre+' '+b.apellido:'?'}`);
   toast('Cobro registrado','success');closeModal('modalNuevoCobro');
   if(window._turnoACobrar){
@@ -4097,17 +4125,42 @@ async function buscarYAplicarGiftcard(){
 
 // ══ CAJA INICIAL ══
 function getTurnoActual(){
-  return ST.turnoActivo||(new Date().getHours()<14?1:2);
+  return Number(ST.turnoActivo || 1);
 }
+
 async function getTurnoDeRegistro(){
-  if(ST.turnoActivo) return ST.turnoActivo;
-  const rows=await dbAll('cajaTurnos');
-  const hoyStr=hoy(),local=Number(ST.localActivo);
-  const abierto=rows.find(r=>r.fecha===hoyStr&&Number(r.local)===local&&!(r.horaCierre||r.hora_cierre));
-  if(abierto) return Number(abierto.turno);
-  const cerrados=[...rows].filter(r=>r.fecha===hoyStr&&Number(r.local)===local&&(r.horaCierre||r.hora_cierre)).sort((a,b)=>Number(b.turno)-Number(a.turno));
-  if(cerrados.length) return Number(cerrados[0].turno)+1;
-  return new Date().getHours()<14?1:2;
+  if (ST.turnoActivo) return Number(ST.turnoActivo);
+
+  const rows = await dbAll('cajaTurnos');
+  const hoyStr = hoy();
+  const local = Number(ST.localActivo);
+
+  const abierto = rows.find(r =>
+    r.fecha === hoyStr &&
+    Number(r.local) === local &&
+    !(r.horaCierre || r.hora_cierre)
+  );
+
+  if (abierto) {
+    ST.turnoActivo = Number(abierto.turno);
+    return ST.turnoActivo;
+  }
+
+  const cerrados = rows
+    .filter(r =>
+      r.fecha === hoyStr &&
+      Number(r.local) === local &&
+      (r.horaCierre || r.hora_cierre)
+    )
+    .sort((a,b)=>Number(b.turno)-Number(a.turno));
+
+  if (cerrados.length) {
+    ST.turnoActivo = Number(cerrados[0].turno) + 1;
+    return ST.turnoActivo;
+  }
+
+  ST.turnoActivo = 1;
+  return 1;
 }
 // ══════════════════════════════════════════════════════════════
 // [31] CAJA INICIAL — tabla caja_turnos separada de arqueos
@@ -4411,8 +4464,16 @@ initDB().then(async()=>{
       const u=await dbGet('usuarios',savedUId);
       if(u&&u.estado==='activo'){
         ST.user=u;
-        const _st=sessionStorage.getItem('tajos_turno');
-        if(_st) ST.turnoActivo=Number(_st);
+        const _st = sessionStorage.getItem('tajos_turno');
+const _fecha = sessionStorage.getItem('tajos_fecha');
+
+if(_fecha === hoy()){
+  if(_st) ST.turnoActivo = Number(_st);
+}else{
+  ST.turnoActivo = null;
+  sessionStorage.removeItem('tajos_turno');
+  sessionStorage.setItem('tajos_fecha', hoy());
+}
         showApp();
       }else{
         sessionStorage.removeItem('tajos_uid');sessionStorage.removeItem('tajos_turno');
