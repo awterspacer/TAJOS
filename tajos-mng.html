@@ -1429,12 +1429,15 @@ async function doLogin(){
     errEl.classList.remove('visible');
     ST.user=u;u.ultimoAcceso=ahora();await dbPut('usuarios',u);
     await logAct('Inicio de sesión');
-    showApp();
+    await showApp();
   }catch(e){console.error('Login error:',e);errEl.classList.add('visible');}
 }
 
-function showApp(){
-  if(!ST.turnoActivo) ST.turnoActivo=1;
+async function showApp(){
+  // Resolver turno desde caja_turnos (fuente de verdad), nunca por reloj
+  if(!ST.turnoActivo){
+    ST.turnoActivo = await getTurnoDeRegistro();
+  }
     sessionStorage.setItem('tajos_uid',               String(ST.user.id));
     sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
     sessionStorage.setItem('tajos_fecha', hoy());
@@ -2677,7 +2680,7 @@ async function guardarCobro(){
   fecha:toDS(now),
   hora:now.toTimeString().slice(0,5),
   local:ST.localActivo,
-  turno:getTurnoDeRegistro(),
+  turno:await getTurnoDeRegistro(),
   registradoPor:ST.user?.login||'?',
   cajero:ST.user?.login||'?'
   });
@@ -4474,7 +4477,7 @@ if(_fecha === hoy()){
   sessionStorage.removeItem('tajos_turno');
   sessionStorage.setItem('tajos_fecha', hoy());
 }
-        showApp();
+        await showApp();
       }else{
         sessionStorage.removeItem('tajos_uid');sessionStorage.removeItem('tajos_turno');
       }
