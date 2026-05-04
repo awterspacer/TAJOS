@@ -1085,7 +1085,7 @@ const FIELD_TO_DB = {
 const FIELD_FROM_DB = Object.fromEntries(Object.entries(FIELD_TO_DB).map(([k,v])=>[v,k]));
 
 const SUPA_COLS={
-  cobros:new Set(['id','cliente_id','barbero_id','fecha','hora','local','items','pagos','total','factura','giftcard_id','registrado_por','cajero','created_at']),
+  cobros:new Set(['id','cliente_id','barbero_id','fecha','hora','local','items','pagos','total','factura','giftcard_id','registrado_por','created_at','cajero','turno']),
   barberos:new Set(['id','nombre','apellido','fecha_ingreso','local','comision','celular','email','activo','created_at','updated_at']),
   barbero_users:new Set(['id','barbero_id','login','pin','activo','ultimo_acceso','created_at']),
   clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
