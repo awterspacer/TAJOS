@@ -1014,14 +1014,16 @@ tbody tr:last-child td{border-bottom:none;}
 // ║  [23] BUSCADORES           — cacheSelect, filtrarSelect     ║
 // ║  [24] SELECTS              — populateSels                   ║
 // ║  [25] BACKUP               — exportar, importar, XML↔JSON  ║
-// ║  [26] ADELANTOS (ADMIN)    — gestionar, aprobar, rechazar   ║
-// ║  [27] MÉTODOS DE PAGO      — renderMetodosPago, guardar     ║
-// ║  [28] CATEGORÍAS           — poblar, render, guardar        ║
-// ║  [29] CONSUMOS             — guardarConsumo, render         ║
-// ║  [30] GIFTCARDS            — render, emitir, canjear        ║
-// ║  [31] CAJA INICIAL         — getTurno, mostrarSiNecesario   ║
-// ║  [32] SEED                 — seedData                       ║
-// ║  [33] INIT                 — initDB, cargarMetodos, boot    ║
+// ║  [26] SEED                 — seedData                       ║
+// ║  [27] ADELANTOS (ADMIN)    — gestionar, aprobar, rechazar   ║
+// ║  [28] MÉTODOS DE PAGO      — renderMetodosPago, guardar     ║
+// ║  [29] CATEGORÍAS           — poblar, render, guardar        ║
+// ║  [30] CONSUMOS             — guardarConsumo, render         ║
+// ║  [31] GIFTCARDS            — render, emitir, canjear        ║
+// ║  [32] CAJA INICIAL         — getTurno, mostrarSiNecesario   ║
+// ║  [33] INVENTARIO           — renderInventario, exportar     ║
+// ║  [34] BLOQUEOS DE AGENDA   — guardarBloqueo, eliminar       ║
+// ║  [35] INIT                 — initDB, cargarMetodos, boot    ║
 // ╚══════════════════════════════════════════════════════════════╝
 
 // ══════════════════════════════════════════════════════════════
@@ -1417,7 +1419,9 @@ function updClock(){
 }
 setInterval(updClock,1000);updClock();
 
-// ══ AUTH ══
+// ══════════════════════════════════════════════════════════════
+// [9] AUTH
+// ══════════════════════════════════════════════════════════════
 async function doLogin(){
   const login=document.getElementById('loginUser').value.trim().toLowerCase();
   const pass=document.getElementById('loginPass').value;
@@ -1434,14 +1438,16 @@ async function doLogin(){
 }
 
 async function showApp(){
-  // Resolver turno desde caja_turnos (fuente de verdad), nunca por reloj
-  if(Number(ST.turnoActivo) < 1){
-    ST.turnoActivo = 1;
-  }
-    sessionStorage.setItem('tajos_uid',               String(ST.user.id));
-    sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
-    sessionStorage.setItem('tajos_fecha', hoy());
+  // Resolver turno SIEMPRE desde caja_turnos (fuente de verdad) antes de cualquier
+  // operación que dependa del turno. getTurnoDeRegistro() escribe ST.turnoActivo.
+  await getTurnoDeRegistro();
+
+  sessionStorage.setItem('tajos_uid',   String(ST.user.id));
+  sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
+  sessionStorage.setItem('tajos_fecha', hoy());
+
   if(ST.user.rol!=='admin'){
+    // Ahora ST.turnoActivo es siempre 1 o 2, nunca 0 ni null.
     saveCajaTurno({horaInicio:new Date().toTimeString().slice(0,5)}).catch(()=>{});
   }
   document.getElementById('loginScreen').classList.remove('visible');
@@ -1528,6 +1534,25 @@ async function doLogout(){
     console.warn('No se pudo cerrar cajaTurno:', e);
   }
 
+  // Guardar efectivo entregado del turno que cierra, para sugerirlo como caja
+  // inicial al próximo cajero que inicie sesión en el mismo local y día.
+  try{
+    const td=hoy();
+    const local=ST.localActivo;
+    const turno=Number(ST.turnoActivo);
+    const arqs=await dbAll('arqueos');
+    const arq=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(local)&&Number(a.turno)===turno);
+    if(arq&&arq.efectivoEntregado>0){
+      sessionStorage.setItem('tajos_cierre_ef',     String(arq.efectivoEntregado));
+      sessionStorage.setItem('tajos_cierre_turno',  String(turno));
+      sessionStorage.setItem('tajos_cierre_cajero', String(ST.user?.login||''));
+      sessionStorage.setItem('tajos_cierre_fecha',  td);
+      sessionStorage.setItem('tajos_cierre_local',  String(local));
+    }else{
+      sessionStorage.removeItem('tajos_cierre_ef');
+    }
+  }catch(e){console.warn('No se pudo guardar cierre para sugerencia:',e);}
+
   await logAct('Cierre de sesión');
 
   ST.user = null;
@@ -1552,7 +1577,9 @@ async function logAct(accion){
   }).catch(e=>console.warn('logAct:',e));
 }
 
-// ══ NAVIGATION ══
+// ══════════════════════════════════════════════════════════════
+// [10] NAVEGACIÓN
+// ══════════════════════════════════════════════════════════════
 const TITLES={dashboard:'Dashboard',agenda:'Agenda',caja:'Caja',clientes:'Clientes',barberos:'Barberos',servicios:'Catálogo',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',reportes:'Reportes',inventario:'Inventario'};
 document.querySelectorAll('.nav-item[data-page]').forEach(el=>el.addEventListener('click',()=>{navigate(el.dataset.page);closeSidebar();}));
 
@@ -1596,7 +1623,9 @@ function selectLocal(n){
   refreshDash();renderAgenda();refreshCaja();
 }
 
-// ══ MODALS ══
+// ══════════════════════════════════════════════════════════════
+// [11] MODALES
+// ══════════════════════════════════════════════════════════════
 function openModal(id,extra){
   // Close any open modal first
   document.querySelectorAll('.modal-overlay.visible').forEach(m=>{if(m.id!==id)m.classList.remove('visible');});
@@ -1720,7 +1749,9 @@ function toast(msg,type='info'){
   document.getElementById('toast-container').appendChild(el);
   setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),300);},3200);
 }
-// ══ USUARIOS ══
+// ══════════════════════════════════════════════════════════════
+// [12] USUARIOS
+// ══════════════════════════════════════════════════════════════
 async function renderUsuarios(){
   const users=await dbAll('usuarios');
   const rl={admin:'Administrador',cajero:'Cajero'};
@@ -1805,7 +1836,9 @@ async function guardarMiPerfil(){
   toast('Perfil actualizado','success');closeModal('modalMiPerfil');
 }
 
-// ══ HISTORIAL ══
+// ══════════════════════════════════════════════════════════════
+// [13] HISTORIAL
+// ══════════════════════════════════════════════════════════════
 async function renderHistorial(){
   const logs=await dbAll('historial');
   const buscar=(document.getElementById('histBuscar').value||'').toLowerCase();
@@ -1835,7 +1868,9 @@ async function limpiarHistorial(){
   await logAct('Limpió el historial de acciones');toast('Historial limpiado','info');renderHistorial();
 }
 
-// ══ CATÁLOGO ══
+// ══════════════════════════════════════════════════════════════
+// [14] CATÁLOGO
+// ══════════════════════════════════════════════════════════════
 async function renderCatalogo(){
   let svcs=await dbAll('servicios');let prods=await dbAll('productos');
   svcs=[...svcs].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
@@ -2005,7 +2040,9 @@ async function ingresarStock(){
   toast(`Stock de "${p.nombre}" (${localNombre(ST.localActivo)}) → ${_ant+cant} u.`,'success');
   closeModal('modalIngresoProducto');renderCatalogo();populateSels();
 }
-// ══ CLIENTES ══
+// ══════════════════════════════════════════════════════════════
+// [15] CLIENTES
+// ══════════════════════════════════════════════════════════════
 async function renderClientes(filter=''){
   let cl=await dbAll('clientes');const cobros=await dbAll('cobros');
   if(filter){const f=filter.toLowerCase();cl=cl.filter(c=>(c.nombre+' '+c.apellido).toLowerCase().includes(f)||(c.celular||'').includes(f)||(c.documento||'').includes(f));}
@@ -2080,7 +2117,9 @@ async function verHistCliente(id){
   openModal('modalHistorialCliente');
 }
 
-// ══ BARBEROS ══
+// ══════════════════════════════════════════════════════════════
+// [16] BARBEROS
+// ══════════════════════════════════════════════════════════════
 async function renderBarberos(){
   let barbs=await dbAll('barberos');
   barbs=[...barbs].sort((a,b)=>(a.nombre+' '+a.apellido).localeCompare(b.nombre+' '+b.apellido,'es'));const cobros=await dbAll('cobros');const td=hoy();
@@ -2248,7 +2287,9 @@ async function switchDtB(tab,el){
       </div>
     </div>`).join(''):'<div class="empty-state"><div class="icon">📋</div><p>Sin cobros</p></div>'}`;
 }
-// ══ AGENDA ══
+// ══════════════════════════════════════════════════════════════
+// [17] AGENDA
+// ══════════════════════════════════════════════════════════════
 function cambiarDiaAgenda(d){const dt=new Date(ST.agendaFecha);dt.setDate(dt.getDate()+d);ST.agendaFecha=dt;renderAgenda();}
 function irHoyAgenda(){ST.agendaFecha=new Date();renderAgenda();}
 
@@ -2586,7 +2627,9 @@ async function guardarTurno(){
   if(b)enviarWhatsAppBarbero(b,c?c.nombre+' '+c.apellido:'Sin nombre',fecha,hora,serviciosGuardados);
 }
 
-// ══ COBROS ══
+// ══════════════════════════════════════════════════════════════
+// [18] COBROS
+// ══════════════════════════════════════════════════════════════
 function addItemCobro(tipo){
   const sel=document.getElementById(tipo==='servicio'?'cobroServicio':'cobroProducto');
   const opt=sel.options[sel.selectedIndex];if(!opt||!opt.value)return;
@@ -2808,7 +2851,9 @@ async function eliminarCobro(id){
   await logAct(`Eliminó cobro · ${fmt(co?.total||0)} · Fecha: ${co?.fecha||'?'} ${co?.hora||''} · Barbero: ${b?b.nombre+' '+b.apellido:'?'} · Cliente: ${c?c.nombre+' '+c.apellido:co?.clienteNombre||'sin registro'}`);
   toast('Cobro eliminado','info');await refreshCaja();await refreshDash();
 }
-// ══ ARQUEO ══
+// ══════════════════════════════════════════════════════════════
+// [19] ARQUEO
+// ══════════════════════════════════════════════════════════════
 async function renderArqueo(){
   const td=hoy();const cobros=await dbAll('cobros');
   const isAdmin=ST.user?.rol==='admin';
@@ -3222,7 +3267,9 @@ async function verEgresosArqueo(id){
 }
 
 
-// ══ HELPER: comisión de un cobro basada en % de cada servicio/producto ══
+// ══════════════════════════════════════════════════════════════
+// [20] COMISIONES
+// ══════════════════════════════════════════════════════════════
 function calcComisionCobro(cobro){
   return (cobro.items||[]).reduce((s,i)=>{
     if(i.tipo==='servicio') return s+i.precio*((i.comision??50)/100);
@@ -3234,7 +3281,9 @@ function calcComisionLista(cobros){
   return cobros.reduce((s,c)=>s+calcComisionCobro(c),0);
 }
 
-// ══ DASHBOARD ══
+// ══════════════════════════════════════════════════════════════
+// [21] DASHBOARD
+// ══════════════════════════════════════════════════════════════
 async function refreshDash(){
   const cobros=await dbAll('cobros');const turnos=await dbAll('turnos');
   const cl=await dbAll('clientes');const barbs=await dbAll('barberos');
@@ -3269,7 +3318,9 @@ async function refreshDash(){
   }).join(''):'<div style="grid-column:1/-1;text-align:center;color:var(--text-dim)">No hay barberos en esta sucursal</div>';
 }
 
-// ══ REPORTES ══
+// ══════════════════════════════════════════════════════════════
+// [22] REPORTES
+// ══════════════════════════════════════════════════════════════
 function toggleReporteCustom(){const v=document.getElementById('reportePeriodo').value;document.getElementById('reporteCustom').style.display=v==='custom'?'flex':'none';}
 function switchReporteTab(tab,el){
   document.querySelectorAll('#page-reportes .tabs .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
@@ -3322,7 +3373,9 @@ async function generarReporte(){
 }
 
 
-// ══ BUSCADORES EN MODALES ══
+// ══════════════════════════════════════════════════════════════
+// [23] BUSCADORES EN MODALES
+// ══════════════════════════════════════════════════════════════
 // Cache de opciones originales para filtrar sin perder datos
 const _selCache={};
 
@@ -3373,7 +3426,9 @@ function resetModalSearches(modalId){
   });
 }
 
-// ══ POPULATE SELECTS ══
+// ══════════════════════════════════════════════════════════════
+// [24] SELECTS
+// ══════════════════════════════════════════════════════════════
 async function populateSels(){
   const allBarbs=await dbAll('barberos');const cl=await dbAll('clientes');const svcs=await dbAll('servicios');const prods=await dbAll('productos');
   // Filtrar barberos a los locales permitidos para el usuario actual
@@ -3398,7 +3453,9 @@ async function populateSels(){
   });
 }
 
-// ══ BACKUP ══
+// ══════════════════════════════════════════════════════════════
+// [25] BACKUP
+// ══════════════════════════════════════════════════════════════
 let _bkpFmt='JSON';
 
 function switchBackupTab(tab,el){
@@ -3560,7 +3617,6 @@ async function exportarBackup(){
   }
 }
 
-async function exportarRapido(f){_bkpFmt=(f==='XML'?'XLSX':f);await exportarBackup();closeModal('modalRecordatorioBackup');await doLogout();}
 
 async function archivarHistorialAntiguo(){
   // Exporta historial >30 días como XML y lo elimina de la DB
@@ -3688,11 +3744,26 @@ async function showRecordatorioBackup(){
   document.getElementById('modalRecordatorioBackup').classList.add('visible');
 }
 
+// Llamado por el botón ⏻ del topbar.
+// Muestra el modal de recordatorio de backup antes de cerrar sesión.
+// Si el usuario es admin (sin turno de caja que cerrar) sale directo.
+async function logoutConfirm(){
+  // Admins no tienen turno ni caja — salir directo con confirmación simple
+  if(ST.user?.rol==='admin'){
+    if(confirm('¿Cerrar sesión?'))await doLogout();
+    return;
+  }
+  // Cajeros: mostrar recordatorio de backup antes de salir
+  await showRecordatorioBackup();
+}
+
 async function salirSinBackup(){
   closeModal('modalRecordatorioBackup');await doLogout();
 }
 
-// ══ SEED ══
+// ══════════════════════════════════════════════════════════════
+// [26] SEED
+// ══════════════════════════════════════════════════════════════
 async function seedData(){
   const u=await dbAll('usuarios');
   if(!u.length){
@@ -3726,7 +3797,9 @@ async function seedData(){
   }
 }
 
-// ══ ADELANTOS (Admin) ══
+// ══════════════════════════════════════════════════════════════
+// [27] ADELANTOS (ADMIN)
+// ══════════════════════════════════════════════════════════════
 async function gestionarAdelantos(barberoId){
   const b=await dbGet('barberos',barberoId);
   if(!b)return;
@@ -3796,7 +3869,9 @@ async function rechazarAdelanto(id){
 
 
 
-// ══ MÉTODOS DE PAGO ══
+// ══════════════════════════════════════════════════════════════
+// [28] MÉTODOS DE PAGO
+// ══════════════════════════════════════════════════════════════
 async function renderMetodosPago(){
   const rows=await dbAll('metodosPago');
   const sorted=rows.sort((a,b)=>(a.orden||0)-(b.orden||0));
@@ -3866,7 +3941,9 @@ async function toggleMetodoPago(id){
   renderMetodosPago();
 }
 
-// ══ CATEGORÍAS ══
+// ══════════════════════════════════════════════════════════════
+// [29] CATEGORÍAS
+// ══════════════════════════════════════════════════════════════
 async function poblarCatSelect(elId,store,defaults,forceVal){
   const cats=await dbAll(store);
   const sel=document.getElementById(elId);
@@ -3924,7 +4001,9 @@ async function eliminarCategoria(ref,nombre){
   renderCategorias();
 }
 
-// ══ CONSUMOS ══
+// ══════════════════════════════════════════════════════════════
+// [30] CONSUMOS
+// ══════════════════════════════════════════════════════════════
 function updConsumoMonto(){
   const sel=document.getElementById('consumoProducto');
   const opt=sel?.value;
@@ -4017,7 +4096,9 @@ async function eliminarConsumo(id){
   renderConsumos();
 }
 
-// ══ GIFTCARDS ══
+// ══════════════════════════════════════════════════════════════
+// [31] GIFTCARDS
+// ══════════════════════════════════════════════════════════════
 let _gcTabActual='disponibles';
 
 function switchGCTab(tab,el){
@@ -4161,7 +4242,10 @@ async function buscarYAplicarGiftcard(){
 }
 
 
-// ══ CAJA INICIAL ══
+// ══════════════════════════════════════════════════════════════
+// [32] CAJA INICIAL — tabla caja_turnos separada de arqueos
+// Clave única por turno: fecha + local + turno (1 o 2)
+// ══════════════════════════════════════════════════════════════
 function getTurnoActual(){
   return Number(ST.turnoActivo || 1);
 }
@@ -4210,10 +4294,6 @@ async function getTurnoDeRegistro(){
   ST.turnoActivo = 1;
   return 1;
 }
-// ══════════════════════════════════════════════════════════════
-// [31] CAJA INICIAL — tabla caja_turnos separada de arqueos
-// Clave única por turno: fecha + local + turno (1 o 2)
-// ══════════════════════════════════════════════════════════════
 function getCajaKey(){
   return 'tajos_caja_'+hoy()+'_t'+getTurnoActual()+'_l'+ST.localActivo;
 }
@@ -4257,13 +4337,48 @@ async function mostrarCajaInicialSiNecesario(){
   const td=hoy();const turno=getTurnoActual();
   const exArq=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&a.turno==turno);
   if(exArq&&(exArq.cajaInicial||exArq.caja_inicial)){
-    // Migrar a caja_turnos
     await saveCajaTurno({cajaInicial:exArq.cajaInicial||exArq.caja_inicial||0,cajaInicialConfirmada:true});
     localStorage.setItem(key,'done');return;
   }
+
+  // ── Sugerencia de caja inicial desde cierre del turno anterior ──
+  // Solo aplica si hubo un logout real en este mismo local y día,
+  // y el cajero que cerró es distinto al actual O si es el mismo pero
+  // el turno anterior ya está cerrado (cambio de turno tras cierre explícito).
+  const cierreEf     = sessionStorage.getItem('tajos_cierre_ef');
+  const cierreFecha  = sessionStorage.getItem('tajos_cierre_fecha');
+  const cierreLocal  = sessionStorage.getItem('tajos_cierre_local');
+  const cierreCajero = sessionStorage.getItem('tajos_cierre_cajero');
+  const cierreTurno  = Number(sessionStorage.getItem('tajos_cierre_turno')||0);
+
+  let sugerido = 0;
+  let sugeridoLabel = '';
+  const mismoDiaYLocal = cierreFecha===td && Number(cierreLocal)===Number(ST.localActivo);
+  const esturnoSiguiente = cierreTurno === turno - 1;            // turno 1 cerró → turno 2 abre
+  const otroCajero = cierreCajero && cierreCajero !== ST.user?.login;
+
+  if(cierreEf && mismoDiaYLocal && esturnoSiguiente && (otroCajero || cierreTurno >= 1)){
+    sugerido = parseFloat(cierreEf) || 0;
+    sugeridoLabel = otroCajero
+      ? `Efectivo entregado por ${cierreCajero} (Turno ${cierreTurno}): ${fmt(sugerido)}`
+      : `Efectivo entregado en Turno ${cierreTurno}: ${fmt(sugerido)}`;
+  }
+
   const info=document.getElementById('cajaInicialInfo');
   const turnoLabel=turno===1?'Turno 1 (8–14h)':'Turno 2 (14–20h)';
-  if(info)info.textContent=localNombre(ST.localActivo)+' · '+turnoLabel+' · '+hoy();
+  if(info)info.textContent=localNombre(ST.localActivo)+' · '+turnoLabel+' · '+td;
+
+  // Pre-llenar el monto sugerido y mostrar el aviso si corresponde
+  const montoEl=document.getElementById('cajaInicialMonto');
+  const sugeridoEl=document.getElementById('cajaInicialSugerido');
+  if(montoEl && sugerido>0){
+    montoEl.value=sugerido;
+    if(sugeridoEl)sugeridoEl.textContent='💡 Sugerido: '+sugeridoLabel;
+    if(sugeridoEl)sugeridoEl.style.display='block';
+  } else {
+    if(sugeridoEl)sugeridoEl.style.display='none';
+  }
+
   const el=document.getElementById('modalCajaInicial');
   if(el)el.classList.add('visible');
 }
@@ -4284,7 +4399,9 @@ function omitirCajaInicial(){
   document.getElementById('modalCajaInicial').classList.remove('visible');
 }
 
-// ══ INVENTARIO ══
+// ══════════════════════════════════════════════════════════════
+// [33] INVENTARIO
+// ══════════════════════════════════════════════════════════════
 async function renderInventario(){
   const prods=await dbAll('productos');
   const activos=prods.filter(p=>p.activo!==false);
@@ -4418,7 +4535,9 @@ async function exportarInventarioXLSX(){
   toast('Inventario exportado correctamente','success');
 }
 
-// ══ BLOQUEOS DE AGENDA ══
+// ══════════════════════════════════════════════════════════════
+// [34] BLOQUEOS DE AGENDA
+// ══════════════════════════════════════════════════════════════
 // Bloqueos persistidos en Supabase (tabla bloqueos_agenda).
 // Accesibles desde ambos portales en cualquier dispositivo.
 async function _cargarBloqueos(){
@@ -4499,7 +4618,9 @@ async function eliminarBloqueo(id){
   renderAgenda();
 }
 
-// ══ INIT ══
+// ══════════════════════════════════════════════════════════════
+// [35] INIT
+// ══════════════════════════════════════════════════════════════
 initDB().then(async()=>{
   await cargarMetodos();
   await seedData();
@@ -4685,6 +4806,7 @@ if(_fecha === hoy()){
     <div class="modal-body">
       <div class="alert alert-info" style="margin-bottom:16px">Ingresá el monto de billetes disponibles para dar vuelto al inicio de este turno.</div>
       <div id="cajaInicialInfo" style="font-family:var(--font-cond);font-size:.85rem;color:var(--text-muted);margin-bottom:14px"></div>
+      <div id="cajaInicialSugerido" style="display:none;background:var(--bg-raised);border-left:3px solid var(--gold);border-radius:var(--radius);padding:10px 14px;font-size:.83rem;color:var(--gold-light);margin-bottom:14px"></div>
       <div class="form-group">
         <label class="form-label">Monto caja inicial (Gs.) *</label>
         <input type="number" class="form-control" id="cajaInicialMonto" placeholder="Ej: 200000" min="0" style="font-size:1.1rem;padding:12px">
