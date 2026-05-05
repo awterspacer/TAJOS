@@ -1085,7 +1085,7 @@ const FIELD_TO_DB = {
 const FIELD_FROM_DB = Object.fromEntries(Object.entries(FIELD_TO_DB).map(([k,v])=>[v,k]));
 
 const SUPA_COLS={
-  cobros:new Set(['id','cliente_id','barbero_id','fecha','hora','local','items','pagos','total','factura','giftcard_id','registrado_por','created_at','cajero','turno']),
+  cobros:new Set(['id','cliente_id','barbero_id','fecha','hora','local','turno','items','pagos','total','factura','giftcard_id','registrado_por','cajero','created_at']),
   barberos:new Set(['id','nombre','apellido','fecha_ingreso','local','comision','celular','email','activo','created_at','updated_at']),
   barbero_users:new Set(['id','barbero_id','login','pin','activo','ultimo_acceso','created_at']),
   clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
@@ -1438,17 +1438,21 @@ async function doLogin(){
 }
 
 async function showApp(){
-  // Resolver turno SIEMPRE desde caja_turnos (fuente de verdad) antes de cualquier
-  // operación que dependa del turno. getTurnoDeRegistro() escribe ST.turnoActivo.
-  await getTurnoDeRegistro();
+  // Resolver turno solo si aún no está en memoria (login fresco).
+  // En restauración de sesión (F5) el boot ya cargó ST.turnoActivo desde
+  // sessionStorage — getTurnoDeRegistro() lo respeta si mem >= 1.
+  if(ST.user.rol !== 'admin'){
+    await getTurnoDeRegistro();
+  }
 
   sessionStorage.setItem('tajos_uid',   String(ST.user.id));
-  sessionStorage.setItem('tajos_turno', String(ST.turnoActivo));
+  sessionStorage.setItem('tajos_turno', String(ST.turnoActivo || 0));
   sessionStorage.setItem('tajos_fecha', hoy());
 
-  if(ST.user.rol!=='admin'){
-    // Ahora ST.turnoActivo es siempre 1 o 2, nunca 0 ni null.
-    saveCajaTurno({horaInicio:new Date().toTimeString().slice(0,5)}).catch(()=>{});
+  if(ST.user.rol !== 'admin'){
+    // Registrar hora de inicio en cajaTurnos solo si no existe ya.
+    // merge interno de saveCajaTurno no sobreescribe horaInicio existente.
+    saveCajaTurno({horaInicio: new Date().toTimeString().slice(0,5)}).catch(()=>{});
   }
   document.getElementById('loginScreen').classList.remove('visible');
   document.getElementById('app').classList.add('visible');
@@ -1525,33 +1529,33 @@ function _aplicarRestriccionReporteLocal(){
 }
 
 async function doLogout(){
-  try{
-    await saveCajaTurno({
-      turno: Number(ST.turnoActivo),
-      horaCierre: new Date().toTimeString().slice(0,5)
-    });
-  }catch(e){
-    console.warn('No se pudo cerrar cajaTurno:', e);
+  // Logout NO cierra el turno. El turno solo cierra con arqueo (cerrado=true).
+  // Solo guardamos efectivo entregado si el arqueo YA fue cerrado en este turno,
+  // para sugerirlo como caja inicial al próximo cajero.
+  if(ST.user?.rol !== 'admin'){
+    try{
+      const td=hoy();
+      const local=ST.localActivo;
+      const turno=Number(ST.turnoActivo);
+      const arqs=await dbAll('arqueos');
+      const arq=arqs.find(a=>
+        a.fecha===td &&
+        Number(a.local)===Number(local) &&
+        Number(a.turno)===turno &&
+        a.cerrado===true
+      );
+      if(arq && arq.efectivoEntregado > 0){
+        sessionStorage.setItem('tajos_cierre_ef',     String(arq.efectivoEntregado));
+        sessionStorage.setItem('tajos_cierre_turno',  String(turno));
+        sessionStorage.setItem('tajos_cierre_cajero', String(ST.user?.login||''));
+        sessionStorage.setItem('tajos_cierre_fecha',  td);
+        sessionStorage.setItem('tajos_cierre_local',  String(local));
+      } else {
+        // Sin arqueo cerrado — no hay efectivo que sugerir al próximo turno.
+        sessionStorage.removeItem('tajos_cierre_ef');
+      }
+    }catch(e){console.warn('doLogout: no se pudo guardar sugerencia de cierre:',e);}
   }
-
-  // Guardar efectivo entregado del turno que cierra, para sugerirlo como caja
-  // inicial al próximo cajero que inicie sesión en el mismo local y día.
-  try{
-    const td=hoy();
-    const local=ST.localActivo;
-    const turno=Number(ST.turnoActivo);
-    const arqs=await dbAll('arqueos');
-    const arq=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(local)&&Number(a.turno)===turno);
-    if(arq&&arq.efectivoEntregado>0){
-      sessionStorage.setItem('tajos_cierre_ef',     String(arq.efectivoEntregado));
-      sessionStorage.setItem('tajos_cierre_turno',  String(turno));
-      sessionStorage.setItem('tajos_cierre_cajero', String(ST.user?.login||''));
-      sessionStorage.setItem('tajos_cierre_fecha',  td);
-      sessionStorage.setItem('tajos_cierre_local',  String(local));
-    }else{
-      sessionStorage.removeItem('tajos_cierre_ef');
-    }
-  }catch(e){console.warn('No se pudo guardar cierre para sugerencia:',e);}
 
   await logAct('Cierre de sesión');
 
@@ -1560,7 +1564,7 @@ async function doLogout(){
 
   sessionStorage.removeItem('tajos_uid');
   sessionStorage.removeItem('tajos_turno');
-  sessionStorage.removeItem('tajos-fecha');
+  sessionStorage.removeItem('tajos_fecha');
 
   document.getElementById('app').classList.remove('visible');
   document.getElementById('loginScreen').classList.add('visible');
@@ -4251,48 +4255,33 @@ function getTurnoActual(){
 }
 
 async function getTurnoDeRegistro(){
+  // Fuente de verdad: arqueos con cerrado===true del día y local.
+  // Un turno existe y está cerrado solo cuando el cajero completó el arqueo.
+  // Cualquier otra interrupción (F5, cierre de ventana, logout, caída de red)
+  // NO cuenta como cierre — el cajero retoma el mismo turno al volver.
+  // Admin nunca tiene turno de caja — retorna 0 para que no escriba en cajaTurnos.
+  if(ST.user?.rol === 'admin') return 0;
 
-  // 1) Si ya hay turno activo válido en memoria, usarlo
+  // Si ya hay turno válido en memoria (misma sesión, mismo día) conservarlo.
+  // Esto evita recalcular en cada cobro y mantiene estabilidad durante la sesión.
   const mem = Number(ST.turnoActivo);
   if(mem >= 1) return mem;
 
-  const rows = await dbAll('cajaTurnos');
-  const hoyStr = hoy();
+  const td = hoy();
   const local = Number(ST.localActivo);
+  const arqs = await dbAll('arqueos');
 
-  // 2) Buscar turno abierto válido del día
-  const abiertos = rows
-    .filter(r =>
-      r.fecha === hoyStr &&
-      Number(r.local) === local &&
-      Number(r.turno) >= 1 &&
-      !(r.horaCierre || r.hora_cierre)
-    )
-    .sort((a,b)=>Number(a.turno)-Number(b.turno));
+  // Contar arqueos CERRADOS del día y local (cerrado===true).
+  // Borradores (cerrado===false, de actualizarEstadoCaja) no cuentan.
+  const cerrados = arqs.filter(a =>
+    a.fecha === td &&
+    Number(a.local) === local &&
+    a.cerrado === true
+  ).length;
 
-  if(abiertos.length){
-    ST.turnoActivo = Number(abiertos[0].turno);
-    return ST.turnoActivo;
-  }
-
-  // 3) Buscar último turno cerrado válido
-  const cerrados = rows
-    .filter(r =>
-      r.fecha === hoyStr &&
-      Number(r.local) === local &&
-      Number(r.turno) >= 1 &&
-      (r.horaCierre || r.hora_cierre)
-    )
-    .sort((a,b)=>Number(b.turno)-Number(a.turno));
-
-  if(cerrados.length){
-    ST.turnoActivo = Number(cerrados[0].turno) + 1;
-    return ST.turnoActivo;
-  }
-
-  // 4) Día nuevo = turno 1
-  ST.turnoActivo = 1;
-  return 1;
+  // turno = arqueos cerrados + 1, con cap en 2.
+  ST.turnoActivo = Math.min(cerrados + 1, 2);
+  return ST.turnoActivo;
 }
 function getCajaKey(){
   return 'tajos_caja_'+hoy()+'_t'+getTurnoActual()+'_l'+ST.localActivo;
