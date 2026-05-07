@@ -1091,7 +1091,7 @@ const SUPA_COLS={
   clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
   servicios:new Set(['id','nombre','precio','duracion','categoria','descripcion','comision','activo','created_at','updated_at']),
   productos:new Set(['id','nombre','precio','stock','categoria','descripcion','comisionable','activo','created_at','updated_at']),
-  turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','created_at','updated_at']),
+  turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','creado','created_at','updated_at']),
   usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
   historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
   arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','cerrado','created_at']),
@@ -1124,10 +1124,15 @@ function fromDbObj(obj){
   // asegurar que 'id' siempre sea número
   if(r.id!==undefined)r.id=Number(r.id);
   // Supabase puede devolver columnas JSONB como string — parsear si es necesario
-  const jsonCols=['pagos','items','detalle','egresosEfectivo','egresos_efectivo','acceso'];
+  const jsonCols=['pagos','items','detalle','egresosEfectivo','egresos_efectivo','acceso','servicios'];
   jsonCols.forEach(col=>{
     if(typeof r[col]==='string'){try{r[col]=JSON.parse(r[col]);}catch(e){r[col]=[];}}
     if(r[col]==null)r[col]=col==='acceso'?{}:[];
+  });
+  // Normalizar campos de hora a HH:MM (Supabase type 'time' puede devolver HH:MM:SS)
+  const horaCols=['hora','horaInicio','hora_inicio','horaCierre','hora_cierre','desde','hasta'];
+  horaCols.forEach(col=>{
+    if(typeof r[col]==='string'&&r[col].length>5) r[col]=r[col].slice(0,5);
   });
   // Normalizar montos dentro de pagos para que siempre sean números
   if(Array.isArray(r.pagos)){
@@ -2586,7 +2591,7 @@ async function guardarTurno(){
   const hora=document.getElementById('turnoHora').value;
   const local=+document.getElementById('turnoLocal').value;
   const notas=document.getElementById('turnoNotas').value.trim();
-  if(!bId)return toast('Selecciona un barbero','error');
+  if(!bId||isNaN(bId))return toast('Selecciona un barbero','error');
   if(!fecha)return toast('Selecciona una fecha','error');
   const all=await dbAll('turnos');
   const svcsAll=await dbAll('servicios');
@@ -2626,7 +2631,7 @@ async function guardarTurno(){
   await logAct(`Agendó turno: ${hora} del ${fecha} · ${c?c.nombre+' '+c.apellido:'sin cliente'}`);
   toast('Turno agendado','success');closeModal('modalNuevoTurno');
   ST.turnoServTemp=[];renderTurnoChips();document.getElementById('turnoNotas').value='';
-  renderAgenda();refreshDash();
+  await renderAgenda();refreshDash();
   // Enviar WhatsApp al barbero si tiene celular registrado
   if(b)enviarWhatsAppBarbero(b,c?c.nombre+' '+c.apellido:'Sin nombre',fecha,hora,serviciosGuardados);
 }
