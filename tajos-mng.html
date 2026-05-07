@@ -1129,6 +1129,9 @@ function fromDbObj(obj){
     if(typeof r[col]==='string'){try{r[col]=JSON.parse(r[col]);}catch(e){r[col]=[];}}
     if(r[col]==null)r[col]=col==='acceso'?{}:[];
   });
+  // Normalizar booleanos que Supabase puede devolver como 0/1 en vez de false/true
+  const boolCols=['cerrado','verificado','activo','cajaInicialConfirmada','caja_inicial_confirmada','comisionable'];
+  boolCols.forEach(col=>{ if(col in r) r[col]=!!r[col]; });
   // Normalizar campos de hora a HH:MM (Supabase type 'time' puede devolver HH:MM:SS)
   const horaCols=['hora','horaInicio','hora_inicio','horaCierre','hora_cierre','desde','hasta'];
   horaCols.forEach(col=>{
@@ -1410,7 +1413,7 @@ async function cargarMetodos(){
 const STORES=['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos','cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda'];
 const fmt=n=>'Gs. '+(n||0).toLocaleString('es-PY',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD=d=>{if(!d)return '';return new Date(d+'T00:00:00').toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric'});};
-const toDS=d=>d.toISOString().split('T')[0];
+const toDS=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${dd}`;};
 const hoy=()=>toDS(new Date());
 const ahora=()=>{const n=new Date();return toDS(n)+' '+n.toTimeString().slice(0,5);};
 const localNombre=n=>n==1?'Central':'Superseis';
@@ -1547,7 +1550,7 @@ async function doLogout(){
         a.fecha===td &&
         Number(a.local)===Number(local) &&
         Number(a.turno)===turno &&
-        a.cerrado===true
+        (a.cerrado===true||a.cerrado===1)
       );
       if(arq && arq.efectivoEntregado > 0){
         sessionStorage.setItem('tajos_cierre_ef',     String(arq.efectivoEntregado));
@@ -1635,6 +1638,11 @@ function selectLocal(n){
 // ══════════════════════════════════════════════════════════════
 // [11] MODALES
 // ══════════════════════════════════════════════════════════════
+
+function normLocal(v){
+  return Number(v?.local ?? v?.local_id ?? 0);
+}
+
 function openModal(id,extra){
   // Close any open modal first
   document.querySelectorAll('.modal-overlay.visible').forEach(m=>{if(m.id!==id)m.classList.remove('visible');});
@@ -2325,7 +2333,10 @@ async function renderAgenda(){
   const barbs  = await dbAll('barberos');
   const bf     = barbs.filter(b=>b.local==ST.localActivo||b.local==0);
   const turnos = await dbAll('turnos');
-  const td     = turnos.filter(t=>t.fecha===fecha&&t.local==ST.localActivo);
+  const td = turnos.filter(t =>
+  t.fecha === fecha &&
+  Number(t.local ?? t.local_id) === Number(ST.localActivo)
+);
   const cl     = await dbAll('clientes');
   const cMap   = {};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
   const svcs   = await dbAll('servicios');
@@ -3298,7 +3309,7 @@ async function refreshDash(){
   const cl=await dbAll('clientes');const barbs=await dbAll('barberos');
   const td=hoy();const lc=cobros.filter(c=>c.local==ST.localActivo);const hc=lc.filter(c=>c.fecha===td);
   const tot=hc.reduce((s,c)=>s+c.total,0);const com=calcComisionLista(hc);
-  const th=turnos.filter(t=>t.fecha===td&&t.local==ST.localActivo);
+  const th=turnos.filter(t=>t.fecha===td&&normLocal(t) === Number(ST.localActivo));
   const pen=th.filter(t=>t.estado!=='completado'&&t.estado!=='cancelado');
   document.getElementById('statIngresos').textContent=fmt(tot);document.getElementById('statIngSub').textContent=`${hc.length} servicios`;
   document.getElementById('statTurnos').textContent=th.length;document.getElementById('statTurnosSub').textContent=`${pen.length} pendientes`;
@@ -4281,7 +4292,7 @@ async function getTurnoDeRegistro(){
   const cerrados = arqs.filter(a =>
     a.fecha === td &&
     Number(a.local) === local &&
-    a.cerrado === true
+    (a.cerrado === true || a.cerrado === 1)
   ).length;
 
   // turno = arqueos cerrados + 1, con cap en 2.
