@@ -1226,14 +1226,14 @@ async function supaFetch(method,table,query,body,extraHeaders={}){
 // INDEXEDDB (CACHÉ LOCAL / FALLBACK OFFLINE)
 // ══════════════════════════════════════════════════════════════
 let db;
-const DB_NAME='TajosOS',DB_VER=5;
+const DB_NAME='TajosOS',DB_VER=6;
 function initDB(){
   return new Promise((res,rej)=>{
     const r=indexedDB.open(DB_NAME,DB_VER);
     r.onupgradeneeded=e=>{
       const d=e.target.result;
       ['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos',
-       'cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd']
+       'cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago']
         .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id',autoIncrement:true});});
     };
     r.onsuccess=e=>{db=e.target.result;res(db);};
@@ -1266,8 +1266,19 @@ async function dbAll(store){
   const tbl=STORE_TABLE[store]||store;
   if(_online){
     try{
-      const rows=await supaFetch('GET',tbl,'select=*&order=id.asc');
-      const mapped=(rows||[]).map(fromDbObj);
+      // Supabase REST devuelve máximo 1000 filas por request.
+      // Paginamos en bloques de 1000 hasta obtener todos los registros.
+      const PAGE=1000;
+      let all=[];
+      let offset=0;
+      while(true){
+        const rows=await supaFetch('GET',tbl,`select=*&order=id.asc&limit=${PAGE}&offset=${offset}`);
+        if(!rows||rows.length===0) break;
+        all=all.concat(rows);
+        if(rows.length<PAGE) break; // última página
+        offset+=PAGE;
+      }
+      const mapped=all.map(fromDbObj);
       // Actualizar caché local en background
       _idbReplaceAll(store,mapped).catch(()=>{});
       return mapped;
@@ -1638,11 +1649,6 @@ function selectLocal(n){
 // ══════════════════════════════════════════════════════════════
 // [11] MODALES
 // ══════════════════════════════════════════════════════════════
-
-function normLocal(v){
-  return Number(v?.local ?? v?.local_id ?? 0);
-}
-
 function openModal(id,extra){
   // Close any open modal first
   document.querySelectorAll('.modal-overlay.visible').forEach(m=>{if(m.id!==id)m.classList.remove('visible');});
@@ -2330,13 +2336,13 @@ async function renderAgenda(){
   document.getElementById('agendaFechaLabel').textContent=
     ST.agendaFecha.toLocaleDateString('es-PY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
+  // Asegurar bloqueos actualizados para la sucursal activa
+  await _cargarBloqueos();
+
   const barbs  = await dbAll('barberos');
   const bf     = barbs.filter(b=>b.local==ST.localActivo||b.local==0);
   const turnos = await dbAll('turnos');
-  const td = turnos.filter(t =>
-  t.fecha === fecha &&
-  Number(t.local ?? t.local_id) === Number(ST.localActivo)
-);
+  const td     = turnos.filter(t=>t.fecha===fecha&&t.local==ST.localActivo);
   const cl     = await dbAll('clientes');
   const cMap   = {};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
   const svcs   = await dbAll('servicios');
@@ -2612,14 +2618,14 @@ async function guardarTurno(){
   const conflicto=all.filter(t=>t.fecha===fecha&&Number(t.barberoId||t.barbero_id)===Number(bId)&&t.local==local&&t.estado!=='cancelado')
     .some(t=>{
       const s=_turnoSlots(t.servicios,svcsAll);
+      const horaFinExistente=_addSlots(t.hora,s);
       for(let i=0;i<s;i++){
         const slotEx=_addSlots(t.hora,i);
         if(!horasNuevo.has(slotEx)) continue;
-        // El slot coincide — verificar si es el slot de fin del existente
-        // y a la vez el slot de inicio del nuevo (inicio del nuevo = hora).
-        // En ese caso NO hay conflicto: el nuevo turno empieza cuando el anterior termina.
-        const horaFinExistente=_addSlots(t.hora,s);
-        if(slotEx===hora&&hora===horaFinExistente) continue;
+        // El único caso permitido: el nuevo turno empieza exactamente cuando termina el existente.
+        // Eso significa slotEx === hora (inicio del nuevo) Y slotEx es el último slot del existente
+        // es decir i === s-1 Y horaFinExistente === hora
+        if(slotEx===hora && horaFinExistente===hora) continue;
         return true;
       }
       return false;
@@ -3309,7 +3315,7 @@ async function refreshDash(){
   const cl=await dbAll('clientes');const barbs=await dbAll('barberos');
   const td=hoy();const lc=cobros.filter(c=>c.local==ST.localActivo);const hc=lc.filter(c=>c.fecha===td);
   const tot=hc.reduce((s,c)=>s+c.total,0);const com=calcComisionLista(hc);
-  const th=turnos.filter(t=>t.fecha===td&&normLocal(t) === Number(ST.localActivo));
+  const th=turnos.filter(t=>t.fecha===td&&t.local==ST.localActivo);
   const pen=th.filter(t=>t.estado!=='completado'&&t.estado!=='cancelado');
   document.getElementById('statIngresos').textContent=fmt(tot);document.getElementById('statIngSub').textContent=`${hc.length} servicios`;
   document.getElementById('statTurnos').textContent=th.length;document.getElementById('statTurnosSub').textContent=`${pen.length} pendientes`;
