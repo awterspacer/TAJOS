@@ -1248,12 +1248,13 @@ const _idbDel=(s,id)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrit
 
 // Vaciar y repoblar un store local con un array de registros
 async function _idbReplaceAll(store, rows){
-  const existing=await _idbAll(store);
-  for(const item of existing)await _idbDel(store,item.id);
+  if(!db)return;
+  const tx=db.transaction(store,'readwrite');
+  const os=tx.objectStore(store);
+  await new Promise((res,rej)=>{const r=os.clear();r.onsuccess=res;r.onerror=rej;});
   for(const item of rows){
-    const copy={...item};
-    if(!copy.id)delete copy.id;
-    await _idbAdd(store,copy);
+    if(!item||item.id===undefined||item.id===null)continue;
+    await new Promise((res,rej)=>{const r=os.put(item);r.onsuccess=res;r.onerror=rej;});
   }
 }
 
@@ -1266,20 +1267,19 @@ async function dbAll(store){
   const tbl=STORE_TABLE[store]||store;
   if(_online){
     try{
-      // Supabase REST devuelve máximo 1000 filas por request.
-      // Paginamos en bloques de 1000 hasta obtener todos los registros.
       const PAGE=1000;
       let all=[];
       let offset=0;
       while(true){
-        const rows=await supaFetch('GET',tbl,`select=*&order=id.asc&limit=${PAGE}&offset=${offset}`);
+        const from=offset;
+        const to=offset+PAGE-1;
+        const rows=await supaFetch('GET',tbl,'select=*&order=id.asc',null,{'Range':`${from}-${to}`,'Range-Unit':'items'});
         if(!rows||rows.length===0) break;
         all=all.concat(rows);
-        if(rows.length<PAGE) break; // última página
+        if(rows.length<PAGE) break;
         offset+=PAGE;
       }
       const mapped=all.map(fromDbObj);
-      // Actualizar caché local en background
       _idbReplaceAll(store,mapped).catch(()=>{});
       return mapped;
     }catch(e){console.warn('dbAll Supabase error, usando IndexedDB:',e);}
@@ -1311,16 +1311,16 @@ async function dbAdd(store,data){
       const rows=await supaFetch('POST',tbl,null,body);
       if(rows&&rows.length){
         const saved=fromDbObj(rows[0]);
-        // Supabase guardó correctamente — solo actualizar cache local, NO encolar offline
         _idbAdd(store,saved).catch(()=>{});
         return saved.id;
       }
-      // Supabase respondió OK pero sin datos (no debería pasar con Prefer:return=representation)
-      // En este caso tampoco encolamos para evitar duplicado: relanzar para que caiga al fallback
-      throw new Error('Supabase POST returned empty');
+      // Supabase devolvió vacío — puede ser RLS sin política SELECT,
+      // o Prefer:return=representation ignorado. El registro SÍ se insertó
+      // (no hubo error HTTP). Guardamos en cache local y continuamos.
+      const localId=await _idbAdd(store,{...data});
+      return localId;
     }catch(e){console.warn('dbAdd Supabase error, guardando offline:',e);}
   }
-  // Solo llegar aquí si estamos offline O si Supabase falló antes de confirmar el guardado
   const localId=await _idbAdd(store,{...data});
   addPending({type:'insert',store,data:{...data,id:localId}});
   return localId;
