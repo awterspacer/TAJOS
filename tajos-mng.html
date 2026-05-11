@@ -2195,7 +2195,7 @@ async function guardarBarbero(){
   const id=document.getElementById('barberoEditId').value;
   const loginPortal=document.getElementById('barberoLoginPortal').value.trim().toLowerCase();
   const pinPortal=document.getElementById('barbaroPinPortal').value.trim();
-  const data={nombre:document.getElementById('barberoNombre').value.trim(),apellido:document.getElementById('barberoApellido').value.trim(),fechaIngreso:document.getElementById('barberoIngreso').value,local:+document.getElementById('barberoLocal').value,celular:document.getElementById('barberoCelular').value.trim(),email:document.getElementById('barberoEmail').value.trim()};
+  const data={nombre:document.getElementById('barberoNombre').value.trim(),apellido:document.getElementById('barberoApellido').value.trim(),fechaIngreso:document.getElementById('barberoIngreso').value,local:+document.getElementById('barberoLocal').value,celular:document.getElementById('barberoCelular').value.trim(),email:document.getElementById('barberoEmail').value.trim(),comision:+document.getElementById('barberoComision').value||50};
   if(!data.nombre||!data.apellido)return toast('Nombre y apellido son requeridos','error');
   if(!loginPortal)return toast('El usuario del portal es requerido','error');
   if(!id&&(!pinPortal||pinPortal.length<4))return toast('El PIN debe tener al menos 4 caracteres','error');
@@ -2250,6 +2250,7 @@ async function editarBarbero(id){
   document.getElementById('barberoLocal').value=b.local;
   document.getElementById('barberoEmail').value=b.email||'';
   document.getElementById('barberoCelular').value=b.celular||'';
+  document.getElementById('barberoComision').value=b.comision||50;
   // Cargar credenciales del portal
   const bUsers=await dbAll('barberoUsers');
   // Normalizar IDs a número para compatibilidad con Supabase y IndexedDB
