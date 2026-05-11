@@ -941,9 +941,13 @@ async function verTurno(id){
 // ══ SERVICIOS ══
 async function renderServicios(){
   const bId=Number(ST.barbero.id);
-  const pct=(ST.barbero.comision||50)/100;
   const PROD_COMIS_PCT=0.10;
   const cobros=await dbAll('cobros');
+  const servicios=await dbAll('servicios');
+  const productos=await dbAll('productos');
+  // Mapas para lookup rápido
+  const sMap={};servicios.forEach(s=>sMap[s.id]={...s});
+  const pMap={};productos.forEach(p=>pMap[p.id]={...p});
   cobros.sort((a,b)=>b.fecha>a.fecha?1:-1);
   const td=hoy();
   const fechaFiltro=document.getElementById('servFechaFiltro').value||td;
@@ -951,16 +955,16 @@ async function renderServicios(){
   const cobrosFiltrados=misCobros.filter(c=>c.fecha===fechaFiltro);
   const cobrosMes=misCobros.filter(c=>c.fecha&&c.fecha.startsWith(td.slice(0,7)));
 
-  // Stats del día seleccionado (servicios + productos comisionables)
+  // Stats del día seleccionado - comisión según servicio/producto
   const comDia=cobrosFiltrados.reduce((s,c)=>{
-    const cs=(c.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0);
+    const cs=(c.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).reduce((a,i)=>a+(i.precio||0)*(sMap[i.id].comision||0)/100,0);
     const cp=(c.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+(i.precio||0)*PROD_COMIS_PCT,0);
     return s+cs+cp;
   },0);
   const cntDia=cobrosFiltrados.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').length,0);
-  // Stats del mes (servicios + productos comisionables)
+  // Stats del mes
   const comMes=cobrosMes.reduce((s,c)=>{
-    const cs=(c.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0);
+    const cs=(c.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).reduce((a,i)=>a+(i.precio||0)*(sMap[i.id].comision||0)/100,0);
     const cp=(c.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+(i.precio||0)*PROD_COMIS_PCT,0);
     return s+cs+cp;
   },0);
@@ -982,7 +986,7 @@ async function renderServicios(){
   const rows=sorted.map(co=>{
     const svcs=(co.items||[]).filter(i=>i.tipo==='servicio').map(i=>i.nombre).join(', ')||'—';
     const prodsComis=(co.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).map(i=>i.nombre).join(', ')||'—';
-    const comServ=(co.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0);
+    const comServ=(co.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).reduce((a,i)=>a+(i.precio||0)*(sMap[i.id].comision||0)/100,0);
     const comProd=(co.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+(i.precio||0)*PROD_COMIS_PCT,0);
     const comision=comServ+comProd;
     totalComision+=comision;
