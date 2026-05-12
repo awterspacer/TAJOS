@@ -1066,6 +1066,8 @@ const FIELD_TO_DB = {
   metodoPago:'metodo_pago', ultimoUso:'ultimo_uso',
   montoSolicitado:'monto_solicitado', montoAprobado:'monto_aprobado',
   fechaSolicitud:'fecha_solicitud', notaSolicitud:'nota_solicitud',
+  createdAt:'created_at',
+  updatedAt:'updated_at',
   notaAdmin:'nota_admin', fechaAprobacion:'fecha_aprobacion',
   barberoNombre:'barbero_nombre', clienteNombre:'cliente_nombre',
   registradoPor:'registrado_por', createdAt:'created_at',
@@ -1226,7 +1228,7 @@ async function supaFetch(method,table,query,body,extraHeaders={}){
 // INDEXEDDB (CACHÉ LOCAL / FALLBACK OFFLINE)
 // ══════════════════════════════════════════════════════════════
 let db;
-const DB_NAME='TajosOS',DB_VER=6;
+const DB_NAME='TajosOS',DB_VER=7;
 function initDB(){
   return new Promise((res,rej)=>{
     const r=indexedDB.open(DB_NAME,DB_VER);
@@ -1234,17 +1236,17 @@ function initDB(){
       const d=e.target.result;
       ['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos',
        'cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago']
-        .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id',autoIncrement:true});});
+        .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});
     };
     r.onsuccess=e=>{db=e.target.result;res(db);};
     r.onerror=e=>rej(e.target.error);
   });
 }
 const _idbAll=s=>new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).getAll();r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
-const _idbGet=(s,id)=>new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).get(Number(id));r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
-const _idbAdd=(s,d)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).add(d);r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
+const _idbGet=(s,id)=>new Promise((res,rej)=>{const r=db.transaction(s,'readonly').objectStore(s).get(id);r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
+const _idbAdd=(s,d)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).put(d);r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
 const _idbPut=(s,d)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).put(d);r.onsuccess=()=>res(r.result);r.onerror=e=>rej(e);});
-const _idbDel=(s,id)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).delete(Number(id));r.onsuccess=()=>res();r.onerror=e=>rej(e);});
+const _idbDel=(s,id)=>new Promise((res,rej)=>{const r=db.transaction(s,'readwrite').objectStore(s).delete(id);r.onsuccess=()=>res();r.onerror=e=>rej(e);});
 
 // Vaciar y repoblar un store local con un array de registros
 async function _idbReplaceAll(store, rows){
@@ -1280,7 +1282,7 @@ async function dbAll(store){
         offset+=PAGE;
       }
       const mapped=all.map(fromDbObj);
-      _idbReplaceAll(store,mapped).catch(()=>{});
+      await _idbReplaceAll(store,mapped);
       return mapped;
     }catch(e){console.warn('dbAll Supabase error, usando IndexedDB:',e);}
   }
@@ -1311,7 +1313,7 @@ async function dbAdd(store,data){
       const rows=await supaFetch('POST',tbl,null,body);
       if(rows&&rows.length){
         const saved=fromDbObj(rows[0]);
-        _idbAdd(store,saved).catch(()=>{});
+        await _idbAdd(store,saved);
         return saved.id;
       }
       // Supabase devolvió vacío — puede ser RLS sin política SELECT,
@@ -2645,7 +2647,7 @@ async function guardarTurno(){
   const cl=await dbAll('clientes');const c=cl.find(x=>x.id===cId);
   const barbs=await dbAll('barberos');const b=barbs.find(x=>x.id===bId);
   const serviciosGuardados=[...ST.turnoServTemp];
-  await dbAdd('turnos',{clienteId:cId,clienteNombre:c?c.nombre+' '+c.apellido:'',barberoId:bId,fecha,hora,local,servicios:serviciosGuardados,notas,estado:'pendiente',creado:new Date().toISOString()});
+  await dbAdd('turnos',{clienteId:cId,clienteNombre:c?c.nombre+' '+c.apellido:'',barberoId:bId,fecha,hora,local,servicios:serviciosGuardados,notas,estado:'pendiente'});
   await logAct(`Agendó turno: ${hora} del ${fecha} · ${c?c.nombre+' '+c.apellido:'sin cliente'}`);
   toast('Turno agendado','success');closeModal('modalNuevoTurno');
   ST.turnoServTemp=[];renderTurnoChips();document.getElementById('turnoNotas').value='';
