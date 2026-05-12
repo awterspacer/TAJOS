@@ -2252,7 +2252,7 @@ async function editarBarbero(id){
   document.getElementById('barberoLocal').value=b.local;
   document.getElementById('barberoEmail').value=b.email||'';
   document.getElementById('barberoCelular').value=b.celular||'';
-  document.getElementById('barberoComision').value=b.comision||50;
+  // document.getElementById('barberoComision').value=b.comision||50;
   // Cargar credenciales del portal
   const bUsers=await dbAll('barberoUsers');
   // Normalizar IDs a número para compatibilidad con Supabase y IndexedDB
