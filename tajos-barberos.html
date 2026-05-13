@@ -530,7 +530,7 @@ async function supaFetch(method,table,query,body,extraHeaders={}){
 
 // IndexedDB (cache local / fallback offline)
 let db;
-const DB_NAME='TajosOS',DB_VER=4;
+const DB_NAME='TajosOS',DB_VER=7;
 function initDB(){
   return new Promise((res,rej)=>{
     const r=indexedDB.open(DB_NAME,DB_VER);
@@ -1015,23 +1015,25 @@ function setPeriodo(p,el){
 
 async function renderReportes(){
   const bId=Number(ST.barbero.id);
-  const pct=(ST.barbero.comision||50)/100;
   const {desde,hasta,label}=getPeriodoRange(ST.reportePeriodo);
   document.getElementById('reportePeriodoLabel').textContent=label;
 
   const cobros=await dbAll('cobros');
+  const servicios=await dbAll('servicios');
   const egresos=await dbAll('egresos');
   const adelantos=await dbAll('adelantos');
+  
+  const sMap={};servicios.forEach(s=>sMap[s.id]={...s});
 
   const misCobros=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===bId&&c.fecha>=desde&&c.fecha<=hasta);
   const misEgresos=egresos.filter(e=>Number(e.barberoId||e.barbero_id)===bId&&e.fecha>=desde&&e.fecha<=hasta);
   const misAdelantos=adelantos.filter(a=>Number(a.barberoId||a.barbero_id)===bId&&a.estado==='aprobado'&&a.fechaAprobacion&&a.fechaAprobacion>=desde&&a.fechaAprobacion<=hasta);
 
-  // Comisiones por servicios SOLAMENTE (stat card)
-  const comServ=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+i.precio*pct,0),0);
-  // Comisiones por productos comisionables (10% fijo)
+  // Comisiones por servicios usando comisión de cada servicio
   const PROD_COMIS_PCT=0.10;
-  const comProd=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+i.precio*PROD_COMIS_PCT,0),0);
+  const comServ=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).reduce((a,i)=>a+(i.precio||0)*(sMap[i.id].comision||0)/100,0),0);
+  // Comisiones por productos comisionables (10% fijo)
+  const comProd=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+(i.precio||0)*PROD_COMIS_PCT,0),0);
   // Egresos/consumos
   const totalEgresos=misEgresos.reduce((s,e)=>s+(e.monto||0),0);
   // Adelantos
@@ -1049,8 +1051,9 @@ async function renderReportes(){
   // ── Tabla servicios ──
   const servRows=[];
   misCobros.forEach(co=>{
-    (co.items||[]).filter(i=>i.tipo==='servicio').forEach(i=>{
-      servRows.push({fecha:co.fecha,nombre:i.nombre,precio:i.precio,comision:i.precio*pct});
+    (co.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).forEach(i=>{
+      const servComision=(i.precio||0)*(sMap[i.id].comision||0)/100;
+      servRows.push({fecha:co.fecha,nombre:i.nombre,precio:i.precio,comision:servComision});
     });
   });
   if(servRows.length){
