@@ -558,7 +558,25 @@ async function _idbReplaceAll(store,rows){
 // Capa hibrida publica
 async function dbAll(store){
   const tbl=STORE_TABLE[store]||store;
-  if(_online){try{const rows=await supaFetch('GET',tbl,'select=*&order=id.asc');const mapped=(rows||[]).map(fromDbObj);_idbReplaceAll(store,mapped).catch(()=>{});return mapped;}catch(e){console.warn('dbAll fallback:',e);}}
+  if(_online){
+    try{
+      const PAGE=1000;
+      let all=[];
+      let offset=0;
+      while(true){
+        const from=offset;
+        const to=offset+PAGE-1;
+        const rows=await supaFetch('GET',tbl,'select=*&order=id.asc',null,{'Range':`${from}-${to}`,'Range-Unit':'items'});
+        if(!rows||rows.length===0) break;
+        all=all.concat(rows);
+        if(rows.length<PAGE) break;
+        offset+=PAGE;
+      }
+      const mapped=all.map(fromDbObj);
+      await _idbReplaceAll(store,mapped);
+      return mapped;
+    }catch(e){console.warn('dbAll fallback:',e);}
+  }
   return _idbAll(store);
 }
 async function dbGet(store,id){
