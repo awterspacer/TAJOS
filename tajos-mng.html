@@ -1091,6 +1091,7 @@ const SUPA_COLS={
   barberos:new Set(['id','nombre','apellido','fecha_ingreso','local','comision','celular','email','activo','created_at','updated_at']),
   barbero_users:new Set(['id','barbero_id','login','pin','activo','ultimo_acceso','created_at']),
   clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
+  clientes_reviewed:new Set(['id','cliente_id','nombre','apellido','numero','fecha_envio','created_at']),
   servicios:new Set(['id','nombre','precio','duracion','categoria','descripcion','comision','activo','created_at','updated_at']),
   productos:new Set(['id','nombre','precio','stock','categoria','descripcion','comisionable','activo','created_at','updated_at']),
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','creado','created_at','updated_at']),
@@ -1228,14 +1229,14 @@ async function supaFetch(method,table,query,body,extraHeaders={}){
 // INDEXEDDB (CACHÉ LOCAL / FALLBACK OFFLINE)
 // ══════════════════════════════════════════════════════════════
 let db;
-const DB_NAME='TajosOS',DB_VER=7;
+const DB_NAME='TajosOS',DB_VER=8;
 function initDB(){
   return new Promise((res,rej)=>{
     const r=indexedDB.open(DB_NAME,DB_VER);
     r.onupgradeneeded=e=>{
       const d=e.target.result;
       ['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos',
-       'cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago']
+       'cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago','clientesReviewed']
         .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});
     };
     r.onsuccess=e=>{db=e.target.result;res(db);};
@@ -1423,7 +1424,7 @@ async function cargarMetodos(){
     }
   }catch(e){console.warn('cargarMetodos fallback:',e);}
 }
-const STORES=['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos','cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda'];
+const STORES=['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos','cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','clientes_reviewed'];
 const fmt=n=>'Gs. '+(n||0).toLocaleString('es-PY',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD=d=>{if(!d)return '';return new Date(d+'T00:00:00').toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric'});};
 const toDS=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${dd}`;};
@@ -2252,7 +2253,7 @@ async function editarBarbero(id){
   document.getElementById('barberoLocal').value=b.local;
   document.getElementById('barberoEmail').value=b.email||'';
   document.getElementById('barberoCelular').value=b.celular||'';
-  // document.getElementById('barberoComision').value=b.comision||50;
+ document.getElementById('barberoComision').value=b.comision||50;
   // Cargar credenciales del portal
   const bUsers=await dbAll('barberoUsers');
   // Normalizar IDs a número para compatibilidad con Supabase y IndexedDB
@@ -2604,6 +2605,36 @@ function enviarWhatsAppBarbero(barbero,clienteNombre,fecha,hora,servicios){
   window.open(url,'_blank');
 }
 
+async function enviarWhatsAppReview(cliente,barbero){
+  const cel=(cliente.celular||'').replace(/\D/g,'');
+  if(!cel){console.warn('Cliente sin celular, no se envía review');return false;}
+  
+  // Verificar si ya fue enviado el link
+  const clientesReviewed=await dbAll('clientesReviewed');
+  if(clientesReviewed.find(cr=>cr.numero===cliente.celular)){
+    console.log('Cliente ya recibió link de review, no se envía de nuevo');
+    return false;
+  }
+  
+  const msg=`Fuiste atendido por ${barbero.nombre||'nuestro equipo'}! Evaluá la experiencia de hoy y participá de descuentos exclusivos! Entrá al enlace: https://g.page/r/CepTVx2uCAgDEAI/review
+
+Sistema TAJOS`;
+  
+  const url='https://wa.me/'+cel+'?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
+  
+  // Registrar que se envió el link
+  await dbAdd('clientesReviewed',{
+    clienteId:cliente.id,
+    nombre:cliente.nombre,
+    apellido:cliente.apellido,
+    numero:cliente.celular,
+    fechaEnvio:toDS(new Date())
+  });
+  
+  return true;
+}
+
 async function guardarTurno(){
   const cId=+document.getElementById('turnoCliente').value||null;
   const bId=+document.getElementById('turnoBarbero').value||null;
@@ -2757,7 +2788,16 @@ async function guardarCobro(){
   cajero:ST.user?.login||'?'
   });
   await logAct(`Registró cobro de ${fmt(tot)} · Cliente: ${c?c.nombre+' '+c.apellido:'sin registro'} · Barbero: ${b?b.nombre+' '+b.apellido:'?'}`);
-  toast('Cobro registrado','success');closeModal('modalNuevoCobro');
+  toast('Cobro registrado','success');
+  
+  // Enviar link de review por WhatsApp si cliente tiene celular y barbero asignado
+  if(c && c.celular && b){
+    try{
+      await enviarWhatsAppReview(c, b);
+    }catch(e){console.warn('Error al enviar WhatsApp de review:', e);}
+  }
+  
+  closeModal('modalNuevoCobro');
   if(window._turnoACobrar){
     try{const turno=await dbGet('turnos',window._turnoACobrar);if(turno&&turno.estado!=='completado'){turno.estado='completado';await dbPut('turnos',turno);}}catch(e){}
     window._turnoACobrar=null;renderAgenda();
@@ -3194,6 +3234,8 @@ async function guardarArqueo(){
     const {cajaInicial,efectivoEntregado}=await _persistirArqueo(true);
     const _hc=new Date().toTimeString().slice(0,5);
     await saveCajaTurno({horaCierre:_hc});
+    // Forzar recálculo de turno: después de cerrar turno 1, el próximo turno debe recalcularse
+    ST.turnoActivo = null;
     await logAct(`Guardó cierre de caja · ${localNombre(ST.localActivo)} · Turno ${getTurnoActual()} · Caja: ${fmt(cajaInicial)} · Entregado: ${fmt(efectivoEntregado)} · Cierre: ${_hc}`);
     toast('Cierre de caja enviado al administrador','success');
     closeModal('modalArqueo');refreshCaja();
