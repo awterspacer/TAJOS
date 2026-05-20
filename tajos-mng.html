@@ -1091,7 +1091,6 @@ const SUPA_COLS={
   barberos:new Set(['id','nombre','apellido','fecha_ingreso','local','comision','celular','email','activo','created_at','updated_at']),
   barbero_users:new Set(['id','barbero_id','login','pin','activo','ultimo_acceso','created_at']),
   clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
-  clientes_reviewed:new Set(['id','cliente_id','nombre','apellido','numero','fecha_envio','created_at']),
   servicios:new Set(['id','nombre','precio','duracion','categoria','descripcion','comision','activo','created_at','updated_at']),
   productos:new Set(['id','nombre','precio','stock','categoria','descripcion','comisionable','activo','created_at','updated_at']),
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','creado','created_at','updated_at']),
@@ -1229,14 +1228,14 @@ async function supaFetch(method,table,query,body,extraHeaders={}){
 // INDEXEDDB (CACHÉ LOCAL / FALLBACK OFFLINE)
 // ══════════════════════════════════════════════════════════════
 let db;
-const DB_NAME='TajosOS',DB_VER=8;
+const DB_NAME='TajosOS',DB_VER=7;
 function initDB(){
   return new Promise((res,rej)=>{
     const r=indexedDB.open(DB_NAME,DB_VER);
     r.onupgradeneeded=e=>{
       const d=e.target.result;
       ['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos',
-       'cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago','clientesReviewed']
+       'cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago']
         .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});
     };
     r.onsuccess=e=>{db=e.target.result;res(db);};
@@ -1424,7 +1423,7 @@ async function cargarMetodos(){
     }
   }catch(e){console.warn('cargarMetodos fallback:',e);}
 }
-const STORES=['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos','cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','clientes_reviewed'];
+const STORES=['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos','cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda'];
 const fmt=n=>'Gs. '+(n||0).toLocaleString('es-PY',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD=d=>{if(!d)return '';return new Date(d+'T00:00:00').toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric'});};
 const toDS=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${dd}`;};
@@ -2148,13 +2147,21 @@ async function verHistCliente(id){
 // ══════════════════════════════════════════════════════════════
 async function renderBarberos(){
   let barbs=await dbAll('barberos');
-  barbs=[...barbs].sort((a,b)=>(a.nombre+' '+a.apellido).localeCompare(b.nombre+' '+b.apellido,'es'));const cobros=await dbAll('cobros');const td=hoy();
+  barbs=[...barbs].sort((a,b)=>(a.nombre+' '+a.apellido).localeCompare(b.nombre+' '+b.apellido,'es'));
+  const cobros=await dbAll('cobros');
+  const td=hoy();
+  
+  // CRÍTICO: Si es cajero, filtrar cobros por su turno actual
+  const turno=await getTurnoDeRegistro();
+  const isCajero=ST.user?.rol!=='admin';
+  const cobrosFiltered=isCajero?cobros.filter(c=>Number(c.turno)===Number(turno)):cobros;
+  
   const bUsers=await dbAll('barberoUsers');
   const adelantos=await dbAll('adelantos');
   const list=document.getElementById('barberosList');
   if(!barbs.length){list.innerHTML='<div class="empty-state" style="grid-column:1/-1"><div class="icon">💈</div><p>No hay barberos</p></div>';return;}
   list.innerHTML=barbs.map(b=>{
-    const bc=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));
+    const bc=cobrosFiltered.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));
     const bh=bc.filter(c=>c.fecha===td);
     const th=bh.reduce((s,c)=>s+c.total,0);
     const comH=calcComisionLista(bh);
@@ -2605,36 +2612,6 @@ function enviarWhatsAppBarbero(barbero,clienteNombre,fecha,hora,servicios){
   window.open(url,'_blank');
 }
 
-async function enviarWhatsAppReview(cliente,barbero){
-  const cel=(cliente.celular||'').replace(/\D/g,'');
-  if(!cel){console.warn('Cliente sin celular, no se envía review');return false;}
-  
-  // Verificar si ya fue enviado el link
-  const clientesReviewed=await dbAll('clientesReviewed');
-  if(clientesReviewed.find(cr=>cr.numero===cliente.celular)){
-    console.log('Cliente ya recibió link de review, no se envía de nuevo');
-    return false;
-  }
-  
-  const msg=`Fuiste atendido por ${barbero.nombre||'nuestro equipo'}! Evaluá la experiencia de hoy y participá de descuentos exclusivos! Entrá al enlace: https://g.page/r/CepTVx2uCAgDEAI/review
-
-Sistema TAJOS`;
-  
-  const url='https://wa.me/'+cel+'?text='+encodeURIComponent(msg);
-  window.open(url,'_blank');
-  
-  // Registrar que se envió el link
-  await dbAdd('clientesReviewed',{
-    clienteId:cliente.id,
-    nombre:cliente.nombre,
-    apellido:cliente.apellido,
-    numero:cliente.celular,
-    fechaEnvio:toDS(new Date())
-  });
-  
-  return true;
-}
-
 async function guardarTurno(){
   const cId=+document.getElementById('turnoCliente').value||null;
   const bId=+document.getElementById('turnoBarbero').value||null;
@@ -2788,16 +2765,7 @@ async function guardarCobro(){
   cajero:ST.user?.login||'?'
   });
   await logAct(`Registró cobro de ${fmt(tot)} · Cliente: ${c?c.nombre+' '+c.apellido:'sin registro'} · Barbero: ${b?b.nombre+' '+b.apellido:'?'}`);
-  toast('Cobro registrado','success');
-  
-  // Enviar link de review por WhatsApp si cliente tiene celular y barbero asignado
-  if(c && c.celular && b){
-    try{
-      await enviarWhatsAppReview(c, b);
-    }catch(e){console.warn('Error al enviar WhatsApp de review:', e);}
-  }
-  
-  closeModal('modalNuevoCobro');
+  toast('Cobro registrado','success');closeModal('modalNuevoCobro');
   if(window._turnoACobrar){
     try{const turno=await dbGet('turnos',window._turnoACobrar);if(turno&&turno.estado!=='completado'){turno.estado='completado';await dbPut('turnos',turno);}}catch(e){}
     window._turnoACobrar=null;renderAgenda();
@@ -2812,7 +2780,11 @@ async function refreshCaja(){
   const barbs=await dbAll('barberos');const cl=await dbAll('clientes');
   const bMap={};barbs.forEach(b=>bMap[String(b.id)]=b.nombre+' '+b.apellido);
   const cMap={};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
-  const lc=cobros.filter(c=>Number(c.local)===Number(ST.localActivo));
+  
+  // CRÍTICO: Filtrar por turno actual del cajero
+  const turno=await getTurnoDeRegistro();
+  const lc=cobros.filter(c=>Number(c.local)===Number(ST.localActivo)&&Number(c.turno)===Number(turno));
+  
   const hoyC=lc.filter(c=>c.fecha===fecha);
   const tot=hoyC.reduce((s,c)=>s+c.total,0);
   const ef=hoyC.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((a,p)=>a+(parseFloat(p.monto)||0),0),0);
@@ -2822,7 +2794,6 @@ async function refreshCaja(){
   document.getElementById('cajaEfectivo').textContent=fmt(ef);
   document.getElementById('cajaDigital').textContent=fmt(dig);
   // Leer caja inicial siempre desde caja_turnos
-  const turno=await getTurnoDeRegistro();
   let ct=await getCajaTurno(fecha,Number(ST.localActivo),Number(turno))||null;
   // Si el turno actual no tiene caja inicial, mostrar referencia del turno anterior
   const refEl=document.getElementById('cajaCajaInicialRef');
@@ -4322,18 +4293,16 @@ function getTurnoActual(){
 }
 
 async function getTurnoDeRegistro(){
-  // Fuente de verdad: arqueos con cerrado===true del día y local.
+  // FUENTE DE VERDAD: arqueos con cerrado===true del día y local.
   // Un turno existe y está cerrado solo cuando el cajero completó el arqueo.
   // Cualquier otra interrupción (F5, cierre de ventana, logout, caída de red)
   // NO cuenta como cierre — el cajero retoma el mismo turno al volver.
   // Admin nunca tiene turno de caja — retorna 0 para que no escriba en cajaTurnos.
   if(ST.user?.rol === 'admin') return 0;
 
-  // Si ya hay turno válido en memoria (misma sesión, mismo día) conservarlo.
-  // Esto evita recalcular en cada cobro y mantiene estabilidad durante la sesión.
-  const mem = Number(ST.turnoActivo);
-  if(mem >= 1) return mem;
-
+  // CRÍTICO: SIEMPRE recalcular desde arqueos cerrados.
+  // NUNCA confiar en ST.turnoActivo de memoria porque puede venir de sesión anterior.
+  // Esto garantiza que turno 2 NUNCA use turno:1 después de que turno 1 cierra.
   const td = hoy();
   const local = Number(ST.localActivo);
   const arqs = await dbAll('arqueos');
@@ -4347,7 +4316,8 @@ async function getTurnoDeRegistro(){
   ).length;
 
   // turno = arqueos cerrados + 1, con cap en 2.
-  ST.turnoActivo = Math.min(cerrados + 1, 2);
+  const turnoCalculado = Math.min(cerrados + 1, 2);
+  ST.turnoActivo = turnoCalculado;
   return ST.turnoActivo;
 }
 function getCajaKey(){
@@ -4679,7 +4649,7 @@ async function eliminarBloqueo(id){
 // ══════════════════════════════════════════════════════════════
 initDB().then(async()=>{
   await cargarMetodos();
-  await seedData();
+  // seedData() ELIMINADO: servicios, barberos, productos se crean SOLO manualmente por admin
   document.getElementById('cajaFechaFiltro').value=hoy();
   verificarAlertaMensual();
   // Restaurar sesion si existe
