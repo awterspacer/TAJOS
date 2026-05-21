@@ -1228,7 +1228,7 @@ async function supaFetch(method,table,query,body,extraHeaders={}){
 // INDEXEDDB (CACHÉ LOCAL / FALLBACK OFFLINE)
 // ══════════════════════════════════════════════════════════════
 let db;
-const DB_NAME='TajosOS',DB_VER=7;
+const DB_NAME='TajosOS',DB_VER=8;
 function initDB(){
   return new Promise((res,rej)=>{
     const r=indexedDB.open(DB_NAME,DB_VER);
