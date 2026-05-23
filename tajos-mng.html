@@ -1236,7 +1236,7 @@ function initDB(){
     r.onupgradeneeded=e=>{
       const d=e.target.result;
       ['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos',
-       'cajaTurnos','barberoUser s','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago','clientesReviewed']
+       'cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago','clientesReviewed']
         .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});
     };
     r.onsuccess=e=>{db=e.target.result;res(db);};
