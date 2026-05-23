@@ -1091,6 +1091,7 @@ const SUPA_COLS={
   barberos:new Set(['id','nombre','apellido','fecha_ingreso','local','comision','celular','email','activo','created_at','updated_at']),
   barbero_users:new Set(['id','barbero_id','login','pin','activo','ultimo_acceso','created_at']),
   clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
+  clientes_reviewed:new Set(['id','cliente_id','nombre','apellido','numero','fecha_envio','created_at']),
   servicios:new Set(['id','nombre','precio','duracion','categoria','descripcion','comision','activo','created_at','updated_at']),
   productos:new Set(['id','nombre','precio','stock','categoria','descripcion','comisionable','activo','created_at','updated_at']),
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','creado','created_at','updated_at']),
@@ -1235,7 +1236,7 @@ function initDB(){
     r.onupgradeneeded=e=>{
       const d=e.target.result;
       ['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos',
-       'cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago']
+       'cajaTurnos','barberoUser s','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','metodosPago','clientesReviewed']
         .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});
     };
     r.onsuccess=e=>{db=e.target.result;res(db);};
@@ -1423,7 +1424,7 @@ async function cargarMetodos(){
     }
   }catch(e){console.warn('cargarMetodos fallback:',e);}
 }
-const STORES=['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos','cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda'];
+const STORES=['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos','cajaTurnos','barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda','clientesReviewed'];
 const fmt=n=>'Gs. '+(n||0).toLocaleString('es-PY',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD=d=>{if(!d)return '';return new Date(d+'T00:00:00').toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric'});};
 const toDS=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${dd}`;};
@@ -2612,6 +2613,36 @@ function enviarWhatsAppBarbero(barbero,clienteNombre,fecha,hora,servicios){
   window.open(url,'_blank');
 }
 
+async function enviarWhatsAppReview(cliente,barbero){
+  const cel=(cliente.celular||'').replace(/\D/g,'');
+  if(!cel){console.warn('Cliente sin celular, no se envía review');return false;}
+  
+  // Verificar si ya fue enviado el link
+  const clientesReviewed=await dbAll('clientesReviewed');
+  if(clientesReviewed.find(cr=>cr.numero===cliente.celular)){
+    console.log('Cliente ya recibió link de review, no se envía de nuevo');
+    return false;
+  }
+  
+  const msg=`Fuiste atendido por ${barbero.nombre||'nuestro equipo'}! Evaluá la experiencia de hoy y participá de descuentos exclusivos! Entrá al enlace: https://g.page/r/CepTVx2uCAgDEAI/review
+
+Sistema TAJOS`;
+  
+  const url='https://wa.me/'+cel+'?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
+  
+  // Registrar que se envió el link
+  await dbAdd('clientesReviewed',{
+    clienteId:cliente.id,
+    nombre:cliente.nombre,
+    apellido:cliente.apellido,
+    numero:cliente.celular,
+    fechaEnvio:toDS(new Date())
+  });
+  
+  return true;
+}
+
 async function guardarTurno(){
   const cId=+document.getElementById('turnoCliente').value||null;
   const bId=+document.getElementById('turnoBarbero').value||null;
@@ -2765,7 +2796,16 @@ async function guardarCobro(){
   cajero:ST.user?.login||'?'
   });
   await logAct(`Registró cobro de ${fmt(tot)} · Cliente: ${c?c.nombre+' '+c.apellido:'sin registro'} · Barbero: ${b?b.nombre+' '+b.apellido:'?'}`);
-  toast('Cobro registrado','success');closeModal('modalNuevoCobro');
+  toast('Cobro registrado','success');
+  
+  // Enviar link de review por WhatsApp si cliente tiene celular y barbero asignado
+  if(c && c.celular && b){
+    try{
+      await enviarWhatsAppReview(c, b);
+    }catch(e){console.warn('Error al enviar WhatsApp de review:', e);}
+  }
+  
+  closeModal('modalNuevoCobro');
   if(window._turnoACobrar){
     try{const turno=await dbGet('turnos',window._turnoACobrar);if(turno&&turno.estado!=='completado'){turno.estado='completado';await dbPut('turnos',turno);}}catch(e){}
     window._turnoACobrar=null;renderAgenda();
@@ -3807,36 +3847,10 @@ async function salirSinBackup(){
 // [26] SEED
 // ══════════════════════════════════════════════════════════════
 async function seedData(){
-  const u=await dbAll('usuarios');
-  if(!u.length){
-    await dbAdd('usuarios',{nombre:'Administrador',apellido:'Sistema',login:'admin',password:'2686',rol:'admin',estado:'activo',email:'',ultimoAcceso:''});
-    await dbAdd('usuarios',{nombre:'Recepción',apellido:'Turno 1',login:'rescob',password:'6147',rol:'cajero',estado:'activo',email:'',ultimoAcceso:''});
-    await dbAdd('usuarios',{nombre:'Angel',apellido:'Turno 2',login:'angel',password:'8800',rol:'cajero',estado:'activo',email:'',ultimoAcceso:''});
-  }
-  const s=await dbAll('servicios');
-  if(!s.length){
-    const ss=[{nombre:'Corte Clásico',precio:50000,duracion:30,categoria:'corte',descripcion:'Tijera y máquina, estilo tradicional'},{nombre:'Corte Moderno',precio:70000,duracion:40,categoria:'corte',descripcion:'Fade y técnicas actuales'},{nombre:'Barba',precio:45000,duracion:20,categoria:'barba',descripcion:'Perfilado y afeitado'},{nombre:'Ritual de Barba',precio:80000,duracion:45,categoria:'ritual',descripcion:'Toalla caliente y aceites'},{nombre:'Combo Corte + Barba',precio:90000,duracion:55,categoria:'combo',descripcion:'Corte clásico + perfilado'},{nombre:'Combo Premium',precio:130000,duracion:70,categoria:'combo',descripcion:'Corte moderno + ritual completo'}];
-    for(const x of ss)await dbAdd('servicios',x);
-  }
-  const p=await dbAll('productos');
-  if(!p.length){
-    const pp=[{nombre:'Pomada Suave',precio:40000,stock:15,descripcion:'Fijación suave y brillo'},{nombre:'Pomada Fuerte',precio:40000,stock:12,descripcion:'Máxima fijación'},{nombre:'Aceite de Barba',precio:65000,stock:8,descripcion:'Hidratación y suavizado'},{nombre:'Shampoo para Barba',precio:50000,stock:10,descripcion:'Limpieza suave'}];
-    for(const x of pp)await dbAdd('productos',x);
-  }
-  const b=await dbAll('barberos');
-  if(!b.length){
-    const bb=[{nombre:'Carlos',apellido:'Martínez',fechaIngreso:'2023-01-15',local:1,comision:50,email:''},{nombre:'Juan',apellido:'Pérez',fechaIngreso:'2023-03-20',local:1,comision:50,email:''},{nombre:'Luis',apellido:'García',fechaIngreso:'2023-06-01',local:2,comision:50,email:''}];
-    for(const x of bb)await dbAdd('barberos',x);
-  }
-  // Seed barberoUsers: create portal access for each barbero without one
-  const allBarbs=await dbAll('barberos');
-  const bUsers=await dbAll('barberoUsers');
-  for(const barb of allBarbs){
-    if(!bUsers.find(u=>Number(u.barberoId||u.barbero_id)===Number(barb.id))){
-      const login=barb.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'');
-      await dbAdd('barberoUsers',{barberoId:barb.id,login,pin:'1234',activo:true,ultimoAcceso:''});
-    }
-  }
+  // COMPLETAMENTE DESACTIVADO.
+  // Servicios, barberos, productos, usuarios se crean SOLO manualmente por admin.
+  // Esta función NO HACE NADA y nunca debe hacer nada.
+  console.log('seedData desactivado - datos maestros se crean manualmente');
 }
 
 // ══════════════════════════════════════════════════════════════
