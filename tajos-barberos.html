@@ -653,7 +653,7 @@ async function _cargarBloqueos(local){
 
 const fmt=n=>'Gs. '+(n||0).toLocaleString('es-PY',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD=d=>{if(!d)return '—';return new Date(d+'T00:00:00').toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric'});};
-const toDS=d=>d.toISOString().split('T')[0];
+const toDS=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const hoy=()=>toDS(new Date());
 const ahora=()=>{const n=new Date();return toDS(n)+' '+n.toTimeString().slice(0,5);};
 
