@@ -1079,6 +1079,8 @@ const FIELD_TO_DB = {
   verificadoAt:'verificado_at',
   egresosEfectivo:'egresos_efectivo',
   efectivoEntregado:'efectivo_entregado',
+  totalEfectivo:'total_efectivo',
+  efectivoEsperado:'efectivo_esperado',
   // Caja turnos
   cajaInicialConfirmada:'caja_inicial_confirmada',
   horaInicio:'hora_inicio',
@@ -1097,7 +1099,7 @@ const SUPA_COLS={
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','creado','created_at','updated_at']),
   usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
   historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
-  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','cerrado','created_at']),
+  arqueos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','detalle','total','nota','notas','verificado','verificado_por','verificado_at','egresos_efectivo','efectivo_entregado','total_efectivo','efectivo_esperado','cerrado','created_at']),
   caja_turnos:new Set(['id','fecha','local','turno','turno_label','cajero','caja_inicial','caja_inicial_confirmada','egresos_efectivo','hora_inicio','hora_cierre','created_at','updated_at']),
   bloqueos_agenda:new Set(['id','local','barbero_id','fecha','desde','hasta','motivo','registrado_por','created_at']),
   adelantos:new Set(['id','barbero_id','barbero_nombre','monto_solicitado','monto_aprobado','estado','fecha_solicitud','nota_solicitud','nota_admin','fecha_aprobacion','ts']),
