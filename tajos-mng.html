@@ -1200,7 +1200,12 @@ async function syncPending(){
     }catch(e){remaining.push(op);}
   }
   savePending(remaining);
-  if(ops.length>remaining.length)toast(`☁ ${ops.length-remaining.length} operaciones sincronizadas con Supabase`,'info');
+  if(ops.length>remaining.length){
+    // Invalidar cachés de los stores afectados para no servir datos desactualizados
+    const touched=new Set(ops.filter(op=>!remaining.includes(op)).map(op=>op.store));
+    touched.forEach(invalidateCache);
+    toast(`☁ ${ops.length-remaining.length} operaciones sincronizadas con Supabase`,'info');
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1262,39 +1267,76 @@ async function _idbReplaceAll(store, rows){
 }
 
 // ══════════════════════════════════════════════════════════════
+// CACHÉ DE TABLAS — evita descargar de nuevo (Egress) datos que
+// ya se pidieron hace poco. Se invalida automáticamente en cada
+// escritura (dbAdd/dbPut/dbDel/syncPending) sobre el mismo store,
+// por lo que la app siempre ve datos consistentes con lo escrito.
+// ══════════════════════════════════════════════════════════════
+const _TABLE_CACHE={};     // store -> {data, ts}
+const _TABLE_INFLIGHT={};  // store -> Promise en curso (dedup de llamadas concurrentes)
+const _CACHE_TTL={
+  // catálogos / tablas de baja frecuencia de cambio → cache larga
+  barberos:300000, servicios:300000, productos:300000, metodosPago:300000,
+  categoriasServ:300000, categoriasProd:300000, barberoUsers:180000,
+  clientes:120000, usuarios:120000, bloqueosAgenda:60000,
+  // tablas operativas / de alta frecuencia → cache corta (solo evita refetch inmediato duplicado)
+  cobros:20000, turnos:20000, historial:20000, arqueos:20000,
+  cajaTurnos:20000, adelantos:20000, egresos:20000, giftcards:30000,
+};
+function _cacheTTL(store){return _CACHE_TTL[store]!=null?_CACHE_TTL[store]:15000;}
+function invalidateCache(store){delete _TABLE_CACHE[store];}
+
+// Columnas explícitas a pedir a Supabase (evita `select=*`).
+// Usa el mismo allow-list SUPA_COLS ya definido para escrituras.
+function _selectCols(tbl){
+  const cols=SUPA_COLS[tbl];
+  return cols?Array.from(cols).join(','):'*';
+}
+
+// ══════════════════════════════════════════════════════════════
 // CAPA HÍBRIDA — API pública (reemplaza dbAll/dbGet/dbAdd/dbPut/dbDel)
 // Prioridad: Supabase → si falla o está offline → IndexedDB
 // ══════════════════════════════════════════════════════════════
 
 async function dbAll(store){
   const tbl=STORE_TABLE[store]||store;
-  if(_online){
-    try{
-      const PAGE=1000;
-      let all=[];
-      let offset=0;
-      while(true){
-        const from=offset;
-        const to=offset+PAGE-1;
-        const rows=await supaFetch('GET',tbl,'select=*&order=id.asc',null,{'Range':`${from}-${to}`,'Range-Unit':'items'});
-        if(!rows||rows.length===0) break;
-        all=all.concat(rows);
-        if(rows.length<PAGE) break;
-        offset+=PAGE;
-      }
-      const mapped=all.map(fromDbObj);
-      await _idbReplaceAll(store,mapped);
-      return mapped;
-    }catch(e){console.warn('dbAll Supabase error, usando IndexedDB:',e);}
-  }
-  return _idbAll(store);
+  const cached=_TABLE_CACHE[store];
+  if(cached&&(Date.now()-cached.ts)<_cacheTTL(store)) return cached.data;
+  if(_TABLE_INFLIGHT[store]) return _TABLE_INFLIGHT[store];
+  const p=(async()=>{
+    if(_online){
+      try{
+        const PAGE=1000;
+        let all=[];
+        let offset=0;
+        const cols=_selectCols(tbl);
+        while(true){
+          const from=offset;
+          const to=offset+PAGE-1;
+          const rows=await supaFetch('GET',tbl,`select=${cols}&order=id.asc`,null,{'Range':`${from}-${to}`,'Range-Unit':'items'});
+          if(!rows||rows.length===0) break;
+          all=all.concat(rows);
+          if(rows.length<PAGE) break;
+          offset+=PAGE;
+        }
+        const mapped=all.map(fromDbObj);
+        await _idbReplaceAll(store,mapped);
+        _TABLE_CACHE[store]={data:mapped,ts:Date.now()};
+        return mapped;
+      }catch(e){console.warn('dbAll Supabase error, usando IndexedDB:',e);}
+    }
+    return _idbAll(store);
+  })();
+  _TABLE_INFLIGHT[store]=p;
+  try{ return await p; } finally { delete _TABLE_INFLIGHT[store]; }
 }
 
 async function dbGet(store,id){
   const tbl=STORE_TABLE[store]||store;
   if(_online){
     try{
-      const rows=await supaFetch('GET',tbl,`id=eq.${id}&select=*`);
+      const cols=_selectCols(tbl);
+      const rows=await supaFetch('GET',tbl,`id=eq.${id}&select=${cols}`);
       if(rows&&rows.length){
         const item=fromDbObj(rows[0]);
         _idbPut(store,item).catch(()=>{});
@@ -1312,6 +1354,7 @@ async function dbAdd(store,data){
   if(_online){
     try{
       const rows=await supaFetch('POST',tbl,null,body);
+      invalidateCache(store);
       if(rows&&rows.length){
         const saved=fromDbObj(rows[0]);
         await _idbAdd(store,saved);
@@ -1325,6 +1368,7 @@ async function dbAdd(store,data){
     }catch(e){console.warn('dbAdd Supabase error, guardando offline:',e);}
   }
   const localId=await _idbAdd(store,{...data});
+  invalidateCache(store);
   addPending({type:'insert',store,data:{...data,id:localId}});
   return localId;
 }
@@ -1336,11 +1380,13 @@ async function dbPut(store,data){
   if(_online){
     try{
       await supaFetch('PATCH',tbl,`id=eq.${data.id}`,body);
+      invalidateCache(store);
       _idbPut(store,data).catch(()=>{});
       return;
     }catch(e){console.warn('dbPut Supabase error, guardando offline:',e);}
   }
   await _idbPut(store,data);
+  invalidateCache(store);
   addPending({type:'upsert',store,data});
 }
 
@@ -1349,11 +1395,13 @@ async function dbDel(store,id){
   if(_online){
     try{
       await supaFetch('DELETE',tbl,`id=eq.${id}`);
+      invalidateCache(store);
       _idbDel(store,id).catch(()=>{});
       return;
     }catch(e){console.warn('dbDel Supabase error, borrando offline:',e);}
   }
   await _idbDel(store,id);
+  invalidateCache(store);
   addPending({type:'delete',store,id});
 }
 
