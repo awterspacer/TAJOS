@@ -1028,8 +1028,8 @@ tbody tr:last-child td{border-bottom:none;}
 
 // ══════════════════════════════════════════════════════════════
 // [1] CONFIG & SUPABASE
-const SUPA_URL='https://tgwhegmgchnttsmrhcfc.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnd2hlZ21nY2hudHRzbXJoY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODg1ODgsImV4cCI6MjA4OTQ2NDU4OH0.3g20p6yGber_j6HNB5oQqesOm_YgQ_fo9P2Yl2jGPbM';
+const SUPA_URL='https://sistematajos.duckdns.org';
+const SUPA_KEY='sb_publishable_5SeTVAtyoLryOA7oBW3blv_fEdvR0gW';
 
 // ══════════════════════════════════════════════════════════════
 // MAPA: nombre de store (IndexedDB) → nombre de tabla (Supabase)
@@ -3155,7 +3155,7 @@ function updArqueoCalc(){
 async function confirmarCajaInicial(){
   const monto=parseFloat(document.getElementById('arqueoInicial')?.value)||0;
   if(monto<0)return toast('El monto no puede ser negativo','error');
-  await saveCajaTurno({cajaInicial:monto,cajaInicialConfirmada:true});
+  await saveCajaTurno({cajaInicial:monto,cajaInicialConfirmada:true,turno:await getTurnoDeRegistro()});
   localStorage.setItem(getCajaKey(),'done');
   const turnoLabel=getTurnoActual()===1?'Turno 1':'Turno 2';
   await logAct(`Registró caja inicial: ${fmt(monto)} · ${turnoLabel}`);
@@ -3172,7 +3172,7 @@ async function agregarEgresoEf(){
   const ct=await getCajaTurno(hoy(),ST.localActivo,await getTurnoDeRegistro());
   const lista=(ct?.egresosEfectivo||[]);
   lista.push({concepto,monto,hora:new Date().toTimeString().slice(0,5)});
-  await saveCajaTurno({egresosEfectivo:lista});
+  await saveCajaTurno({egresosEfectivo:lista,turno:await getTurnoDeRegistro()});
   await logAct(`Registró egreso de efectivo: ${concepto} · ${fmt(monto)}`);
   toast(`Egreso registrado: ${fmt(monto)}`,'success');
   const ec=document.getElementById('aqEgresoConcepto');if(ec)ec.value='';
@@ -3186,7 +3186,7 @@ async function quitarEgresoEf(idx){
   if(!ct)return;
   const lista=(ct.egresosEfectivo||[]);
   lista.splice(idx,1);
-  await saveCajaTurno({egresosEfectivo:lista});
+  await saveCajaTurno({egresosEfectivo:lista,turno:await getTurnoDeRegistro()});
   renderArqueo();
 }
 
