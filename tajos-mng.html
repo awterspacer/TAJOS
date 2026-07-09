@@ -550,12 +550,30 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
   </div>
   <div id="reporteTabFlujo" style="display:none">
-    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
-      <select class="form-control" id="flujoPeriodo" style="width:160px" onchange="generarFlujoClientes()">
-        <option value="semana">Esta Semana</option>
-        <option value="mes" selected>Este Mes</option>
-        <option value="anio">Este Año</option>
-      </select>
+    <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end">
+      <div>
+        <label style="display:block;font-size:.75rem;color:var(--text-muted);margin-bottom:4px">Tipo de filtro</label>
+        <select class="form-control" id="flujoTipo" style="width:130px" onchange="_flujoTipoChanged()">
+          <option value="diario">Diario</option>
+          <option value="semanal">Semanal</option>
+          <option value="mensual" selected>Mensual</option>
+          <option value="anual">Anual</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:.75rem;color:var(--text-muted);margin-bottom:4px">Período</label>
+        <input type="date" class="form-control" id="flujoValorDiario" style="width:160px;display:none" onchange="generarFlujoClientes()">
+        <select class="form-control" id="flujoValorSemanal" style="width:230px;display:none" onchange="generarFlujoClientes()"></select>
+        <select class="form-control" id="flujoValorMensual" style="width:180px" onchange="generarFlujoClientes()"></select>
+        <select class="form-control" id="flujoValorAnual" style="width:110px;display:none" onchange="generarFlujoClientes()"></select>
+      </div>
+      <div>
+        <label style="display:block;font-size:.75rem;color:var(--text-muted);margin-bottom:4px">Sucursal</label>
+        <div id="flujoSucursales" style="display:flex;gap:14px;align-items:center;height:38px">
+          <label style="display:flex;align-items:center;gap:5px;font-size:.85rem;cursor:pointer"><input type="checkbox" id="flujoLocal1" checked onchange="generarFlujoClientes()"> Central</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:.85rem;cursor:pointer"><input type="checkbox" id="flujoLocal2" checked onchange="generarFlujoClientes()"> Superseis</label>
+        </div>
+      </div>
     </div>
     <div class="grid-4" style="margin-bottom:20px">
       <div class="stat-card"><div class="stat-label">Turnos Agendados</div><div class="stat-value" id="fTotalAgendados">0</div><div class="stat-icon">📅</div></div>
@@ -572,7 +590,7 @@ tbody tr:last-child td{border-bottom:none;}
           <option value="visitas">Ordenar por cantidad de visitas</option>
         </select>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>#</th><th>Cliente</th><th>Visitas</th><th>Monto Total</th></tr></thead><tbody id="fTopClientesTbody"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Cliente</th><th>Visitas</th><th>Monto Total</th><th>Visitas/mes</th></tr></thead><tbody id="fTopClientesTbody"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -1704,7 +1722,7 @@ function navigate(page){
   if(page==='usuarios')renderUsuarios();
   if(page==='historial')renderHistorial();
   if(page==='arqueos')renderArqueosAdmin();
-  if(page==='reportes'){_aplicarRestriccionReporteLocal();generarReporte();}
+  if(page==='reportes'){_aplicarRestriccionReporteLocal();_initFlujoSelectores();generarReporte();}
   if(page==='giftcards')renderGiftcards();
   if(page==='consumos'){
     const fd=document.getElementById('consFiltroFecha');
@@ -3533,31 +3551,97 @@ async function generarReporte(){
   document.getElementById('rServiciosTbody').innerHTML=sL.length?sL.map(([n,d])=>`<tr><td><strong>${n}</strong></td><td>${d.count}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(d.total)}</td><td><div class="comm-bar-wrap"><div class="comm-bar" style="width:${stot?(d.total/stot*100).toFixed(1):0}%"></div></div><span style="font-size:.75rem;color:var(--text-muted)">${stot?(d.total/stot*100).toFixed(1):0}%</span></td></tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
 }
 
+// Puebla los selectores dependientes de "Tipo de filtro" (semanal/mensual/anual) con
+// opciones relativas a hoy, y fija el valor por defecto del selector diario. Idempotente.
+function _initFlujoSelectores(){
+  const selSem=document.getElementById('flujoValorSemanal');
+  const selMes=document.getElementById('flujoValorMensual');
+  const selAnio=document.getElementById('flujoValorAnual');
+  const inpDia=document.getElementById('flujoValorDiario');
+  if(!selSem||selSem.options.length)return; // ya inicializado
+  inpDia.value=hoy();
+  // Semanas: últimas 8, lunes a sábado
+  const hoyD=new Date();
+  const diffLunes=(hoyD.getDay()+6)%7; // 0=lunes
+  for(let i=0;i<8;i++){
+    const lunes=new Date(hoyD);lunes.setDate(hoyD.getDate()-diffLunes-7*i);
+    const sabado=new Date(lunes);sabado.setDate(lunes.getDate()+5);
+    const label=`Lun ${lunes.getDate()}/${lunes.getMonth()+1} – Sáb ${sabado.getDate()}/${sabado.getMonth()+1}`;
+    const opt=document.createElement('option');opt.value=toDS(lunes);opt.textContent=label;
+    selSem.appendChild(opt);
+  }
+  // Meses: últimos 12
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  for(let i=0;i<12;i++){
+    const d=new Date(hoyD.getFullYear(),hoyD.getMonth()-i,1);
+    const val=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    const opt=document.createElement('option');opt.value=val;opt.textContent=meses[d.getMonth()]+' '+d.getFullYear();
+    selMes.appendChild(opt);
+  }
+  // Años: últimos 5
+  for(let i=0;i<5;i++){
+    const y=hoyD.getFullYear()-i;
+    const opt=document.createElement('option');opt.value=String(y);opt.textContent=String(y);
+    selAnio.appendChild(opt);
+  }
+  // Sucursales: ocultar/fijar según permisos del usuario (mismo criterio que reporteLocal)
+  const permitidos=getLocalesPermitidos();
+  const c1=document.getElementById('flujoLocal1'),c2=document.getElementById('flujoLocal2');
+  c1.checked=permitidos.includes(1);c1.disabled=!permitidos.includes(1);
+  c2.checked=permitidos.includes(2);c2.disabled=!permitidos.includes(2);
+  if(permitidos.length===1)document.getElementById('flujoSucursales').style.opacity='.5';
+}
+
+// Alterna qué selector de valor se muestra según el tipo de filtro elegido.
+function _flujoTipoChanged(){
+  const tipo=document.getElementById('flujoTipo').value;
+  document.getElementById('flujoValorDiario').style.display=tipo==='diario'?'':'none';
+  document.getElementById('flujoValorSemanal').style.display=tipo==='semanal'?'':'none';
+  document.getElementById('flujoValorMensual').style.display=tipo==='mensual'?'':'none';
+  document.getElementById('flujoValorAnual').style.display=tipo==='anual'?'':'none';
+  generarFlujoClientes();
+}
+
+// Redondea una hora "HH:MM" al slot de 30min más cercano hacia abajo (mismo grillado que HORAS).
+function _slotDe(horaStr){
+  if(!horaStr)return null;
+  const [hh,mm]=horaStr.split(':').map(Number);
+  if(isNaN(hh))return null;
+  const totalMin=Math.floor((hh*60+(mm||0))/30)*30;
+  return String(Math.floor(totalMin/60)).padStart(2,'0')+':'+String(totalMin%60).padStart(2,'0');
+}
+
 // Flujo de clientes: horas pico (turnos, con cancelados superpuestos), duración real 30/60min
 // (cobros = servicio efectivamente consumido, + turnos cancelados que nunca generaron cobro),
 // y top 20% de clientes (Pareto) por monto o por visitas, según selector.
-// Usa su propio selector de período (semana/mes/año), independiente del filtro de Resumen/Comisiones/Servicios.
 async function generarFlujoClientes(){
-  const per=document.getElementById('flujoPeriodo').value;
+  const tipo=document.getElementById('flujoTipo').value;
   const orden=document.getElementById('flujoParetoOrden')?.value||'monto';
   const permitidos=getLocalesPermitidos();
-  const lfSel=+document.getElementById('reporteLocal').value;
-  const lf=lfSel>0&&permitidos.includes(lfSel)?lfSel:(permitidos.length===1?permitidos[0]:0);
+  const localesElegidos=[1,2].filter(n=>permitidos.includes(n)&&document.getElementById('flujoLocal'+n).checked);
+
   const td=hoy();
-  let desde,hasta=td;
-  if(per==='semana'){const d=new Date();d.setDate(d.getDate()-d.getDay());desde=toDS(d);}
-  else if(per==='anio')desde=td.slice(0,4)+'-01-01';
-  else desde=td.slice(0,7)+'-01';
+  let desde,hasta=td,mesesPeriodo=1;
+  if(tipo==='diario'){desde=hasta=document.getElementById('flujoValorDiario').value||td;mesesPeriodo=1/30;}
+  else if(tipo==='semanal'){
+    const lunes=document.getElementById('flujoValorSemanal').value;
+    const d=new Date(lunes+'T00:00:00');d.setDate(d.getDate()+5);
+    desde=lunes;hasta=toDS(d);mesesPeriodo=7/30;
+  }else if(tipo==='anual'){
+    const y=document.getElementById('flujoValorAnual').value;
+    desde=y+'-01-01';hasta=y+'-12-31';mesesPeriodo=12;
+  }else{
+    const ym=document.getElementById('flujoValorMensual').value;
+    desde=ym+'-01';
+    const [yy,mm]=ym.split('-').map(Number);
+    hasta=toDS(new Date(yy,mm,0));mesesPeriodo=1;
+  }
 
   let turnos=await dbAll('turnos');
-  turnos=turnos.filter(t=>t.fecha>=desde&&t.fecha<=hasta);
-  if(lf>0){turnos=turnos.filter(t=>Number(t.local)===Number(lf));}
-  else if(permitidos.length<2){turnos=turnos.filter(t=>permitidos.includes(Number(t.local)));}
+  turnos=turnos.filter(t=>t.fecha>=desde&&t.fecha<=hasta&&localesElegidos.includes(Number(t.local)));
 
   let cobros=await dbAll('cobros');
-  cobros=cobros.filter(c=>c.fecha>=desde&&c.fecha<=hasta);
-  if(lf>0){cobros=cobros.filter(c=>Number(c.local)===Number(lf));}
-  else if(permitidos.length<2){cobros=cobros.filter(c=>permitidos.includes(Number(c.local)));}
+  cobros=cobros.filter(c=>c.fecha>=desde&&c.fecha<=hasta&&localesElegidos.includes(Number(c.local)));
 
   const svcs=await dbAll('servicios');
   const cancelados=turnos.filter(t=>t.estado==='cancelado');
@@ -3576,18 +3660,28 @@ async function generarFlujoClientes(){
   document.getElementById('fTurnos30').textContent=c30;
   document.getElementById('fTurnos60').textContent=c60;
 
-  // Horas pico: histograma por hora de inicio del turno (agenda), con cancelados superpuestos
+  // Horas pico: histograma en slots de 30min (misma grilla que la agenda), con cancelados superpuestos
   const horaTotal={},horaCancel={};
   turnos.forEach(t=>{
-    const h=(t.hora||'').slice(0,2);if(!h)return;
-    horaTotal[h]=(horaTotal[h]||0)+1;
-    if(t.estado==='cancelado')horaCancel[h]=(horaCancel[h]||0)+1;
+    const s=_slotDe(t.hora);if(!s)return;
+    horaTotal[s]=(horaTotal[s]||0)+1;
+    if(t.estado==='cancelado')horaCancel[s]=(horaCancel[s]||0)+1;
   });
-  const horas=Object.keys(horaTotal).sort();
-  document.getElementById('fHorasPico').innerHTML=horas.length?_lineChartHoras(horas,[
-    {label:'Total turnos',color:'var(--gold-light)',values:horas.map(h=>horaTotal[h]||0)},
-    {label:'Cancelados',color:'var(--danger)',values:horas.map(h=>horaCancel[h]||0)},
-  ]):'<div class="empty-state"><p>Sin datos</p></div>';
+  const maxH=Math.max(1,...Object.values(horaTotal));
+  document.getElementById('fHorasPico').innerHTML=HORAS.map(h=>{
+    const tot=horaTotal[h]||0,can=horaCancel[h]||0;
+    const pctTot=(tot/maxH*100).toFixed(1),pctCan=(can/maxH*100).toFixed(1);
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span>${h}</span>
+        <span style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${tot} turno${tot!==1?'s':''}${can?` <span style="color:var(--danger);font-weight:400">(${can} cancelado${can!==1?'s':''})</span>`:''}</span>
+      </div>
+      <div class="comm-bar-wrap" style="position:relative">
+        <div class="comm-bar" style="width:${pctTot}%"></div>
+        <div style="position:absolute;top:0;left:0;height:100%;width:${pctCan}%;background:var(--danger);border-radius:4px"></div>
+      </div>
+    </div>`;
+  }).join('');
 
   // Top clientes — principio de Pareto: el 20% de los clientes con más actividad
   const cl=await dbAll('clientes');const cMap={};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
@@ -3602,35 +3696,7 @@ async function generarFlujoClientes(){
   const todos=Object.values(cliMap);
   const cortePareto=Math.max(1,Math.ceil(todos.length*0.2));
   const topCli=[...todos].sort((a,b)=>orden==='visitas'?b.visitas-a.visitas:b.monto-a.monto).slice(0,cortePareto);
-  document.getElementById('fTopClientesTbody').innerHTML=topCli.length?topCli.map((c,i)=>`<tr><td>${i+1}</td><td><strong>${c.nombre}</strong></td><td>${c.visitas}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(c.monto)}</td></tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
-}
-
-// Gráfico lineal horizontal: eje Y = horas (categórico), eje X = cantidad.
-// Soporta múltiples series superpuestas (ej. total vs cancelados).
-function _lineChartHoras(categorias,series){
-  const rowH=34,leftPad=54,rightPad=24,topPad=16,botPad=16;
-  const h=categorias.length*rowH+topPad+botPad;
-  const w=640;
-  const plotW=w-leftPad-rightPad;
-  const maxV=Math.max(1,...series.flatMap(s=>s.values));
-  const x=v=>leftPad+(v/maxV)*plotW;
-  const y=i=>topPad+i*rowH+rowH/2;
-  let svg=`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">`;
-  categorias.forEach((hr,i)=>{
-    svg+=`<line x1="${leftPad}" y1="${y(i)}" x2="${w-rightPad}" y2="${y(i)}" stroke="var(--border)" stroke-width="1"/>`;
-    svg+=`<text x="${leftPad-10}" y="${y(i)+4}" text-anchor="end" font-size="11" fill="var(--text-muted)">${hr}:00</text>`;
-  });
-  series.forEach(s=>{
-    const pts=categorias.map((hr,i)=>`${x(s.values[i]||0)},${y(i)}`).join(' ');
-    svg+=`<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.5"/>`;
-    categorias.forEach((hr,i)=>{
-      const v=s.values[i]||0;
-      svg+=`<circle cx="${x(v)}" cy="${y(i)}" r="3.5" fill="${s.color}"><title>${hr}:00 · ${s.label}: ${v}</title></circle>`;
-    });
-  });
-  svg+='</svg>';
-  const legend=series.map(s=>`<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:.8rem;color:var(--text-muted)"><span style="width:10px;height:10px;border-radius:50%;background:${s.color};display:inline-block"></span>${s.label}</span>`).join('');
-  return `<div style="margin-bottom:10px">${legend}</div>${svg}`;
+  document.getElementById('fTopClientesTbody').innerHTML=topCli.length?topCli.map((c,i)=>`<tr><td>${i+1}</td><td><strong>${c.nombre}</strong></td><td>${c.visitas}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(c.monto)}</td><td>${(c.visitas/mesesPeriodo).toFixed(1)}</td></tr>`).join(''):'<tr><td colspan="5"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
 }
 
 
