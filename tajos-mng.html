@@ -564,8 +564,15 @@ tbody tr:last-child td{border-bottom:none;}
       <div class="stat-card"><div class="stat-label">Turnos Cancelados</div><div class="stat-value" id="fTurnosCancelados">0</div><div class="stat-icon">✖</div></div>
     </div>
     <div class="card" style="margin-bottom:20px"><div class="card-title">🕐 Horas Pico</div><div id="fHorasPico"></div></div>
-    <div class="card"><div class="card-title">👥 Top 200 Clientes</div>
-      <div class="table-wrap"><table><thead><tr><th>#</th><th>Cliente</th><th>Turnos</th><th>Cancelados</th></tr></thead><tbody id="fTopClientesTbody"></tbody></table></div>
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <span>👥 Top Clientes (20% · Pareto)</span>
+        <select class="form-control" id="flujoParetoOrden" style="width:200px" onchange="generarFlujoClientes()">
+          <option value="monto">Ordenar por monto gastado</option>
+          <option value="visitas">Ordenar por cantidad de visitas</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Cliente</th><th>Visitas</th><th>Monto Total</th></tr></thead><tbody id="fTopClientesTbody"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -3178,7 +3185,7 @@ async function confirmarCajaInicial(){
   const monto=parseFloat(document.getElementById('arqueoInicial')?.value)||0;
   if(monto<0)return toast('El monto no puede ser negativo','error');
   await saveCajaTurno({cajaInicial:monto,cajaInicialConfirmada:true,turno:await getTurnoDeRegistro()});
-  localStorage.setItem(getCajaKey(),'done');
+  localStorage.setItem(await getCajaKey(),'done');
   const turnoLabel=getTurnoActual()===1?'Turno 1':'Turno 2';
   await logAct(`Registró caja inicial: ${fmt(monto)} · ${turnoLabel}`);
   toast(`Caja inicial confirmada: ${fmt(monto)}`,'success');
@@ -3299,7 +3306,7 @@ const efectivoEsperado =
   };
   if(ex){data.id=ex.id;await dbPut('arqueos',data);}
   else{await dbAdd('arqueos',data);}
-  localStorage.setItem(getCajaKey(),'done');
+  localStorage.setItem(await getCajaKey(),'done');
   return {cajaInicial,efectivoEntregado};
 }
 
@@ -3375,7 +3382,7 @@ async function renderArqueosAdmin(){
     const egEf=ctA.egresosEfectivo||[];
     const totEgEf=egEf.reduce((s,e)=>s+(e.monto||0),0);
     const efEnt=a.efectivoEntregado||0;
-    const cobsTurno=cobros.filter(c=>c.fecha===a.fecha&&Number(c.local)===Number(a.local));
+    const cobsTurno=cobros.filter(c=>c.fecha===a.fecha&&Number(c.local)===Number(a.local)&&Number(c.turno||0)===Number(a.turno));
     const efCobros=cobsTurno.reduce((s,c)=>s+(c.pagos||[]).filter(p=>p.metodo==='efectivo').reduce((x,p)=>x+(parseFloat(p.monto)||0),0),0);
     const efEsperado=ini+efCobros-totEgEf;
     const diff=efEnt>0?efEnt-efEsperado:null;
@@ -3526,10 +3533,13 @@ async function generarReporte(){
   document.getElementById('rServiciosTbody').innerHTML=sL.length?sL.map(([n,d])=>`<tr><td><strong>${n}</strong></td><td>${d.count}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(d.total)}</td><td><div class="comm-bar-wrap"><div class="comm-bar" style="width:${stot?(d.total/stot*100).toFixed(1):0}%"></div></div><span style="font-size:.75rem;color:var(--text-muted)">${stot?(d.total/stot*100).toFixed(1):0}%</span></td></tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
 }
 
-// Flujo de clientes: horas pico, turnos de 30/60min agendados, cancelados y top 200 clientes.
+// Flujo de clientes: horas pico (turnos, con cancelados superpuestos), duración real 30/60min
+// (cobros = servicio efectivamente consumido, + turnos cancelados que nunca generaron cobro),
+// y top 20% de clientes (Pareto) por monto o por visitas, según selector.
 // Usa su propio selector de período (semana/mes/año), independiente del filtro de Resumen/Comisiones/Servicios.
 async function generarFlujoClientes(){
   const per=document.getElementById('flujoPeriodo').value;
+  const orden=document.getElementById('flujoParetoOrden')?.value||'monto';
   const permitidos=getLocalesPermitidos();
   const lfSel=+document.getElementById('reporteLocal').value;
   const lf=lfSel>0&&permitidos.includes(lfSel)?lfSel:(permitidos.length===1?permitidos[0]:0);
@@ -3538,38 +3548,89 @@ async function generarFlujoClientes(){
   if(per==='semana'){const d=new Date();d.setDate(d.getDate()-d.getDay());desde=toDS(d);}
   else if(per==='anio')desde=td.slice(0,4)+'-01-01';
   else desde=td.slice(0,7)+'-01';
+
   let turnos=await dbAll('turnos');
   turnos=turnos.filter(t=>t.fecha>=desde&&t.fecha<=hasta);
   if(lf>0){turnos=turnos.filter(t=>Number(t.local)===Number(lf));}
   else if(permitidos.length<2){turnos=turnos.filter(t=>permitidos.includes(Number(t.local)));}
+
+  let cobros=await dbAll('cobros');
+  cobros=cobros.filter(c=>c.fecha>=desde&&c.fecha<=hasta);
+  if(lf>0){cobros=cobros.filter(c=>Number(c.local)===Number(lf));}
+  else if(permitidos.length<2){cobros=cobros.filter(c=>permitidos.includes(Number(c.local)));}
+
   const svcs=await dbAll('servicios');
   const cancelados=turnos.filter(t=>t.estado==='cancelado');
-  let c30=0,c60=0;
-  turnos.forEach(t=>{if(_turnoSlots(t.servicios,svcs)<=1)c30++;else c60++;});
   document.getElementById('fTotalAgendados').textContent=turnos.length;
+  document.getElementById('fTurnosCancelados').textContent=cancelados.length;
+
+  // Duración 30/60min: servicio REAL consumido (desde cobros) + turnos cancelados
+  // (que nunca generaron cobro, así que se toma su duración agendada como aproximación).
+  let c30=0,c60=0;
+  cobros.forEach(co=>{
+    const nombres=(co.items||[]).filter(i=>i.tipo==='servicio').map(i=>i.nombre);
+    if(!nombres.length)return;
+    if(_turnoSlots(nombres,svcs)<=1)c30++;else c60++;
+  });
+  cancelados.forEach(t=>{if(_turnoSlots(t.servicios,svcs)<=1)c30++;else c60++;});
   document.getElementById('fTurnos30').textContent=c30;
   document.getElementById('fTurnos60').textContent=c60;
-  document.getElementById('fTurnosCancelados').textContent=cancelados.length;
-  // Horas pico: histograma por hora de inicio del turno
-  const horaMap={};
-  turnos.forEach(t=>{const h=(t.hora||'').slice(0,2);if(h)horaMap[h]=(horaMap[h]||0)+1;});
-  const maxH=Math.max(1,...Object.values(horaMap));
-  const horasOrdenadas=Object.keys(horaMap).sort();
-  document.getElementById('fHorasPico').innerHTML=horasOrdenadas.length?horasOrdenadas.map(h=>{
-    const v=horaMap[h];const pct=(v/maxH*100).toFixed(1);
-    return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>${h}:00</span><span style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${v} turno${v!==1?'s':''}</span></div><div class="comm-bar-wrap"><div class="comm-bar" style="width:${pct}%"></div></div></div>`;
-  }).join(''):'<div class="empty-state"><p>Sin datos</p></div>';
-  // Top 200 clientes por cantidad de turnos en el período
+
+  // Horas pico: histograma por hora de inicio del turno (agenda), con cancelados superpuestos
+  const horaTotal={},horaCancel={};
+  turnos.forEach(t=>{
+    const h=(t.hora||'').slice(0,2);if(!h)return;
+    horaTotal[h]=(horaTotal[h]||0)+1;
+    if(t.estado==='cancelado')horaCancel[h]=(horaCancel[h]||0)+1;
+  });
+  const horas=Object.keys(horaTotal).sort();
+  document.getElementById('fHorasPico').innerHTML=horas.length?_lineChartHoras(horas,[
+    {label:'Total turnos',color:'var(--gold-light)',values:horas.map(h=>horaTotal[h]||0)},
+    {label:'Cancelados',color:'var(--danger)',values:horas.map(h=>horaCancel[h]||0)},
+  ]):'<div class="empty-state"><p>Sin datos</p></div>';
+
+  // Top clientes — principio de Pareto: el 20% de los clientes con más actividad
   const cl=await dbAll('clientes');const cMap={};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
   const cliMap={};
-  turnos.forEach(t=>{
-    const key=String(t.clienteId||t.cliente_id||t.clienteNombre||'—');
-    if(!cliMap[key])cliMap[key]={nombre:cMap[key]||t.clienteNombre||'—',turnos:0,cancelados:0};
-    cliMap[key].turnos++;
-    if(t.estado==='cancelado')cliMap[key].cancelados++;
+  cobros.forEach(co=>{
+    const key=String(co.clienteId||co.cliente_id||'');
+    if(!key)return;
+    if(!cliMap[key])cliMap[key]={nombre:cMap[key]||'—',visitas:0,monto:0};
+    cliMap[key].visitas++;
+    cliMap[key].monto+=co.total||0;
   });
-  const topCli=Object.values(cliMap).sort((a,b)=>b.turnos-a.turnos).slice(0,200);
-  document.getElementById('fTopClientesTbody').innerHTML=topCli.length?topCli.map((c,i)=>`<tr><td>${i+1}</td><td><strong>${c.nombre}</strong></td><td>${c.turnos}</td><td>${c.cancelados}</td></tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
+  const todos=Object.values(cliMap);
+  const cortePareto=Math.max(1,Math.ceil(todos.length*0.2));
+  const topCli=[...todos].sort((a,b)=>orden==='visitas'?b.visitas-a.visitas:b.monto-a.monto).slice(0,cortePareto);
+  document.getElementById('fTopClientesTbody').innerHTML=topCli.length?topCli.map((c,i)=>`<tr><td>${i+1}</td><td><strong>${c.nombre}</strong></td><td>${c.visitas}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(c.monto)}</td></tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
+}
+
+// Gráfico lineal horizontal: eje Y = horas (categórico), eje X = cantidad.
+// Soporta múltiples series superpuestas (ej. total vs cancelados).
+function _lineChartHoras(categorias,series){
+  const rowH=34,leftPad=54,rightPad=24,topPad=16,botPad=16;
+  const h=categorias.length*rowH+topPad+botPad;
+  const w=640;
+  const plotW=w-leftPad-rightPad;
+  const maxV=Math.max(1,...series.flatMap(s=>s.values));
+  const x=v=>leftPad+(v/maxV)*plotW;
+  const y=i=>topPad+i*rowH+rowH/2;
+  let svg=`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">`;
+  categorias.forEach((hr,i)=>{
+    svg+=`<line x1="${leftPad}" y1="${y(i)}" x2="${w-rightPad}" y2="${y(i)}" stroke="var(--border)" stroke-width="1"/>`;
+    svg+=`<text x="${leftPad-10}" y="${y(i)+4}" text-anchor="end" font-size="11" fill="var(--text-muted)">${hr}:00</text>`;
+  });
+  series.forEach(s=>{
+    const pts=categorias.map((hr,i)=>`${x(s.values[i]||0)},${y(i)}`).join(' ');
+    svg+=`<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2.5"/>`;
+    categorias.forEach((hr,i)=>{
+      const v=s.values[i]||0;
+      svg+=`<circle cx="${x(v)}" cy="${y(i)}" r="3.5" fill="${s.color}"><title>${hr}:00 · ${s.label}: ${v}</title></circle>`;
+    });
+  });
+  svg+='</svg>';
+  const legend=series.map(s=>`<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:.8rem;color:var(--text-muted)"><span style="width:10px;height:10px;border-radius:50%;background:${s.color};display:inline-block"></span>${s.label}</span>`).join('');
+  return `<div style="margin-bottom:10px">${legend}</div>${svg}`;
 }
 
 
@@ -4452,8 +4513,8 @@ async function getTurnoDeRegistro(){
   ST.turnoActivo = turnoCalculado;
   return ST.turnoActivo;
 }
-function getCajaKey(){
-  return 'tajos_caja_'+hoy()+'_t'+getTurnoActual()+'_l'+ST.localActivo;
+async function getCajaKey(){
+  return 'tajos_caja_'+hoy()+'_t'+(await getTurnoDeRegistro())+'_l'+ST.localActivo;
 }
 
 // Obtener el registro de caja_turnos del turno actual
@@ -4485,17 +4546,18 @@ async function saveCajaTurno(updates){
 
 async function mostrarCajaInicialSiNecesario(){
   if(!ST.user||ST.user.rol==='admin')return;
-  const key=getCajaKey();
+  const turno=await getTurnoDeRegistro();
+  const key=await getCajaKey();
   if(localStorage.getItem(key)==='done')return;
   // Verificar si ya existe en caja_turnos
-  const ct=await getCajaTurno(hoy(),ST.localActivo,getTurnoActual());
+  const ct=await getCajaTurno(hoy(),ST.localActivo,turno);
   if(ct&&ct.cajaInicialConfirmada){localStorage.setItem(key,'done');return;}
   // Si ya tenía caja inicial en arqueos (migración), usar ese valor
   const arqs=await dbAll('arqueos');
-  const td=hoy();const turno=getTurnoActual();
+  const td=hoy();
   const exArq=arqs.find(a=>a.fecha===td&&Number(a.local)===Number(ST.localActivo)&&a.turno==turno);
   if(exArq&&(exArq.cajaInicial||exArq.caja_inicial)){
-    await saveCajaTurno({cajaInicial:exArq.cajaInicial||exArq.caja_inicial||0,cajaInicialConfirmada:true});
+    await saveCajaTurno({cajaInicial:exArq.cajaInicial||exArq.caja_inicial||0,cajaInicialConfirmada:true,turno});
     localStorage.setItem(key,'done');return;
   }
 
@@ -4544,16 +4606,17 @@ async function mostrarCajaInicialSiNecesario(){
 async function guardarCajaInicial(){
   const monto=parseFloat(document.getElementById('cajaInicialMonto').value)||0;
   const nota=document.getElementById('cajaInicialNota').value.trim();
-  await saveCajaTurno({cajaInicial:monto,cajaInicialConfirmada:true});
-  localStorage.setItem(getCajaKey(),'done');
-  await logAct('Registró caja inicial: '+fmt(monto)+' · '+(getTurnoActual()===1?'Turno 1':'Turno 2'));
+  const turno=await getTurnoDeRegistro();
+  await saveCajaTurno({cajaInicial:monto,cajaInicialConfirmada:true,turno});
+  localStorage.setItem(await getCajaKey(),'done');
+  await logAct('Registró caja inicial: '+fmt(monto)+' · '+(turno===1?'Turno 1':'Turno 2'));
   toast('Caja inicial registrada: '+fmt(monto),'success');
   document.getElementById('modalCajaInicial').classList.remove('visible');
   refreshCaja();
 }
 
-function omitirCajaInicial(){
-  localStorage.setItem(getCajaKey(),'skipped');
+async function omitirCajaInicial(){
+  localStorage.setItem(await getCajaKey(),'skipped');
   document.getElementById('modalCajaInicial').classList.remove('visible');
 }
 
