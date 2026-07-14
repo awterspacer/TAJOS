@@ -2616,12 +2616,33 @@ async function verDetTurno(id){
   openModal('modalDetalleTurno');
 }
 
+// Avisa por WhatsApp al barbero que su cliente acaba de llegar a la barbería.
+async function avisarClienteLlego(turnoId){
+  const t=await dbGet('turnos',turnoId);if(!t)return;
+  const barbs=await dbAll('barberos');
+  const b=barbs.find(x=>Number(x.id)===Number(t.barberoId||t.barbero_id));
+  if(!b){toast('Turno sin barbero asignado','error');return;}
+  const cel=(b.celular||'').replace(/\D/g,'');
+  if(!cel){toast('El barbero no tiene celular registrado','error');return;}
+  const cl=await dbAll('clientes');
+  const c=cl.find(x=>Number(x.id)===Number(t.clienteId||t.cliente_id));
+  const nombreCliente=c?c.nombre:(t.clienteNombre||'').split(' ')[0]||'Tu cliente';
+  const msg=`Aviso. Tu cliente ${nombreCliente} acaba de llegar a TAJOS.`;
+  const url='https://wa.me/'+cel+'?text='+encodeURIComponent(msg);
+  window.open(url,'_blank');
+}
+
 async function actualizarTurnoEstado(id){
   const t=await dbGet('turnos',id);
+  const estadoAnterior=t.estado;
   t.estado=document.getElementById('turnoEstadoSel').value;
   await dbPut('turnos',t);
   await logAct(`Cambió estado de turno · ${t.fecha||'?'} ${t.hora||''} · Cliente: ${t.clienteNombre||'sin nombre'} · Nuevo estado: ${t.estado}`);
   toast('Estado actualizado','success');
+  // Si se marcó "En atención" (y no lo estaba ya), avisar al barbero que el cliente llegó
+  if(t.estado==='en_atencion'&&estadoAnterior!=='en_atencion'){
+    await avisarClienteLlego(id);
+  }
   // Si se marcó como completado, ofrecer cobrar directamente
   if(t.estado==='completado'){
     closeModal('modalDetalleTurno');
@@ -3694,8 +3715,14 @@ async function generarFlujoClientes(){
     cliMap[key].monto+=co.total||0;
   });
   const todos=Object.values(cliMap);
-  const cortePareto=Math.max(1,Math.ceil(todos.length*0.2));
-  const topCli=[...todos].sort((a,b)=>orden==='visitas'?b.visitas-a.visitas:b.monto-a.monto).slice(0,cortePareto);
+  const ordenados=[...todos].sort((a,b)=>orden==='visitas'?b.visitas-a.visitas:b.monto-a.monto);
+  const totalGlobal=ordenados.reduce((s,c)=>s+(orden==='visitas'?c.visitas:c.monto),0);
+  let acumulado=0;const topCli=[];
+  for(const c of ordenados){
+    if(acumulado>=totalGlobal*0.8 && topCli.length>0)break; // ya se explicó el 80%
+    topCli.push(c);
+    acumulado+=(orden==='visitas'?c.visitas:c.monto);
+  }
   document.getElementById('fTopClientesTbody').innerHTML=topCli.length?topCli.map((c,i)=>`<tr><td>${i+1}</td><td><strong>${c.nombre}</strong></td><td>${c.visitas}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(c.monto)}</td><td>${(c.visitas/mesesPeriodo).toFixed(1)}</td></tr>`).join(''):'<tr><td colspan="5"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
 }
 
