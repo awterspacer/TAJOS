@@ -541,7 +541,7 @@ tbody tr:last-child td{border-bottom:none;}
   </div>
   <div id="reporteTabComisiones" style="display:none">
     <div class="card"><div class="card-title">💈 Comisiones por Barbero</div>
-      <div class="table-wrap"><table><thead><tr><th>Barbero</th><th>Servicios</th><th>Facturado</th><th>Comisión</th><th>Progreso</th></tr></thead><tbody id="rComisionesTbody"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Barbero</th><th>Servicios</th><th>Facturado</th><th>Com. Servicios</th><th>Com. Productos</th><th>Progreso</th></tr></thead><tbody id="rComisionesTbody"></tbody></table></div>
     </div>
   </div>
   <div id="reporteTabServicios" style="display:none">
@@ -3336,7 +3336,7 @@ const efectivoEsperado =
   const data={
     fecha:td,local:ST.localActivo,turno,turnoLabel,
     cajaInicial,total,detalle,notas,
-    cajero:ex?.cajero||ct?.cajero||ST.user?.login,
+    cajero:ST.user?.login||ex?.cajero||ct?.cajero,
     verificado:ex?.verificado||false,
     cerrado:cerrar?true:(ex?.cerrado||false),
     egresosEfectivo,efectivoEntregado,
@@ -3480,6 +3480,21 @@ function calcComisionCobro(cobro){
 function calcComisionLista(cobros){
   return cobros.reduce((s,c)=>s+calcComisionCobro(c),0);
 }
+// Desglose de comisión por tipo (servicios vs productos comisionables) para el reporte de comisiones.
+function calcComisionServiciosCobro(cobro){
+  return (cobro.items||[]).reduce((s,i)=>i.tipo==='servicio'?s+i.precio*((i.comision??50)/100):s,0);
+}
+function calcComisionProductosCobro(cobro){
+  return (cobro.items||[]).reduce((s,i)=>(i.tipo==='producto'&&i.comisionable)?s+i.precio*0.10:s,0);
+}
+// Facturado comisionable: solo servicios y productos comisionables, excluye productos no comisionables (bebidas, snacks, etc.)
+function calcFacturadoComisionableCobro(cobro){
+  return (cobro.items||[]).reduce((s,i)=>{
+    if(i.tipo==='servicio')return s+i.precio;
+    if(i.tipo==='producto'&&i.comisionable)return s+i.precio;
+    return s;
+  },0);
+}
 
 // ══════════════════════════════════════════════════════════════
 // [21] DASHBOARD
@@ -3563,10 +3578,10 @@ async function generarReporte(){
   barbs=filtrarPorLocalPermitido(barbs);
   if(lf>0)barbs=barbs.filter(b=>Number(b.local)===Number(lf)||Number(b.local)===0);
   document.getElementById('rComisionesTbody').innerHTML=barbs.map(b=>{
-    const bc=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));const bt=bc.reduce((s,c)=>s+c.total,0);
-    const bco=calcComisionLista(bc);const pct=tot?(bt/tot*100).toFixed(1):0;
-    return `<tr><td><strong>${b.nombre} ${b.apellido}</strong></td><td>${bc.length}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(bt)}</td><td style="font-family:var(--font-cond);color:var(--success)">${fmt(bco)}</td><td style="min-width:120px"><div class="comm-bar-wrap"><div class="comm-bar" style="width:${pct}%"></div></div><div style="font-size:.72rem;color:var(--text-dim)">${pct}%</div></td></tr>`;
-  }).join('')||'<tr><td colspan="5"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
+    const bc=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===Number(b.id));const bt=bc.reduce((s,c)=>s+calcFacturadoComisionableCobro(c),0);
+    const bcoServ=bc.reduce((s,c)=>s+calcComisionServiciosCobro(c),0);const bcoProd=bc.reduce((s,c)=>s+calcComisionProductosCobro(c),0);const pct=tot?(bt/tot*100).toFixed(1):0;
+    return `<tr><td><strong>${b.nombre} ${b.apellido}</strong></td><td>${bc.length}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(bt)}</td><td style="font-family:var(--font-cond);color:var(--success)">${fmt(bcoServ)}</td><td style="font-family:var(--font-cond);color:var(--success)">${fmt(bcoProd)}</td><td style="min-width:120px"><div class="comm-bar-wrap"><div class="comm-bar" style="width:${pct}%"></div></div><div style="font-size:.72rem;color:var(--text-dim)">${pct}%</div></td></tr>`;
+  }).join('')||'<tr><td colspan="6"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
   const sMap={};cobros.forEach(co=>(co.items||[]).filter(i=>i.tipo==='servicio').forEach(i=>{if(!sMap[i.nombre])sMap[i.nombre]={count:0,total:0};sMap[i.nombre].count++;sMap[i.nombre].total+=i.precio;}));
   const sL=Object.entries(sMap).sort((a,b)=>b[1].total-a[1].total);const stot=sL.reduce((s,[,v])=>s+v.total,0);
   document.getElementById('rServiciosTbody').innerHTML=sL.length?sL.map(([n,d])=>`<tr><td><strong>${n}</strong></td><td>${d.count}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(d.total)}</td><td><div class="comm-bar-wrap"><div class="comm-bar" style="width:${stot?(d.total/stot*100).toFixed(1):0}%"></div></div><span style="font-size:.75rem;color:var(--text-muted)">${stot?(d.total/stot*100).toFixed(1):0}%</span></td></tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
@@ -4625,7 +4640,7 @@ async function saveCajaTurno(updates){
   const ex=await getCajaTurno(td,local,turno);
   const merged={
     fecha:td,local,turno,turnoLabel,
-    cajero:ex?.cajero||ST.user?.login,
+    cajero:ST.user?.login||ex?.cajero,
     cajaInicial:updates.cajaInicial!=null?updates.cajaInicial:(ex?.cajaInicial||ex?.caja_inicial||0),
     cajaInicialConfirmada:updates.cajaInicialConfirmada!=null?updates.cajaInicialConfirmada:(ex?.cajaInicialConfirmada||ex?.caja_inicial_confirmada||false),
     egresosEfectivo:updates.egresosEfectivo!=null?updates.egresosEfectivo:(ex?.egresosEfectivo||[]),
