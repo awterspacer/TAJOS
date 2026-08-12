@@ -235,6 +235,8 @@ tbody tr:last-child td{border-bottom:none;}
 @media(max-width:900px){#sidebar{transform:translateX(-100%);}#sidebar.open{transform:translateX(0);}#sidebar-overlay{display:block;opacity:0;pointer-events:none;transition:opacity .3s;}#sidebar-overlay.visible{opacity:1;pointer-events:all;}#main{margin-left:0;}.hamburger{display:block;}.grid-4{grid-template-columns:1fr 1fr;}.grid-3{grid-template-columns:1fr 1fr;}}
 @media(max-width:640px){#content{padding:14px;}.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}.form-row{grid-template-columns:1fr;}}
 @media print{#loginScreen,#sidebar,#topbar,.btn,.hamburger{display:none!important;}#main{margin-left:0;}body{background:#fff;color:#000;}.card{border:1px solid #ccc;box-shadow:none;}}
+#arqueoPrintArea{display:none;}
+@media print{body.printing-arqueo #main,body.printing-arqueo .modal-overlay{display:none!important;}body.printing-arqueo #arqueoPrintArea{display:block!important;background:#fff;color:#000;}}
 </style>
 </head>
 <body>
@@ -960,6 +962,14 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="modal-header"><div class="modal-title">🏦 Arqueo / Cierre de Caja</div><button class="modal-close" onclick="closeModal('modalArqueo')">✕</button></div>
     <div class="modal-body" id="arqueoContent"></div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modalArqueo')">Cerrar</button><button class="btn btn-gold" onclick="guardarArqueo()">Guardar Arqueo</button></div>
+  </div>
+</div>
+<!-- ARQUEO — VISUALIZAR (admin, solo lectura) -->
+<div class="modal-overlay" id="modalArqueoVer" onclick="closeModalOutside(event,'modalArqueoVer')">
+  <div class="modal modal-lg">
+    <div class="modal-header"><div class="modal-title">🔍 Detalle de Arqueo</div><button class="modal-close" onclick="closeModal('modalArqueoVer')">✕</button></div>
+    <div class="modal-body" id="arqueoVerContent"></div>
+    <div class="modal-footer" id="arqueoVerFooter"><button class="btn btn-ghost" onclick="closeModal('modalArqueoVer')">Cerrar</button></div>
   </div>
 </div>
 <!-- BACKUP -->
@@ -3378,6 +3388,8 @@ async function verificarArqueo(id){
   toast('Arqueo verificado','success');renderArqueo();
   // Refrescar la página de arqueos si está activa
   if(document.getElementById('page-arqueos')?.classList.contains('active'))renderArqueosAdmin();
+  // Refrescar el modal de detalle si está abierto, para reflejar el estado verificado
+  if(document.getElementById('modalArqueoVer')?.classList.contains('visible'))verArqueoDetalle(id);
 }
 
 async function renderArqueosAdmin(){
@@ -3444,11 +3456,8 @@ async function renderArqueosAdmin(){
       <td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(a.total||0)}</td>
       <td><span class="badge ${estadoBadge}">${estadoLabel}</span></td>
       <td>
-        ${!a.verificado&&a.cerrado
-          ?`<button class="btn btn-gold btn-sm" onclick="verificarArqueo(${a.id})">✅ Verificar</button>`
-          :a.verificado
-            ?`<span style="font-size:.75rem;color:var(--text-muted)">${fmtD((a.verificadoAt||'').slice(0,10))} · ${a.verificadoPor||a.verificado_por||'—'}</span>`
-            :''}
+        ${a.cerrado?`<button class="btn btn-outline btn-sm" onclick="verArqueoDetalle(${a.id})">👁 Visualizar</button> <button class="btn btn-ghost btn-sm" onclick="imprimirArqueoDetalle(${a.id})" title="Imprimir para firma">🖨</button>`:''}
+        ${a.verificado?`<span style="font-size:.75rem;color:var(--text-muted);display:block;margin-top:4px">${fmtD((a.verificadoAt||'').slice(0,10))} · ${a.verificadoPor||a.verificado_por||'—'}</span>`:''}
         ${egEf.length?`<button class="btn btn-ghost btn-sm" onclick="verEgresosArqueo(${a.id})" title="Ver egresos">💸</button>`:''}
       </td>
     </tr>`;
@@ -3465,6 +3474,106 @@ async function verEgresosArqueo(id){
   if(!egEf.length){toast('Sin egresos registrados para este turno','info');return;}
   toast(`${tl} · ${a.cajero||'—'} · ${egEf.length} egreso(s): ${fmt(total)} — ${egEf.map(e=>`${e.concepto} ${fmt(e.monto)}`).join(' | ')}`,'info');
 }
+
+// Calcula los datos de detalle de un arqueo específico (compartido por Visualizar e Imprimir).
+async function _calcDetalleArqueo(a){
+  const cobros=await dbAll('cobros');
+  const ct=await getCajaTurno(a.fecha,a.local,a.turno)||{cajaInicial:0,egresosEfectivo:[]};
+  const ini=Number(ct.cajaInicial??ct.caja_inicial??0);
+  const egEf=ct.egresosEfectivo||[];
+  const totEgEf=egEf.reduce((s,e)=>s+(e.monto||0),0);
+  const tl=a.turnoLabel||a.turno_label||(a.turno==1?'Turno 1':'Turno 2');
+  const cobsTurno=cobros.filter(c=>c.fecha===a.fecha&&Number(c.local)===Number(a.local)&&Number(c.turno||0)===Number(a.turno));
+  const {total:totDia,detalle:mets,totalEfectivo:efTotal}=calcularResumenCobros(cobsTurno);
+  const efEnt=a.efectivoEntregado||0;
+  const efEsperado=ini+efTotal-totEgEf;
+  const diferencia=efEnt-efEsperado;
+  return {ini,egEf,totEgEf,tl,cobsTurno,totDia,mets,efTotal,efEnt,efEsperado,diferencia};
+}
+
+// Vista de solo lectura del detalle de un arqueo (admin) — igual al formulario de cierre, no editable.
+async function verArqueoDetalle(id){
+  const a=await dbGet('arqueos',id);if(!a)return;
+  const {ini,egEf,totEgEf,tl,cobsTurno,totDia,mets,efTotal,efEnt,efEsperado,diferencia}=await _calcDetalleArqueo(a);
+  document.getElementById('arqueoVerContent').innerHTML=`
+    <div class="alert alert-info" style="margin-bottom:14px">📍 ${localNombre(a.local)} · ${tl} · ${fmtD(a.fecha)} · Cajero: <strong>${a.cajero||'—'}</strong></div>
+    <div class="arqueo-box">
+      <div class="card-title" style="margin-bottom:10px">💵 Caja Inicial del Turno</div>
+      <div style="font-family:var(--font-display);font-size:1.8rem;color:var(--gold-light)">${fmt(ini)}</div>
+    </div>
+    <div class="arqueo-box">
+      <div class="card-title" style="margin-bottom:10px">📊 Resumen del Turno — ${cobsTurno.length} cobros</div>
+      ${METODOS.map(m=>`<div class="arqueo-row"><span>${m.icon} ${m.label}</span><span class="arqueo-total">${fmt(mets[m.id]||0)}</span></div>`).join('')}
+      <div class="arqueo-row" style="margin-top:8px"><span style="font-family:var(--font-cond);font-weight:700">TOTAL FACTURADO</span><span class="arqueo-total" style="font-size:1.4rem">${fmt(totDia)}</span></div>
+    </div>
+    <div class="arqueo-box">
+      <div class="card-title" style="margin-bottom:10px">💼 Efectivo en Caja</div>
+      <div class="arqueo-row"><span>Caja inicial</span><span>${fmt(ini)}</span></div>
+      <div class="arqueo-row"><span>Cobros en efectivo</span><span>${fmt(efTotal)}</span></div>
+      <div class="arqueo-row" style="color:var(--danger)"><span>Egresos de efectivo</span><span>−${fmt(totEgEf)}</span></div>
+      <div class="arqueo-row"><span style="font-family:var(--font-cond);font-weight:700">TOTAL EFECTIVO ESPERADO</span><span class="arqueo-total">${fmt(efEsperado)}</span></div>
+    </div>
+    <div class="arqueo-box">
+      <div class="card-title" style="margin-bottom:10px">💸 Egresos de Efectivo</div>
+      ${egEf.length?egEf.map(e=>`<div class="arqueo-row"><span>${e.concepto||'Sin concepto'}</span><span class="arqueo-total" style="font-size:.95rem;color:#e74c3c">−${fmt(e.monto)}</span></div>`).join(''):'<div style="color:var(--text-dim);font-size:.82rem;padding:6px 0">Sin egresos registrados</div>'}
+    </div>
+    <div class="arqueo-box">
+      <div class="card-title" style="margin-bottom:10px">🏦 Efectivo Entregado al Cierre</div>
+      <div class="arqueo-row"><span>Esperado en caja</span><span class="arqueo-total">${fmt(efEsperado)}</span></div>
+      <div class="arqueo-row"><span>Entregado</span><span class="arqueo-total">${efEnt>0?fmt(efEnt):'—'}</span></div>
+      <div class="arqueo-row"><span style="font-family:var(--font-cond);font-weight:700">DIFERENCIA</span><span class="arqueo-total" style="color:${diferencia===0?'var(--success)':diferencia>0?'#f1c40f':'var(--danger)'}">${efEnt>0?(diferencia>0?'+':'')+fmt(diferencia):'—'}</span></div>
+    </div>
+    <div class="form-group"><label class="form-label">Notas / Observaciones</label>
+      <div class="arqueo-box" style="font-size:.85rem">${a.notas||a.nota||'<span style="color:var(--text-dim)">Sin notas</span>'}</div></div>
+    <div style="margin-top:6px">${a.verificado
+      ?`<span class="badge badge-green" style="font-size:.8rem">✅ Verificado por ${a.verificadoPor||a.verificado_por||'—'} · ${fmtD((a.verificadoAt||'').slice(0,10))}</span>`
+      :a.cerrado
+        ?`<span class="badge badge-gold" style="font-size:.8rem">📤 Cerrado — pendiente de verificación</span>`
+        :`<span class="badge badge-yellow" style="font-size:.8rem">⏳ Turno en curso</span>`}</div>`;
+  const footer=document.getElementById('arqueoVerFooter');
+  footer.innerHTML=`<button class="btn btn-ghost" onclick="closeModal('modalArqueoVer')">Cerrar</button>
+    ${!a.verificado&&a.cerrado?`<button class="btn btn-gold" onclick="verificarArqueo(${id})">✅ Verificar</button>`:''}`;
+  openModal('modalArqueoVer');
+}
+
+// Formulario imprimible (fondo blanco) del cierre de turno, para firma del cajero.
+async function imprimirArqueoDetalle(id){
+  const a=await dbGet('arqueos',id);if(!a)return;
+  const {ini,egEf,totEgEf,tl,cobsTurno,totDia,mets,efTotal,efEnt,efEsperado,diferencia}=await _calcDetalleArqueo(a);
+  document.getElementById('arqueoPrintArea').innerHTML=`
+    <div style="font-family:Arial,sans-serif;color:#000;padding:24px;max-width:720px;margin:0 auto">
+      <h2 style="margin:0 0 4px">Cierre de Turno</h2>
+      <div style="font-size:.9rem;margin-bottom:16px">${localNombre(a.local)} · ${tl} · ${fmtD(a.fecha)}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;margin-bottom:16px">
+        <tr><td style="padding:4px 0;width:180px">Cajero:</td><td>${a.cajero||'—'}</td></tr>
+        <tr><td style="padding:4px 0">Caja inicial:</td><td>${fmt(ini)}</td></tr>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;margin-bottom:16px">
+        <thead><tr><th style="text-align:left;border-bottom:1px solid #000;padding:4px 0">Método</th><th style="text-align:right;border-bottom:1px solid #000;padding:4px 0">Monto</th></tr></thead>
+        <tbody>
+          ${METODOS.map(m=>`<tr><td style="padding:3px 0">${m.label}</td><td style="text-align:right">${fmt(mets[m.id]||0)}</td></tr>`).join('')}
+          <tr><td style="padding:6px 0;font-weight:bold;border-top:1px solid #000">TOTAL FACTURADO</td><td style="text-align:right;font-weight:bold;border-top:1px solid #000">${fmt(totDia)}</td></tr>
+        </tbody>
+      </table>
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem;margin-bottom:16px">
+        <tr><td style="padding:3px 0">Caja inicial</td><td style="text-align:right">${fmt(ini)}</td></tr>
+        <tr><td style="padding:3px 0">Cobros en efectivo</td><td style="text-align:right">${fmt(efTotal)}</td></tr>
+        <tr><td style="padding:3px 0">Egresos de efectivo</td><td style="text-align:right">−${fmt(totEgEf)}</td></tr>
+        <tr><td style="padding:6px 0;font-weight:bold;border-top:1px solid #000">TOTAL EFECTIVO ESPERADO</td><td style="text-align:right;font-weight:bold;border-top:1px solid #000">${fmt(efEsperado)}</td></tr>
+        <tr><td style="padding:3px 0">Efectivo entregado</td><td style="text-align:right">${efEnt>0?fmt(efEnt):'—'}</td></tr>
+        <tr><td style="padding:3px 0">Diferencia</td><td style="text-align:right">${efEnt>0?(diferencia>0?'+':'')+fmt(diferencia):'—'}</td></tr>
+      </table>
+      ${egEf.length?`<div style="font-size:.85rem;margin-bottom:16px">Egresos: ${egEf.map(e=>`${e.concepto} ${fmt(e.monto)}`).join(' · ')}</div>`:''}
+      ${a.notas||a.nota?`<div style="font-size:.85rem;margin-bottom:16px">Notas: ${a.notas||a.nota}</div>`:''}
+      <div style="display:flex;justify-content:space-between;margin-top:60px;font-size:.85rem">
+        <div style="width:45%;border-top:1px solid #000;padding-top:6px;text-align:center">Firma del Cajero</div>
+        <div style="width:45%;border-top:1px solid #000;padding-top:6px;text-align:center">Firma de Verificación</div>
+      </div>
+    </div>`;
+  document.body.classList.add('printing-arqueo');
+  window.print();
+}
+window.addEventListener('afterprint',()=>document.body.classList.remove('printing-arqueo'));
 
 
 // ══════════════════════════════════════════════════════════════
@@ -5175,5 +5284,6 @@ if(_fecha === hoy()){
     </div>
   </div>
 </div>
+<div id="arqueoPrintArea"></div>
 </body>
 </html>
