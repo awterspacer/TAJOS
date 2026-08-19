@@ -259,7 +259,8 @@ tbody tr:last-child td{border-bottom:none;}
       <input class="form-control" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn btn-gold" style="width:100%;margin-top:8px;padding:12px" onclick="doLogin()">Ingresar al Sistema</button>
-    <div style="text-align:center;margin-top:16px;font-size:.75rem;color:var(--text-dim)">TAJOS v2.0 · Acceso restringido</div>
+    <div style="text-align:center;margin-top:16px;font-size:.75rem;color:var(--text-dim)">TAJOS v1.0 · Acceso restringido</div>
+    <div style="text-align:center;margin-top:16px;font-size:.75rem;color:var(--text-dim)">Desarrollado por AwterSpacer Dev Ops</div>
   </div>
 </div>
 
@@ -420,7 +421,6 @@ tbody tr:last-child td{border-bottom:none;}
   <div class="section-header">
     <div><div class="section-title">CATÁLOGO</div><div class="section-sub">Servicios y productos</div></div>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-outline" onclick="openModal('modalNuevoProducto')">＋ Producto</button>
       <button class="btn btn-gold" onclick="openModal('modalNuevoServicio')">＋ Servicio</button>
     </div>
   </div>
@@ -428,9 +428,6 @@ tbody tr:last-child td{border-bottom:none;}
   <div id="catTabMetodos" style="display:none"></div>
   <div id="catTabServicios"><div class="grid-3" id="serviciosList"></div></div>
   <div id="catTabProductos" style="display:none">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
-      <button class="btn btn-outline btn-sm" id="btnIngresoStock" style="display:none" onclick="openModal('modalIngresoProducto')">📦 Ingreso de Stock</button>
-    </div>
     <div class="grid-3" id="productosList"></div>
   </div>
   <div id="catTabCategorias" style="display:none">
@@ -641,6 +638,9 @@ tbody tr:last-child td{border-bottom:none;}
         <option value="">Todas las categorías</option>
       </select>
       <input type="text" class="form-control" id="invBuscar" placeholder="Buscar..." style="width:150px" oninput="renderInventario()">
+      <button class="btn btn-outline btn-sm" onclick="abrirModalEntradaStock()">📥 Registrar Entrada</button>
+      <button class="btn btn-outline btn-sm" onclick="abrirModalSalidaStock()">📤 Registrar Salida</button>
+      <button class="btn btn-gold btn-sm" onclick="openModal('modalNuevoProducto')">＋ Crear Artículo</button>
       <button class="btn btn-outline" onclick="exportarInventarioXLSX()">📊 Exportar XLSX</button>
     </div>
   </div>
@@ -857,14 +857,18 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="modal-header"><div class="modal-title" id="modalProdTitulo">📦 Nuevo Producto</div><button class="modal-close" onclick="closeModal('modalNuevoProducto')">✕</button></div>
     <div class="modal-body">
       <input type="hidden" id="prodEditId">
-      <div class="form-group"><label class="form-label">Nombre *</label><input type="text" class="form-control" id="prodNombre"></div>
+      <div class="form-group"><label class="form-label">Nombre *</label><input type="text" class="form-control" id="prodNombre" oninput="actualizarCodigoProducto()"></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Precio *</label><input type="number" class="form-control" id="prodPrecio" min="0"></div>
         <div class="form-group"><label class="form-label">Stock Inicial</label><input type="number" class="form-control" id="prodStock" value="0" min="0"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Categoría</label><select class="form-control" id="prodCategoria"></select></div>
+        <div class="form-group"><label class="form-label">Categoría</label><select class="form-control" id="prodCategoria" onchange="actualizarCodigoProducto()"></select></div>
+        <div class="form-group"><label class="form-label">Marca</label><input type="text" class="form-control" id="prodMarca"></div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label class="form-label">Descripción</label><input type="text" class="form-control" id="prodDesc"></div>
+        <div class="form-group"><label class="form-label">Código</label><input type="text" class="form-control" id="prodCodigo" readonly style="opacity:.7" placeholder="Se genera automáticamente"></div>
       </div>
       <div class="form-group" style="margin-top:4px">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none">
@@ -876,19 +880,47 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modalNuevoProducto')">Cancelar</button><button class="btn btn-gold" onclick="guardarProducto()">Guardar</button></div>
   </div>
 </div>
-<!-- INGRESO STOCK -->
-<div class="modal-overlay" id="modalIngresoProducto" onclick="closeModalOutside(event,'modalIngresoProducto')">
+<!-- ENTRADA DE STOCK -->
+<div class="modal-overlay" id="modalEntradaStock" onclick="closeModalOutside(event,'modalEntradaStock')">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">📦 Ingreso de Stock</div><button class="modal-close" onclick="closeModal('modalIngresoProducto')">✕</button></div>
+    <div class="modal-header"><div class="modal-title">📥 Registrar Entrada de Stock</div><button class="modal-close" onclick="closeModal('modalEntradaStock')">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">Producto *</label><select class="form-control" id="stockProductoSel" onchange="updateStockActual()"></select></div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Cantidad a ingresar *</label><input type="number" class="form-control" id="stockCantidad" min="1" value="1"></div>
-        <div class="form-group"><label class="form-label">Stock actual</label><input type="text" class="form-control" id="stockActual" readonly style="opacity:.6"></div>
+      <div class="form-group"><label class="form-label">Código / Nombre *</label>
+        <input type="text" class="form-control" id="entBuscar" list="dlEntProductos" placeholder="Buscar por código o nombre..." oninput="resolverProductoStock('ent')">
+        <datalist id="dlEntProductos"></datalist>
+        <input type="hidden" id="entProductoId">
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px" id="entStockActual"></div>
       </div>
-      <div class="form-group"><label class="form-label">Notas / Proveedor</label><input type="text" class="form-control" id="stockNotas" placeholder="Opcional..."></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Cantidad *</label><input type="number" class="form-control" id="entCantidad" min="1" value="1"></div>
+        <div class="form-group"><label class="form-label">Sucursal *</label><select class="form-control" id="entSucursal" onchange="resolverProductoStock('ent')"><option value="1">Central</option><option value="2">Superseis</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Factura asociada</label><input type="text" class="form-control" id="entFactura" placeholder="N° de factura (opcional)"></div>
+        <div class="form-group"><label class="form-label">Costo</label><input type="number" class="form-control" id="entCosto" min="0" placeholder="Opcional"></div>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modalIngresoProducto')">Cancelar</button><button class="btn btn-gold" onclick="ingresarStock()">Registrar Ingreso</button></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modalEntradaStock')">Cancelar</button><button class="btn btn-gold" onclick="registrarEntradaStock()">Registrar Entrada</button></div>
+  </div>
+</div>
+<!-- SALIDA DE STOCK -->
+<div class="modal-overlay" id="modalSalidaStock" onclick="closeModalOutside(event,'modalSalidaStock')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">📤 Registrar Salida de Stock</div><button class="modal-close" onclick="closeModal('modalSalidaStock')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Código / Nombre *</label>
+        <input type="text" class="form-control" id="salBuscar" list="dlSalProductos" placeholder="Buscar por código o nombre..." oninput="resolverProductoStock('sal')">
+        <datalist id="dlSalProductos"></datalist>
+        <input type="hidden" id="salProductoId">
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:4px" id="salStockActual"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Cantidad *</label><input type="number" class="form-control" id="salCantidad" min="1" value="1"></div>
+        <div class="form-group"><label class="form-label">Sucursal *</label><select class="form-control" id="salSucursal" onchange="resolverProductoStock('sal')"><option value="1">Central</option><option value="2">Superseis</option></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Concepto / Motivo</label><input type="text" class="form-control" id="salConcepto" placeholder="Caducidad, canje, avería, etc. (opcional)"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modalSalidaStock')">Cancelar</button><button class="btn btn-gold" onclick="registrarSalidaStock()">Registrar Salida</button></div>
   </div>
 </div>
 <!-- DETALLE COBRO -->
@@ -1150,7 +1182,7 @@ const SUPA_COLS={
   clientes:new Set(['id','nombre','apellido','documento','celular','email','notas','created_at','updated_at']),
   clientes_reviewed:new Set(['id','cliente_id','nombre','apellido','numero','fecha_envio','created_at']),
   servicios:new Set(['id','nombre','precio','duracion','categoria','descripcion','comision','activo','created_at','updated_at']),
-  productos:new Set(['id','nombre','precio','stock','categoria','descripcion','comisionable','activo','created_at','updated_at']),
+  productos:new Set(['id','nombre','precio','stock','categoria','marca','codigo','descripcion','comisionable','activo','created_at','updated_at']),
   turnos:new Set(['id','cliente_id','cliente_nombre','barbero_id','fecha','hora','local','servicios','notas','estado','created_at','updated_at']),
   usuarios:new Set(['id','login','password','nombre','apellido','email','rol','estado','acceso','ultimo_acceso','created_at','updated_at']),
   historial:new Set(['id','usuario','nombre','rol','accion','fecha','hora','ts']),
@@ -1596,8 +1628,6 @@ async function showApp(){
     if(el.classList.contains('nav-item')){el.style.display=isAdmin?'none':'flex';}
     else{el.style.display=isAdmin?'none':'';}
   });
-  const btnStock=document.getElementById('btnIngresoStock');
-  if(btnStock)btnStock.style.display=isAdmin?'inline-flex':'none';
   // Aplicar restricción de acceso a sucursales para cajeros
   if(!isAdmin&&u.acceso){
     const acc=u.acceso;
@@ -1790,7 +1820,6 @@ function openModal(id,extra){
     document.getElementById('perfilPassword').value='';
   }
   if(id==='modalArqueo')renderArqueo();
-  if(id==='modalIngresoProducto')populateStockSel();
   if(id==='modalNuevaCategoria'){
     const tipo=extra||'serv';
     const hidEl=document.getElementById('catTipo');if(hidEl)hidEl.value=tipo;
@@ -1841,7 +1870,7 @@ function openModal(id,extra){
   }
   if(id==='modalNuevoProducto'){
     if(!document.getElementById('prodEditId').value){
-      ['prodNombre','prodPrecio','prodDesc'].forEach(f=>document.getElementById(f).value='');
+      ['prodNombre','prodPrecio','prodDesc','prodMarca','prodCodigo'].forEach(f=>document.getElementById(f).value='');
       document.getElementById('prodStock').value='0';
       const cbC=document.getElementById('prodComisionable');if(cbC)cbC.checked=false;
       document.getElementById('modalProdTitulo').textContent='📦 Nuevo Producto';
@@ -2111,10 +2140,27 @@ async function eliminarServicio(id){
   await dbDel('servicios',id);await logAct(`Eliminó servicio: ${s.nombre}`);toast('Eliminado','info');renderCatalogo();populateSels();
 }
 
+// Genera un código intuitivo tipo CATEGORÍA-NOMBRE-### (ej. B-G-001 para Bebida/Gaseosa),
+// incrementando el secuencial dentro de ese mismo prefijo.
+function _letraCod(s){return (s||'').trim().charAt(0).toUpperCase()||'X';}
+async function actualizarCodigoProducto(){
+  if(document.getElementById('prodEditId').value)return; // el código no se regenera al editar
+  const nombre=document.getElementById('prodNombre').value;
+  const categoria=document.getElementById('prodCategoria')?.value||'';
+  const codEl=document.getElementById('prodCodigo');
+  if(!nombre||!categoria){codEl.value='';return;}
+  const prefijo=`${_letraCod(categoria)}-${_letraCod(nombre)}`;
+  const prods=await dbAll('productos');
+  const nums=prods.filter(p=>typeof p.codigo==='string'&&p.codigo.startsWith(prefijo+'-'))
+    .map(p=>parseInt(p.codigo.split('-')[2],10)).filter(n=>!isNaN(n));
+  const next=(nums.length?Math.max(...nums):0)+1;
+  codEl.value=`${prefijo}-${String(next).padStart(3,'0')}`;
+}
+
 async function guardarProducto(){
   const id=document.getElementById('prodEditId').value;
   const _stockVal=+document.getElementById('prodStock').value||0;
-  const data={nombre:document.getElementById('prodNombre').value.trim(),precio:+document.getElementById('prodPrecio').value||0,categoria:document.getElementById('prodCategoria')?.value||'',descripcion:document.getElementById('prodDesc').value.trim(),comisionable:document.getElementById('prodComisionable')?.checked||false};
+  const data={nombre:document.getElementById('prodNombre').value.trim(),precio:+document.getElementById('prodPrecio').value||0,categoria:document.getElementById('prodCategoria')?.value||'',marca:document.getElementById('prodMarca').value.trim(),descripcion:document.getElementById('prodDesc').value.trim(),codigo:document.getElementById('prodCodigo').value.trim(),comisionable:document.getElementById('prodComisionable')?.checked||false};
   if(!data.nombre)return toast('El nombre es requerido','error');
   if(id){
     // Editar: preservar stock de otras sucursales, solo actualizar la activa
@@ -2129,9 +2175,10 @@ async function guardarProducto(){
     [1,2].forEach(s=>data.stock[String(s)]=0);
     data.stock[String(ST.localActivo)]=_stockVal;
     await dbAdd('productos',data);
-    await logAct(`Creó producto: ${data.nombre}`);toast('Producto creado','success');
+    await logAct(`Creó producto: ${data.nombre} (${data.codigo||'s/cód.'})`);toast('Producto creado','success');
   }
   closeModal('modalNuevoProducto');document.getElementById('prodEditId').value='';renderCatalogo();populateSels();
+  if(document.getElementById('page-inventario')?.classList.contains('active'))renderInventario();
 }
 
 async function editarProducto(id){
@@ -2139,6 +2186,7 @@ async function editarProducto(id){
   document.getElementById('prodEditId').value=id;document.getElementById('prodNombre').value=p.nombre;
   document.getElementById('prodPrecio').value=p.precio;document.getElementById('prodStock').value=getStockLocal(p);
   document.getElementById('prodDesc').value=p.descripcion||'';
+  document.getElementById('prodMarca').value=p.marca||'';document.getElementById('prodCodigo').value=p.codigo||'';
   ST._pendingProdCat=p.categoria||'';
   const cbComis=document.getElementById('prodComisionable');if(cbComis)cbComis.checked=!!p.comisionable;
   document.getElementById('modalProdTitulo').textContent='&#128230; Editar Producto';openModal('modalNuevoProducto');
@@ -2149,29 +2197,73 @@ async function eliminarProducto(id){
   await dbDel('productos',id);await logAct(`Eliminó producto: ${p.nombre}`);toast('Eliminado','info');renderCatalogo();populateSels();
 }
 
-async function populateStockSel(){
+// Buscador compartido código/nombre para los modales de Entrada y Salida de stock.
+async function _poblarBuscadorStock(prefijo){
   const prods=await dbAll('productos');
-  const sel=document.getElementById('stockProductoSel');
-  sel.innerHTML=prods.map(p=>{const _sl=getStockLocal(p);return`<option value="${p.id}" data-stock="${_sl}">${p.nombre} (${localNombre(ST.localActivo)}: ${_sl} · Total: ${stockTotal(p)})</option>`;}).join('');
-  updateStockActual();
+  const dl=document.getElementById(prefijo==='ent'?'dlEntProductos':'dlSalProductos');
+  dl.innerHTML=prods.map(p=>`<option value="${(p.codigo?p.codigo+' — ':'')}${p.nombre}">`).join('');
+  return prods;
 }
-function updateStockActual(){
-  const sel=document.getElementById('stockProductoSel');
-  const opt=sel.options[sel.selectedIndex];
-  document.getElementById('stockActual').value=opt?opt.dataset.stock:'0';
+async function resolverProductoStock(prefijo){
+  const val=document.getElementById(`${prefijo}Buscar`).value.trim();
+  const prods=await dbAll('productos');
+  const match=prods.find(p=>`${p.codigo?p.codigo+' — ':''}${p.nombre}`===val);
+  document.getElementById(`${prefijo}ProductoId`).value=match?match.id:'';
+  const stkEl=document.getElementById(`${prefijo}StockActual`);
+  if(match){
+    const suc=document.getElementById(`${prefijo}Sucursal`).value;
+    stkEl.textContent=`Stock actual: ${getStockLocal(match,suc)} u. en ${localNombre(suc)} · Total: ${stockTotal(match)} u.`;
+  }else stkEl.textContent='';
 }
-async function ingresarStock(){
-  const prodId=+document.getElementById('stockProductoSel').value;
-  const cant=+document.getElementById('stockCantidad').value||0;
-  const notas=document.getElementById('stockNotas').value.trim();
-  if(!prodId||cant<=0)return toast('Selecciona producto y cantidad válida','error');
-  const p=await dbGet('productos',prodId);
-  const _ant=getStockLocal(p);
-  setStockLocal(p,_ant+cant);
+
+async function abrirModalEntradaStock(){
+  document.getElementById('entBuscar').value='';document.getElementById('entProductoId').value='';
+  document.getElementById('entCantidad').value=1;document.getElementById('entFactura').value='';document.getElementById('entCosto').value='';
+  document.getElementById('entSucursal').value=ST.localActivo;
+  document.getElementById('entStockActual').textContent='';
+  await _poblarBuscadorStock('ent');
+  openModal('modalEntradaStock');
+}
+async function abrirModalSalidaStock(){
+  document.getElementById('salBuscar').value='';document.getElementById('salProductoId').value='';
+  document.getElementById('salCantidad').value=1;document.getElementById('salConcepto').value='';
+  document.getElementById('salSucursal').value=ST.localActivo;
+  document.getElementById('salStockActual').textContent='';
+  await _poblarBuscadorStock('sal');
+  openModal('modalSalidaStock');
+}
+
+async function registrarEntradaStock(){
+  const prodId=+document.getElementById('entProductoId').value;
+  const cant=+document.getElementById('entCantidad').value||0;
+  const suc=document.getElementById('entSucursal').value;
+  const factura=document.getElementById('entFactura').value.trim();
+  const costo=+document.getElementById('entCosto').value||0;
+  if(!prodId||cant<=0)return toast('Selecciona un producto válido de la lista y una cantidad','error');
+  const p=await dbGet('productos',prodId);if(!p)return toast('Producto no encontrado','error');
+  const _ant=getStockLocal(p,suc);
+  setStockLocal(p,_ant+cant,suc);
   await dbPut('productos',p);
-  await logAct(`Ingresó ${cant} u. de "${p.nombre}" en ${localNombre(ST.localActivo)}${notas?' ('+notas+')':''}`);
-  toast(`Stock de "${p.nombre}" (${localNombre(ST.localActivo)}) → ${_ant+cant} u.`,'success');
-  closeModal('modalIngresoProducto');renderCatalogo();populateSels();
+  await logAct(`Entrada de stock: ${cant} u. de "${p.nombre}" (${p.codigo||'s/cód.'}) en ${localNombre(suc)}${factura?' · Factura: '+factura:''}${costo?' · Costo: '+fmt(costo):''}`);
+  toast(`Stock de "${p.nombre}" (${localNombre(suc)}) → ${_ant+cant} u.`,'success');
+  closeModal('modalEntradaStock');renderCatalogo();populateSels();
+  if(document.getElementById('page-inventario')?.classList.contains('active'))renderInventario();
+}
+async function registrarSalidaStock(){
+  const prodId=+document.getElementById('salProductoId').value;
+  const cant=+document.getElementById('salCantidad').value||0;
+  const suc=document.getElementById('salSucursal').value;
+  const concepto=document.getElementById('salConcepto').value.trim();
+  if(!prodId||cant<=0)return toast('Selecciona un producto válido de la lista y una cantidad','error');
+  const p=await dbGet('productos',prodId);if(!p)return toast('Producto no encontrado','error');
+  const _ant=getStockLocal(p,suc);
+  if(cant>_ant)return toast(`Stock insuficiente en ${localNombre(suc)} (disponible: ${_ant})`,'error');
+  setStockLocal(p,_ant-cant,suc);
+  await dbPut('productos',p);
+  await logAct(`Salida de stock: ${cant} u. de "${p.nombre}" (${p.codigo||'s/cód.'}) en ${localNombre(suc)}${concepto?' · Motivo: '+concepto:''}`);
+  toast(`Stock de "${p.nombre}" (${localNombre(suc)}) → ${_ant-cant} u.`,'success');
+  closeModal('modalSalidaStock');renderCatalogo();populateSels();
+  if(document.getElementById('page-inventario')?.classList.contains('active'))renderInventario();
 }
 // ══════════════════════════════════════════════════════════════
 // [15] CLIENTES
@@ -3946,78 +4038,6 @@ function switchBackupTab(tab,el){
 
 function selFmt(fmt){_bkpFmt=fmt;document.getElementById('fmtJSON').classList.toggle('active',fmt==='JSON');const xEl=document.getElementById('fmtXLSX');if(xEl)xEl.classList.toggle('active',fmt==='XLSX');}
 
-async function cargarResumenBackup(){
-  const labels={barberos:'Barberos',clientes:'Clientes',servicios:'Servicios',productos:'Productos',turnos:'Turnos',cobros:'Cobros',usuarios:'Usuarios',historial:'Historial',arqueos:'Arqueos',barberoUsers:'Accesos Portal Barberos',adelantos:'Adelantos',egresos:'Egresos/Consumos',giftcards:'Giftcards'};
-  const counts={};for(const s of STORES){const d=await dbAll(s);counts[s]=d.length;}
-  document.getElementById('backupResumen').innerHTML=`<div style="font-family:var(--font-cond);font-size:.8rem;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Contenido del backup</div>`+
-    Object.entries(counts).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(201,148,10,.06)"><span>${labels[k]||k}</span><span style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${v}</span></div>`).join('')+
-    `<div style="margin-top:10px;font-size:.78rem;color:var(--text-dim)">Fecha: ${new Date().toLocaleString('es-PY')}</div>`;
-}
-
-async function recolectarDatos(){
-  const data={_meta:{version:'2.0',sistema:'TAJOS',fecha:new Date().toISOString()}};
-  for(const s of STORES)data[s]=await dbAll(s);
-  return data;
-}
-
-async function exportarBackup(){
-  const data=await recolectarDatos();
-  const ts=hoy();const user=ST.user?.login||'sistema';
-  if(_bkpFmt==='JSON'){
-    descargar(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),`tajos_backup_${ts}_${user}.json`);
-    await logAct('Exportó backup en formato JSON');toast('Backup JSON descargado','success');
-  }else{
-    await exportarBackupXLSX(data,ts,user);
-    await logAct('Exportó backup en formato XLSX');toast('Backup XLSX descargado','success');
-  }
-}
-
-async function exportarRapido(f){_bkpFmt=(f==='XML'?'XLSX':f);await exportarBackup();closeModal('modalRecordatorioBackup');await doLogout();}
-
-async function archivarHistorialAntiguo(){
-  // Exporta historial >30 días como XML y lo elimina de la DB
-  const logs=await dbAll('historial');
-  const limite=new Date();limite.setDate(limite.getDate()-30);const limDS=toDS(limite);
-  const viejos=logs.filter(l=>l.fecha<limDS);
-  if(!viejos.length){toast('No hay registros de historial con más de 30 días','info');return;}
-  // Generar XML del archivo
-  const esc=v=>v==null?'':String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<TajosHistorialArchivo fecha="${new Date().toISOString()}" registros="${viejos.length}">\n`;
-  viejos.forEach(l=>{
-    xml+=`  <registro id="${esc(l.id)}">\n`;
-    Object.entries(l).filter(([k])=>k!=='id').forEach(([k,v])=>{xml+=`    <${k}>${esc(v)}</${k}>\n`;});
-    xml+=`  </registro>\n`;
-  });
-  xml+=`</TajosHistorialArchivo>`;
-  const ts=hoy();
-  descargar(new Blob([xml],{type:'application/xml'}),`tajos_historial_archivo_${ts}.xml`);
-  // Eliminar de la DB
-  for(const l of viejos)await dbDel('historial',l.id);
-  await logAct(`Archivó y eliminó ${viejos.length} registros de historial anteriores a ${limDS}`);
-  toast(`Archivados y eliminados ${viejos.length} registros (>${30} días)`,'success');
-  if(document.getElementById('page-historial')?.classList.contains('active'))renderHistorial();
-}
-
-async function verificarAlertaMensual(){
-  // Mostrar alerta si estamos en los últimos 3 días del mes
-  const hm=new Date();
-  const ultimoDia=new Date(hm.getFullYear(),hm.getMonth()+1,0).getDate();
-  const diasRestantes=ultimoDia-hm.getDate();
-  if(diasRestantes>2)return;
-  const clave=`alertaMes_${hoy().slice(0,7)}`;
-  if(localStorage.getItem(clave))return;
-  localStorage.setItem(clave,'shown');
-  const logs=await dbAll('historial');
-  const limite=new Date();limite.setDate(limite.getDate()-30);const limDS=toDS(limite);
-  const viejos=logs.filter(l=>l.fecha<limDS).length;
-  const msg=viejos>0
-    ? `⚠ Fin de mes próximo. Hay ${viejos} registros de historial con más de 30 días. Se recomienda archivarlos desde Backup → Exportar.`
-    : `📅 Fin de mes en ${diasRestantes} día(s). Recordá hacer el backup mensual.`;
-  setTimeout(()=>toast(msg,'info'),2000);
-}
-
-function descargar(blob,nombre){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nombre;a.click();URL.revokeObjectURL(a.href);}
-
 // ── XLSX helper (SheetJS CDN) ──
 function _xlsxVal(v){
   if(v==null)return'';
@@ -4078,7 +4098,7 @@ async function cargarResumenBackup(){
 }
 
 async function recolectarDatos(){
-  const data={_meta:{version:'2.0',sistema:'TAJOS',fecha:new Date().toISOString()}};
+  const data={_meta:{version:'1.0',sistema:'TAJOS',fecha:new Date().toISOString()}};
   for(const s of STORES)data[s]=await dbAll(s);
   return data;
 }
