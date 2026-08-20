@@ -638,19 +638,39 @@ tbody tr:last-child td{border-bottom:none;}
         <option value="">Todas las categorías</option>
       </select>
       <input type="text" class="form-control" id="invBuscar" placeholder="Buscar..." style="width:150px" oninput="renderInventario()">
-      <button class="btn btn-outline btn-sm" onclick="abrirModalEntradaStock()">📥 Registrar Entrada</button>
-      <button class="btn btn-outline btn-sm" onclick="abrirModalSalidaStock()">📤 Registrar Salida</button>
       <button class="btn btn-gold btn-sm" onclick="openModal('modalNuevoProducto')">＋ Crear Artículo</button>
       <button class="btn btn-outline" onclick="exportarInventarioXLSX()">📊 Exportar XLSX</button>
     </div>
   </div>
-  <div class="grid-4" style="margin-bottom:20px">
+  <div class="tabs">
+    <div class="tab active" onclick="switchInvTab('catalogo',this)">📦 Catálogo</div>
+    <div class="tab" onclick="switchInvTab('movimientos',this)">🔄 Movimientos</div>
+  </div>
+  <div class="grid-4" style="margin-bottom:20px" id="invStatsRow">
     <div class="stat-card"><div class="stat-label">Total productos</div><div class="stat-value" id="invStatTotal">0</div><div class="stat-icon">📦</div></div>
     <div class="stat-card"><div class="stat-label">Sin stock</div><div class="stat-value" id="invStatSinStock" style="color:var(--danger)">0</div><div class="stat-icon">⚠</div></div>
     <div class="stat-card"><div class="stat-label">Stock bajo (&lt;5)</div><div class="stat-value" id="invStatBajo" style="color:#e67e22">0</div><div class="stat-icon">📉</div></div>
     <div class="stat-card"><div class="stat-label">Valor total estimado</div><div class="stat-value" id="invStatValor" style="font-size:1.3rem">Gs. 0</div><div class="stat-icon">💰</div></div>
   </div>
-  <div class="card"><div id="invContenido"></div></div>
+  <div id="invTabCatalogo">
+    <div class="card"><div id="invContenido"></div></div>
+  </div>
+  <div id="invTabMovimientos" style="display:none">
+    <div class="section-header" style="margin-bottom:14px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-outline btn-sm" onclick="abrirModalEntradaStock()">📥 Registrar Entrada</button>
+        <button class="btn btn-outline btn-sm" onclick="abrirModalSalidaStock()">📤 Registrar Salida</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select class="form-control" id="invMovOrden" style="width:190px" onchange="renderInvMovimientos()">
+          <option value="fecha">Ordenar por fecha</option>
+          <option value="codigo">Ordenar por código</option>
+          <option value="nombre">Ordenar por nombre</option>
+        </select>
+      </div>
+    </div>
+    <div class="card"><div id="invMovContenido"></div></div>
+  </div>
 </div>
 
 <!-- GIFTCARDS -->
@@ -1769,7 +1789,10 @@ function navigate(page){
     if(fd&&!fd.value) fd.value=hoy();
     renderConsumos();
   }
-  if(page==='inventario')renderInventario();
+  if(page==='inventario'){
+    renderInventario();
+    if(document.getElementById('invTabMovimientos')?.style.display!=='none')renderInvMovimientos();
+  }
 }
 
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebar-overlay').classList.toggle('visible');}
@@ -2247,7 +2270,10 @@ async function registrarEntradaStock(){
   await logAct(`Entrada de stock: ${cant} u. de "${p.nombre}" (${p.codigo||'s/cód.'}) en ${localNombre(suc)}${factura?' · Factura: '+factura:''}${costo?' · Costo: '+fmt(costo):''}`);
   toast(`Stock de "${p.nombre}" (${localNombre(suc)}) → ${_ant+cant} u.`,'success');
   closeModal('modalEntradaStock');renderCatalogo();populateSels();
-  if(document.getElementById('page-inventario')?.classList.contains('active'))renderInventario();
+  if(document.getElementById('page-inventario')?.classList.contains('active')){
+    renderInventario();
+    if(document.getElementById('invTabMovimientos')?.style.display!=='none')renderInvMovimientos();
+  }
 }
 async function registrarSalidaStock(){
   const prodId=+document.getElementById('salProductoId').value;
@@ -2263,7 +2289,10 @@ async function registrarSalidaStock(){
   await logAct(`Salida de stock: ${cant} u. de "${p.nombre}" (${p.codigo||'s/cód.'}) en ${localNombre(suc)}${concepto?' · Motivo: '+concepto:''}`);
   toast(`Stock de "${p.nombre}" (${localNombre(suc)}) → ${_ant-cant} u.`,'success');
   closeModal('modalSalidaStock');renderCatalogo();populateSels();
-  if(document.getElementById('page-inventario')?.classList.contains('active'))renderInventario();
+  if(document.getElementById('page-inventario')?.classList.contains('active')){
+    renderInventario();
+    if(document.getElementById('invTabMovimientos')?.style.display!=='none')renderInvMovimientos();
+  }
 }
 // ══════════════════════════════════════════════════════════════
 // [15] CLIENTES
@@ -2645,8 +2674,10 @@ async function renderAgenda(){
         return;
       }
 
-      // Turno que comienza aquí
-      const t=td.find(t=>t.hora===hora&&Number(t.barberoId||t.barbero_id)===bid);
+      // Turno que comienza aquí — si hay más de uno en el mismo slot (ej. uno cancelado
+      // y otro reagendado encima), el cancelado pierde prioridad y no se muestra.
+      const _tMatches=td.filter(t=>t.hora===hora&&Number(t.barberoId||t.barbero_id)===bid);
+      const t=_tMatches.find(t=>t.estado!=='cancelado')||_tMatches[0];
       if(t){
         const span   = t._slots||1;
         const durMin = span*30;
@@ -4821,6 +4852,21 @@ async function mostrarCajaInicialSiNecesario(){
       : `Efectivo entregado en Turno ${cierreTurno}: ${fmt(sugerido)}`;
   }
 
+  // Respaldo: sessionStorage se pierde al cerrar la pestaña/navegador o cambiar de
+  // dispositivo, así que si no hay sugerencia por esa vía, buscamos directo en el
+  // arqueo cerrado del turno anterior (fuente durable, ya persistida en la base).
+  if(!sugerido && turno>1){
+    const turnoAnt=turno-1;
+    const arqAnt=arqs.find(a=>
+      a.fecha===td && Number(a.local)===Number(ST.localActivo) &&
+      Number(a.turno)===turnoAnt && (a.cerrado===true||a.cerrado===1)
+    );
+    if(arqAnt && arqAnt.efectivoEntregado>0){
+      sugerido=Number(arqAnt.efectivoEntregado)||0;
+      sugeridoLabel=`Efectivo entregado por ${arqAnt.cajero||'Turno '+turnoAnt} (Turno ${turnoAnt}): ${fmt(sugerido)}`;
+    }
+  }
+
   const info=document.getElementById('cajaInicialInfo');
   const turnoLabel=turno===1?'Turno 1 (8–14h)':'Turno 2 (14–20h)';
   if(info)info.textContent=localNombre(ST.localActivo)+' · '+turnoLabel+' · '+td;
@@ -4860,6 +4906,63 @@ async function omitirCajaInicial(){
 // ══════════════════════════════════════════════════════════════
 // [33] INVENTARIO
 // ══════════════════════════════════════════════════════════════
+function switchInvTab(tab,el){
+  document.querySelectorAll('#page-inventario .tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('invTabCatalogo').style.display=tab==='catalogo'?'':'none';
+  document.getElementById('invTabMovimientos').style.display=tab==='movimientos'?'':'none';
+  if(tab==='movimientos')renderInvMovimientos();
+}
+
+// Parsea los movimientos de stock (entrada/salida) desde el historial de acciones,
+// generado por registrarEntradaStock()/registrarSalidaStock() vía logAct().
+const _RE_MOV=/^(Entrada|Salida) de stock: (\d+) u\. de "(.+)" \(([^)]*)\) en ([^·]+?)(?:\s*·\s*(.+))?$/;
+async function _obtenerMovimientosStock(){
+  const hist=await dbAll('historial');
+  const movs=[];
+  hist.forEach(h=>{
+    const m=(h.accion||'').match(_RE_MOV);
+    if(!m)return;
+    movs.push({
+      tipo:m[1]==='Entrada'?'entrada':'salida',
+      cantidad:+m[2],nombre:m[3],codigo:m[4]==='s/cód.'?'':m[4],
+      sucursal:m[5].trim(),detalle:m[6]||'',
+      fecha:h.fecha,hora:h.hora,usuario:h.nombre||h.usuario
+    });
+  });
+  return movs;
+}
+async function renderInvMovimientos(){
+  const orden=document.getElementById('invMovOrden')?.value||'fecha';
+  const movs=await _obtenerMovimientosStock();
+  movs.sort((a,b)=>{
+    if(orden==='codigo')return (a.codigo||'').localeCompare(b.codigo||'','es')||0;
+    if(orden==='nombre')return a.nombre.localeCompare(b.nombre,'es');
+    // fecha: más reciente primero (fecha+hora)
+    const da=a.fecha+' '+a.hora,db=b.fecha+' '+b.hora;
+    return db.localeCompare(da);
+  });
+  const cont=document.getElementById('invMovContenido');
+  if(!movs.length){
+    cont.innerHTML='<div class="empty-state"><div class="icon">🔄</div><p>No hay movimientos de stock registrados</p></div>';
+    return;
+  }
+  cont.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Código</th><th>Producto</th>
+      <th style="text-align:right">Cantidad</th><th>Sucursal</th><th>Detalle</th><th>Usuario</th></tr></thead>
+    <tbody>${movs.map(m=>`<tr>
+      <td style="font-family:var(--font-cond);white-space:nowrap">${fmtD(m.fecha)} ${m.hora}</td>
+      <td><span class="badge ${m.tipo==='entrada'?'badge-green':'badge-red'}">${m.tipo==='entrada'?'📥 Entrada':'📤 Salida'}</span></td>
+      <td style="color:var(--text-muted)">${m.codigo||'—'}</td>
+      <td><strong>${m.nombre}</strong></td>
+      <td style="text-align:right;font-family:var(--font-cond)">${m.cantidad}</td>
+      <td>${m.sucursal}</td>
+      <td style="color:var(--text-muted);font-size:.82rem">${m.detalle||'—'}</td>
+      <td style="color:var(--text-dim);font-size:.82rem">${m.usuario||'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
 async function renderInventario(){
   const prods=await dbAll('productos');
   const activos=prods.filter(p=>p.activo!==false);
