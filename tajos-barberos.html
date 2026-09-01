@@ -113,6 +113,7 @@ tbody tr:last-child td{border-bottom:none;}
 .badge-gold{background:rgba(201,148,10,.18);color:var(--gold-light);}
 .badge-green{background:rgba(39,174,96,.15);color:#2ecc71;}
 .badge-red{background:rgba(192,57,43,.15);color:#e74c3c;}
+.badge-blue{background:rgba(41,128,185,.15);color:#3498db;}
 .badge-blue{background:rgba(41,128,185,.2);color:#5dade2;}
 .badge-gray{background:rgba(255,255,255,.06);color:var(--text-muted);}
 .badge-yellow{background:rgba(241,196,15,.15);color:#f1c40f;}
@@ -289,8 +290,8 @@ tbody tr:last-child td{border-bottom:none;}
         </div>
       </div>
       <div class="grid-4" style="margin-bottom:20px">
-        <div class="stat-card"><div class="stat-label">Comisión Hoy</div><div class="stat-value" id="srvComHoy">Gs. 0</div><div class="stat-icon">💈</div></div>
-        <div class="stat-card"><div class="stat-label">Servicios Hoy</div><div class="stat-value" id="srvCntHoy">0</div><div class="stat-icon">✂</div></div>
+        <div class="stat-card"><div class="stat-label">Comisión del día</div><div class="stat-value" id="srvComHoy">Gs. 0</div><div class="stat-icon">💈</div></div>
+        <div class="stat-card"><div class="stat-label">Servicios del día</div><div class="stat-value" id="srvCntHoy">0</div><div class="stat-icon">✂</div></div>
         <div class="stat-card"><div class="stat-label">Comisión Mes</div><div class="stat-value" id="srvComMes">Gs. 0</div><div class="stat-icon">📅</div></div>
         <div class="stat-card"><div class="stat-label">Servicios Mes</div><div class="stat-value" id="srvCntMes">0</div><div class="stat-icon">📋</div></div>
       </div>
@@ -436,8 +437,8 @@ tbody tr:last-child td{border-bottom:none;}
 // ══════════════════════════════════════════════════════════════
 // CONFIGURACIÓN SUPABASE — reemplazar con tus valores reales
 // ══════════════════════════════════════════════════════════════
-const SUPA_URL='https://tgwhegmgchnttsmrhcfc.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnd2hlZ21nY2hudHRzbXJoY2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODg1ODgsImV4cCI6MjA4OTQ2NDU4OH0.3g20p6yGber_j6HNB5oQqesOm_YgQ_fo9P2Yl2jGPbM';
+const SUPA_URL='https://sistematajos.duckdns.org';
+const SUPA_KEY='sb_publishable_5SeTVAtyoLryOA7oBW3blv_fEdvR0gW';
 
 const STORE_TABLE={
   barberos:'barberos',clientes:'clientes',servicios:'servicios',productos:'productos',
@@ -445,6 +446,7 @@ const STORE_TABLE={
   arqueos:'arqueos',barberoUsers:'barbero_users',adelantos:'adelantos',
   egresos:'egresos',giftcards:'giftcards',categoriasServ:'categorias_serv',categoriasProd:'categorias_prod',
   metodosPago:'metodos_pago',
+  bloqueosAgenda:'bloqueos_agenda',
 };
 const FIELD_TO_DB={
   barberoId:'barbero_id',clienteId:'cliente_id',productoId:'producto_id',
@@ -474,6 +476,7 @@ const SUPA_COLS={
   categorias_serv:new Set(['id','nombre','created_at']),
   categorias_prod:new Set(['id','nombre','created_at']),
   metodos_pago:new Set(['id','nombre','icono','activo','orden','created_at']),
+  bloqueos_agenda:new Set(['id','local','barbero_id','fecha','desde','hasta','motivo','registrado_por','created_at']),
 };
 function toDbObj(obj,table){const allowed=table?SUPA_COLS[table]:null;const r={};for(const [k,v] of Object.entries(obj)){const dk=FIELD_TO_DB[k]||k;if(allowed&&!allowed.has(dk))continue;r[dk]=(v!==undefined&&v!==null)?v:null;}return r;}
 function fromDbObj(obj){
@@ -527,14 +530,14 @@ async function supaFetch(method,table,query,body,extraHeaders={}){
 
 // IndexedDB (cache local / fallback offline)
 let db;
-const DB_NAME='TajosOS',DB_VER=4;
+const DB_NAME='TajosOS',DB_VER=8;
 function initDB(){
   return new Promise((res,rej)=>{
     const r=indexedDB.open(DB_NAME,DB_VER);
     r.onupgradeneeded=e=>{
       const d=e.target.result;
       ['barberos','clientes','servicios','productos','turnos','cobros','usuarios','historial','arqueos',
-       'barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd']
+       'barberoUsers','adelantos','egresos','giftcards','categoriasServ','categoriasProd','bloqueosAgenda']
         .forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id',autoIncrement:true});});
     };
     r.onsuccess=e=>{db=e.target.result;res(db);};
@@ -555,7 +558,25 @@ async function _idbReplaceAll(store,rows){
 // Capa hibrida publica
 async function dbAll(store){
   const tbl=STORE_TABLE[store]||store;
-  if(_online){try{const rows=await supaFetch('GET',tbl,'select=*&order=id.asc');const mapped=(rows||[]).map(fromDbObj);_idbReplaceAll(store,mapped).catch(()=>{});return mapped;}catch(e){console.warn('dbAll fallback:',e);}}
+  if(_online){
+    try{
+      const PAGE=1000;
+      let all=[];
+      let offset=0;
+      while(true){
+        const from=offset;
+        const to=offset+PAGE-1;
+        const rows=await supaFetch('GET',tbl,'select=*&order=id.asc',null,{'Range':`${from}-${to}`,'Range-Unit':'items'});
+        if(!rows||rows.length===0) break;
+        all=all.concat(rows);
+        if(rows.length<PAGE) break;
+        offset+=PAGE;
+      }
+      const mapped=all.map(fromDbObj);
+      await _idbReplaceAll(store,mapped);
+      return mapped;
+    }catch(e){console.warn('dbAll fallback:',e);}
+  }
   return _idbAll(store);
 }
 async function dbGet(store,id){
@@ -587,13 +608,52 @@ const ST={
   barbero:null,      // barbero record (vinculado)
   agendaFecha:new Date(),
   agendaVista:'dia', // 'dia' | 'semana'
-  reportePeriodo:'dia'
+  reportePeriodo:'dia',
+  _bloqueos:[]       // bloqueos de horario cargados desde localStorage
 };
 
 // ══ HELPERS ══
+
+// Slots de 30min que ocupa un turno según sus servicios
+function _turnoSlots(serviciosNombres, catalogo){
+  const mins=(serviciosNombres||[]).reduce((s,n)=>{
+    const svc=(catalogo||[]).find(x=>x.nombre===n);
+    return s+(svc&&svc.duracion>0?svc.duracion:30);
+  },0);
+  return Math.max(1,Math.ceil(Math.max(30,mins)/30));
+}
+// Suma N slots de 30min a una hora HH:MM
+function _addSlots(hora,n){
+  const [h,m]=hora.split(':').map(Number);
+  const t=h*60+m+n*30;
+  return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
+}
+// Badge CSS class según estado del turno
+function _badgeTurno(estado){
+  if(estado==='completado') return 'badge-green';
+  if(estado==='cancelado')  return 'badge-red';
+  if(estado==='en_atencion') return 'badge-blue';
+  return 'badge-gold';
+}
+// Label legible del estado
+function _labelTurno(estado){
+  if(estado==='en_atencion') return 'En atención';
+  return estado||'pendiente';
+}
+// Cargar bloqueos desde Supabase (tabla bloqueos_agenda).
+// Compartida entre portales: el admin los crea en tajos-mng,
+// el barbero los ve aquí en tiempo real.
+async function _cargarBloqueos(local){
+  try{
+    const rows=await dbAll('bloqueosAgenda');
+    // Sin filtro de local: el barbero ve los bloqueos de su barberoId
+    ST._bloqueos=rows;
+  }catch(e){ST._bloqueos=[];}
+}
+
 const fmt=n=>'Gs. '+(n||0).toLocaleString('es-PY',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtD=d=>{if(!d)return '—';return new Date(d+'T00:00:00').toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric'});};
-const toDS=d=>d.toISOString().split('T')[0];
+const toDS=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const hoy=()=>toDS(new Date());
 const ahora=()=>{const n=new Date();return toDS(n)+' '+n.toTimeString().slice(0,5);};
 
@@ -752,7 +812,10 @@ async function renderAgenda(){
   const bId=Number(ST.barbero.id);
   const turnos=await dbAll('turnos');
   const clientes=await dbAll('clientes');
+  const svcs=await dbAll('servicios');
   const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
+  // Cargar bloqueos desde Supabase
+  await _cargarBloqueos();
 
   if(ST.agendaVista==='dia'){
     const fecha=toDS(ST.agendaFecha);
@@ -760,27 +823,81 @@ async function renderAgenda(){
       ST.agendaFecha.toLocaleDateString('es-PY',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     document.getElementById('agendaSubtitle').textContent='Vista diaria';
     const misTurnos=turnos.filter(t=>Number(t.barberoId||t.barbero_id)===bId&&t.fecha===fecha);
-    let html='<div style="display:grid;grid-template-columns:64px 1fr;min-width:320px">';
-    HORAS.forEach(hora=>{
-      const _tMatches=misTurnos.filter(t=>t.hora===hora);
-      const t=_tMatches.find(t=>t.estado!=='cancelado')||_tMatches[0];
-      html+=`<div class="time-label">${hora}</div>`;
+    const blqDia=(ST._bloqueos||[]).filter(b=>b.fecha===fecha&&Number(b.barberoId)===bId);
+
+    // Pre-calcular spans
+    misTurnos.forEach(t=>{t._slots=_turnoSlots(t.servicios,svcs);});
+    blqDia.forEach(bl=>{
+      const [hd,md]=bl.desde.split(':').map(Number);
+      const [hf,mf]=bl.hasta.split(':').map(Number);
+      bl._slots=Math.max(1,((hf*60+mf)-(hd*60+md))/30);
+    });
+    // skipMap: celdas cubiertas por span
+    const skipMap={};
+    misTurnos.forEach(t=>{for(let i=1;i<t._slots;i++)skipMap[_addSlots(t.hora,i)]=true;});
+    blqDia.forEach(bl=>{for(let i=1;i<bl._slots;i++)skipMap['blq|'+_addSlots(bl.desde,i)]=true;});
+    const blqStart=new Set(blqDia.map(b=>b.desde));
+
+    // Un único grid: columnas=64px+1fr, filas=40px header + 48px×HORAS
+    const rowTpl=`40px repeat(${HORAS.length},48px)`;
+    let cells='';
+    // Cabecera
+    cells+=`<div style="grid-column:1;grid-row:1;display:flex;align-items:center;justify-content:center;
+      font-size:.7rem;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--bg-raised)">HORA</div>`;
+    cells+=`<div style="grid-column:2;grid-row:1;display:flex;align-items:center;padding:0 10px;
+      font-family:var(--font-cond);font-weight:700;font-size:.82rem;color:var(--gold);
+      border-bottom:1px solid var(--border);background:var(--bg-raised)">${ST.barbero.nombre}</div>`;
+
+    HORAS.forEach((hora,ri)=>{
+      const gridRow=ri+2;
+      cells+=`<div style="grid-column:1;grid-row:${gridRow};display:flex;align-items:center;justify-content:center;
+        font-family:var(--font-cond);font-size:.78rem;color:var(--text-muted);
+        border-bottom:1px solid rgba(201,148,10,.06);border-right:1px solid var(--border)">${hora}</div>`;
+
+      if(skipMap[hora]||skipMap['blq|'+hora]) return;
+
+      // Bloqueo que empieza aquí
+      if(blqStart.has(hora)){
+        const bl=blqDia.find(b=>b.desde===hora);
+        if(bl){
+          cells+=`<div style="grid-column:2;grid-row:${gridRow}/span ${bl._slots};padding:3px;
+            border-bottom:1px solid rgba(201,148,10,.06)">
+            <div style="height:100%;background:rgba(180,40,40,.1);border:1px dashed #e74c3c;border-radius:6px;
+              display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <span style="font-size:.75rem;font-weight:700;color:#e74c3c">🚫 Bloqueado</span>
+              <span style="font-size:.68rem;color:var(--text-muted)">${bl.desde}–${bl.hasta}</span>
+              ${bl.motivo?`<span style="font-size:.65rem;color:var(--text-dim)">${bl.motivo}</span>`:''}
+            </div></div>`;
+          return;
+        }
+      }
+
+      const t=misTurnos.find(t=>t.hora===hora);
       if(t){
-        const cn=cMap[t.clienteId]||t.clienteNombre||'Sin nombre';
+        const span=t._slots||1;
+        const isCompact=span===1;
+        const cn=cMap[t.clienteId||t.cliente_id]||t.clienteNombre||'Sin nombre';
         const sl=(t.servicios||[]).join(', ')||'—';
-        const badge=t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold';
-        html+=`<div style="padding:4px 8px">
-          <div class="slot-cell slot-occupied" onclick="verTurno(${t.id})">
-            <div style="font-weight:700;margin-bottom:2px">${cn}</div>
-            <div style="font-size:.78rem;color:var(--text-muted)">${sl}</div>
-            <span class="badge ${badge}" style="font-size:.65rem;margin-top:3px">${t.estado||'pendiente'}</span>
+        cells+=`<div style="grid-column:2;grid-row:${gridRow}/span ${span};padding:3px;
+          border-bottom:1px solid rgba(201,148,10,.06)">
+          <div class="slot-cell slot-occupied" onclick="verTurno(${t.id})"
+            style="height:100%;display:flex;flex-direction:${isCompact?'row':'column'};
+              align-items:${isCompact?'center':'flex-start'};justify-content:${isCompact?'space-between':'center'};
+              padding:${isCompact?'3px 6px':'6px 8px'};gap:3px">
+            <div style="font-weight:700;font-size:${isCompact?'.72rem':'.8rem'};
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">${cn}</div>
+            ${isCompact?'':`<div style="font-size:.72rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sl}</div>`}
+            <span class="badge ${_badgeTurno(t.estado)}" style="font-size:.6rem;padding:1px 4px;flex-shrink:0">${_labelTurno(t.estado)}</span>
           </div></div>`;
       }else{
-        html+=`<div style="padding:4px 8px"><div class="slot-cell slot-empty">sin turno</div></div>`;
+        cells+=`<div style="grid-column:2;grid-row:${gridRow};padding:3px;
+          border-bottom:1px solid rgba(201,148,10,.06)">
+          <div class="slot-cell slot-empty">sin turno</div></div>`;
       }
     });
-    html+='</div>';
-    document.getElementById('agendaContent').innerHTML=html;
+    document.getElementById('agendaContent').innerHTML=
+      `<div style="display:grid;grid-template-columns:64px 1fr;grid-template-rows:${rowTpl};
+        min-width:320px;position:relative">${cells}</div>`;
   } else {
     // Vista semanal
     const dias=getDiasSemana(ST.agendaFecha);
@@ -805,15 +922,13 @@ async function renderAgenda(){
       html+=`<div class="time-label" style="padding:10px 6px;border-right:1px solid var(--border)">${hora}</div>`;
       dias.forEach(d=>{
         const fecha=toDS(d);
-        const _tMatches=misTurnos.filter(t=>t.fecha===fecha&&t.hora===hora);
-        const t=_tMatches.find(t=>t.estado!=='cancelado')||_tMatches[0];
+        const t=misTurnos.find(t=>t.fecha===fecha&&t.hora===hora);
         if(t){
           const cn=cMap[t.clienteId]||t.clienteNombre||'—';
-          const badge=t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold';
           html+=`<div style="padding:3px 5px">
             <div class="slot-cell slot-occupied" onclick="verTurno(${t.id})" style="font-size:.74rem">
               <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cn}</div>
-              <span class="badge ${badge}" style="font-size:.6rem">${t.estado||'pend.'}</span>
+              <span class="badge ${_badgeTurno(t.estado)}" style="font-size:.6rem">${_labelTurno(t.estado)}</span>
             </div></div>`;
         }else{
           html+=`<div style="padding:3px 5px"><div style="min-height:44px;border-radius:4px;background:rgba(255,255,255,.01);border:1px dashed rgba(201,148,10,.07)"></div></div>`;
@@ -830,13 +945,13 @@ async function verTurno(id){
   const t=await dbGet('turnos',id);if(!t)return;
   const clientes=await dbAll('clientes');
   const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
-  const badge=t.estado==='completado'?'badge-green':t.estado==='cancelado'?'badge-red':'badge-gold';
   document.getElementById('detalleTurnoContent').innerHTML=`
     <div class="grid-2" style="gap:14px;margin-bottom:14px">
-      <div><div class="form-label">Cliente</div><div style="font-weight:600">${cMap[t.clienteId]||t.clienteNombre||'—'}</div></div>
+      <div><div class="form-label">Cliente</div><div style="font-weight:600">${cMap[t.clienteId||t.cliente_id]||t.clienteNombre||'—'}</div></div>
       <div><div class="form-label">Fecha y Hora</div><div style="font-weight:600">${fmtD(t.fecha)} ${t.hora}</div></div>
       <div><div class="form-label">Servicios</div><div>${(t.servicios||[]).join(', ')||'—'}</div></div>
-      <div><div class="form-label">Estado</div><span class="badge ${badge}">${t.estado||'pendiente'}</span></div>
+      <div><div class="form-label">Duración</div><div>${(t._slots||1)*30} min</div></div>
+      <div><div class="form-label">Estado</div><span class="badge ${_badgeTurno(t.estado)}">${_labelTurno(t.estado)}</span></div>
     </div>
     ${t.notas?`<div class="alert alert-info">${t.notas}</div>`:''}`;
   openModal('modalDetalleTurno');
@@ -844,40 +959,55 @@ async function verTurno(id){
 // ══ SERVICIOS ══
 async function renderServicios(){
   const bId=Number(ST.barbero.id);
-  const pct=(ST.barbero.comision||50)/100;
+  const PROD_COMIS_PCT=0.10;
   const cobros=await dbAll('cobros');
+  const servicios=await dbAll('servicios');
+  const productos=await dbAll('productos');
+  // Mapas para lookup rápido
+  const sMap={};servicios.forEach(s=>sMap[s.id]={...s});
+  const pMap={};productos.forEach(p=>pMap[p.id]={...p});
   cobros.sort((a,b)=>b.fecha>a.fecha?1:-1);
-  const clientes=await dbAll('clientes');
-  const cMap={};clientes.forEach(c=>cMap[c.id]=c.nombre+' '+c.apellido);
   const td=hoy();
   const fechaFiltro=document.getElementById('servFechaFiltro').value||td;
-  // Normalizar barberoId a número para evitar mismatch string/number con Supabase
   const misCobros=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===bId);
-  const cobrosHoy=misCobros.filter(c=>c.fecha===td);
+  const cobrosFiltrados=misCobros.filter(c=>c.fecha===fechaFiltro);
   const cobrosMes=misCobros.filter(c=>c.fecha&&c.fecha.startsWith(td.slice(0,7)));
-  const cobrosFiltered=misCobros.filter(c=>c.fecha===fechaFiltro);
 
-  // Stats — comisión calculada sobre ítems de servicio (no sobre total del cobro)
-  const comHoy=cobrosHoy.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0),0);
-  const cntHoy=cobrosHoy.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').length,0);
-  const comMes=cobrosMes.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0),0);
+  // Stats del día seleccionado - comisión según servicio/producto
+  const comDia=cobrosFiltrados.reduce((s,c)=>{
+    const cs=(c.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).reduce((a,i)=>a+(i.precio||0)*(sMap[i.id].comision||0)/100,0);
+    const cp=(c.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+(i.precio||0)*PROD_COMIS_PCT,0);
+    return s+cs+cp;
+  },0);
+  const cntDia=cobrosFiltrados.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').length,0);
+  // Stats del mes
+  const comMes=cobrosMes.reduce((s,c)=>{
+    const cs=(c.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).reduce((a,i)=>a+(i.precio||0)*(sMap[i.id].comision||0)/100,0);
+    const cp=(c.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+(i.precio||0)*PROD_COMIS_PCT,0);
+    return s+cs+cp;
+  },0);
   const cntMes=cobrosMes.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').length,0);
-  document.getElementById('srvComHoy').textContent=fmt(comHoy);
-  document.getElementById('srvCntHoy').textContent=cntHoy;
+
+  document.getElementById('srvComHoy').textContent=fmt(comDia);
+  document.getElementById('srvCntHoy').textContent=cntDia;
   document.getElementById('srvComMes').textContent=fmt(comMes);
   document.getElementById('srvCntMes').textContent=cntMes;
 
   // Tabla
   const tbody=document.getElementById('serviciosTbody');
-  if(!cobrosFiltered.length){
+  if(!cobrosFiltrados.length){
     tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><div class="icon">✂</div><p>Sin servicios en esta fecha</p></div></td></tr>`;
     return;
   }
-  tbody.innerHTML=cobrosFiltered.sort((a,b)=>(b.hora||'')>(a.hora||'')?1:-1).map(co=>{
+  const sorted=cobrosFiltrados.sort((a,b)=>(b.hora||'')>(a.hora||'')?1:-1);
+  let totalComision=0;
+  const rows=sorted.map(co=>{
     const svcs=(co.items||[]).filter(i=>i.tipo==='servicio').map(i=>i.nombre).join(', ')||'—';
     const prodsComis=(co.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).map(i=>i.nombre).join(', ')||'—';
-    // Comisión = suma de precios de ítems de servicio × pct (no total del cobro)
-    const comision=(co.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+(i.precio||0)*pct,0);
+    const comServ=(co.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).reduce((a,i)=>a+(i.precio||0)*(sMap[i.id].comision||0)/100,0);
+    const comProd=(co.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+(i.precio||0)*PROD_COMIS_PCT,0);
+    const comision=comServ+comProd;
+    totalComision+=comision;
     return `<tr>
       <td>${fmtD(co.fecha)}</td>
       <td>${co.hora||'—'}</td>
@@ -885,7 +1015,12 @@ async function renderServicios(){
       <td style="font-size:.8rem;color:var(--text-muted)">${prodsComis}</td>
       <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(comision)}</td>
     </tr>`;
-  }).join('');
+  });
+  rows.push(`<tr style="background:rgba(201,148,10,.07);border-top:2px solid var(--border-strong)">
+    <td colspan="4" style="font-family:var(--font-cond);font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;text-align:right;padding-right:16px">Total del día</td>
+    <td style="font-family:var(--font-cond);font-weight:700;font-size:1.05rem;color:var(--gold-light)">${fmt(totalComision)}</td>
+  </tr>`);
+  tbody.innerHTML=rows.join('');
 }
 
 // ══ REPORTES ══
@@ -898,24 +1033,25 @@ function setPeriodo(p,el){
 
 async function renderReportes(){
   const bId=Number(ST.barbero.id);
-  const pct=(ST.barbero.comision||50)/100;
   const {desde,hasta,label}=getPeriodoRange(ST.reportePeriodo);
   document.getElementById('reportePeriodoLabel').textContent=label;
 
   const cobros=await dbAll('cobros');
+  const servicios=await dbAll('servicios');
   const egresos=await dbAll('egresos');
   const adelantos=await dbAll('adelantos');
+  
+  const sMap={};servicios.forEach(s=>sMap[s.id]={...s});
 
   const misCobros=cobros.filter(c=>Number(c.barberoId||c.barbero_id)===bId&&c.fecha>=desde&&c.fecha<=hasta);
   const misEgresos=egresos.filter(e=>Number(e.barberoId||e.barbero_id)===bId&&e.fecha>=desde&&e.fecha<=hasta);
   const misAdelantos=adelantos.filter(a=>Number(a.barberoId||a.barbero_id)===bId&&a.estado==='aprobado'&&a.fechaAprobacion&&a.fechaAprobacion>=desde&&a.fechaAprobacion<=hasta);
 
-  // Comisiones por servicios
-  const comServ=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio').reduce((a,i)=>a+i.precio*pct,0),0);
-  // Comisiones por productos
-  // Solo productos con comisionable===true generan 10% fijo
+  // Comisiones por servicios usando comisión de cada servicio
   const PROD_COMIS_PCT=0.10;
-  const comProd=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+i.precio*PROD_COMIS_PCT,0),0);
+  const comServ=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).reduce((a,i)=>a+(i.precio||0)*(sMap[i.id].comision||0)/100,0),0);
+  // Comisiones por productos comisionables (10% fijo)
+  const comProd=misCobros.reduce((s,c)=>s+(c.items||[]).filter(i=>i.tipo==='producto'&&i.comisionable===true).reduce((a,i)=>a+(i.precio||0)*PROD_COMIS_PCT,0),0);
   // Egresos/consumos
   const totalEgresos=misEgresos.reduce((s,e)=>s+(e.monto||0),0);
   // Adelantos
@@ -930,21 +1066,31 @@ async function renderReportes(){
   document.getElementById('rpNeto').textContent=fmt(neto);
   document.getElementById('rpNeto').style.color=neto>=0?'var(--gold-light)':'#e74c3c';
 
-  // Tabla servicios
+  // ── Tabla servicios ──
   const servRows=[];
   misCobros.forEach(co=>{
-    (co.items||[]).filter(i=>i.tipo==='servicio').forEach(i=>{
-      servRows.push({fecha:co.fecha,nombre:i.nombre,precio:i.precio,comision:i.precio*pct});
+    (co.items||[]).filter(i=>i.tipo==='servicio'&&sMap[i.id]).forEach(i=>{
+      const servComision=(i.precio||0)*(sMap[i.id].comision||0)/100;
+      servRows.push({fecha:co.fecha,nombre:i.nombre,precio:i.precio,comision:servComision});
     });
   });
-  document.getElementById('rpServTbody').innerHTML=servRows.length?
-    servRows.sort((a,b)=>b.fecha>a.fecha?1:-1).map(r=>`<tr>
-      <td>${fmtD(r.fecha)}</td><td>${r.nombre}</td>
-      <td style="font-family:var(--font-cond);color:var(--text-muted)">${fmt(r.precio)}</td>
-      <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(r.comision)}</td>
-    </tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin servicios en este período</p></div></td></tr>';
+  if(servRows.length){
+    const totalServComis=servRows.reduce((s,r)=>s+r.comision,0);
+    document.getElementById('rpServTbody').innerHTML=
+      servRows.sort((a,b)=>b.fecha>a.fecha?1:-1).map(r=>`<tr>
+        <td>${fmtD(r.fecha)}</td><td>${r.nombre}</td>
+        <td style="font-family:var(--font-cond);color:var(--text-muted)">${fmt(r.precio)}</td>
+        <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(r.comision)}</td>
+      </tr>`).join('')+
+      `<tr style="background:rgba(201,148,10,.07);border-top:2px solid var(--border-strong)">
+        <td colspan="3" style="font-family:var(--font-cond);font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;text-align:right;padding-right:16px">Total comisiones</td>
+        <td style="font-family:var(--font-cond);font-weight:700;font-size:1.05rem;color:var(--gold-light)">${fmt(totalServComis)}</td>
+      </tr>`;
+  }else{
+    document.getElementById('rpServTbody').innerHTML='<tr><td colspan="4"><div class="empty-state"><p>Sin servicios en este período</p></div></td></tr>';
+  }
 
-  // Tabla productos vendidos
+  // ── Tabla productos vendidos ──
   const prodRows=[];
   misCobros.forEach(co=>{
     (co.items||[]).filter(i=>i.tipo==='producto').forEach(i=>{
@@ -952,27 +1098,54 @@ async function renderReportes(){
       prodRows.push({fecha:co.fecha,nombre:i.nombre,precio:i.precio,comision:comisionProd,comisionable:i.comisionable===true});
     });
   });
-  document.getElementById('rpProdTbody').innerHTML=prodRows.length?
-    prodRows.sort((a,b)=>b.fecha>a.fecha?1:-1).map(r=>`<tr>
-      <td>${fmtD(r.fecha)}</td><td>${r.nombre}</td>
-      <td style="font-family:var(--font-cond);color:var(--text-muted)">${fmt(r.precio)}</td>
-      <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(r.comision)}</td>
-    </tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin productos vendidos</p></div></td></tr>';
+  if(prodRows.length){
+    const totalProdComis=prodRows.reduce((s,r)=>s+r.comision,0);
+    document.getElementById('rpProdTbody').innerHTML=
+      prodRows.sort((a,b)=>b.fecha>a.fecha?1:-1).map(r=>`<tr>
+        <td>${fmtD(r.fecha)}</td><td>${r.nombre}</td>
+        <td style="font-family:var(--font-cond);color:var(--text-muted)">${fmt(r.precio)}</td>
+        <td style="font-family:var(--font-cond);font-weight:700;color:var(--gold-light)">${fmt(r.comision)}</td>
+      </tr>`).join('')+
+      `<tr style="background:rgba(201,148,10,.07);border-top:2px solid var(--border-strong)">
+        <td colspan="3" style="font-family:var(--font-cond);font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;text-align:right;padding-right:16px">Total comisiones</td>
+        <td style="font-family:var(--font-cond);font-weight:700;font-size:1.05rem;color:var(--gold-light)">${fmt(totalProdComis)}</td>
+      </tr>`;
+  }else{
+    document.getElementById('rpProdTbody').innerHTML='<tr><td colspan="4"><div class="empty-state"><p>Sin productos vendidos</p></div></td></tr>';
+  }
 
-  // Tabla egresos
-  document.getElementById('rpEgresosTbody').innerHTML=misEgresos.length?
-    misEgresos.sort((a,b)=>b.fecha>a.fecha?1:-1).map(e=>`<tr>
-      <td>${fmtD(e.fecha)}</td><td>${e.producto}</td><td>${e.cantidad||1}</td>
-      <td style="font-family:var(--font-cond);font-weight:700;color:#e74c3c">${fmt(e.monto)}</td>
-    </tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin egresos registrados</p></div></td></tr>';
+  // ── Tabla egresos ──
+  if(misEgresos.length){
+    const sortedEgresos=misEgresos.sort((a,b)=>b.fecha>a.fecha?1:-1);
+    document.getElementById('rpEgresosTbody').innerHTML=
+      sortedEgresos.map(e=>`<tr>
+        <td>${fmtD(e.fecha)}</td><td>${e.producto}</td><td>${e.cantidad||1}</td>
+        <td style="font-family:var(--font-cond);font-weight:700;color:#e74c3c">${fmt(e.monto)}</td>
+      </tr>`).join('')+
+      `<tr style="background:rgba(192,57,43,.07);border-top:2px solid rgba(192,57,43,.3)">
+        <td colspan="3" style="font-family:var(--font-cond);font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;text-align:right;padding-right:16px">Total egresos</td>
+        <td style="font-family:var(--font-cond);font-weight:700;font-size:1.05rem;color:#e74c3c">${fmt(totalEgresos)}</td>
+      </tr>`;
+  }else{
+    document.getElementById('rpEgresosTbody').innerHTML='<tr><td colspan="4"><div class="empty-state"><p>Sin egresos registrados</p></div></td></tr>';
+  }
 
-  // Tabla adelantos
-  document.getElementById('rpAdelantosTbody').innerHTML=misAdelantos.length?
-    misAdelantos.sort((a,b)=>b.fechaAprobacion>a.fechaAprobacion?1:-1).map(a=>`<tr>
-      <td>${fmtD(a.fechaAprobacion)}</td>
-      <td style="font-family:var(--font-cond);font-weight:700;color:#e74c3c">${fmt(a.montoAprobado)}</td>
-      <td style="font-size:.82rem;color:var(--text-muted)">${a.notaAdmin||'—'}</td>
-    </tr>`).join(''):'<tr><td colspan="3"><div class="empty-state"><p>Sin adelantos en este período</p></div></td></tr>';
+  // ── Tabla adelantos ──
+  if(misAdelantos.length){
+    const sortedAdel=misAdelantos.sort((a,b)=>b.fechaAprobacion>a.fechaAprobacion?1:-1);
+    document.getElementById('rpAdelantosTbody').innerHTML=
+      sortedAdel.map(a=>`<tr>
+        <td>${fmtD(a.fechaAprobacion)}</td>
+        <td style="font-family:var(--font-cond);font-weight:700;color:#e74c3c">${fmt(a.montoAprobado)}</td>
+        <td style="font-size:.82rem;color:var(--text-muted)">${a.notaAdmin||'—'}</td>
+      </tr>`).join('')+
+      `<tr style="background:rgba(192,57,43,.07);border-top:2px solid rgba(192,57,43,.3)">
+        <td colspan="2" style="font-family:var(--font-cond);font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;text-align:right;padding-right:16px">Total descontado</td>
+        <td style="font-family:var(--font-cond);font-weight:700;font-size:1.05rem;color:#e74c3c">${fmt(totalAdelantos)}</td>
+      </tr>`;
+  }else{
+    document.getElementById('rpAdelantosTbody').innerHTML='<tr><td colspan="3"><div class="empty-state"><p>Sin adelantos en este período</p></div></td></tr>';
+  }
 }
 
 // ══ ADELANTOS ══
@@ -1004,6 +1177,14 @@ async function renderAdelantos(){
       <td style="font-size:.82rem;color:var(--text-muted)">${a.notaAdmin||'—'}</td>
     </tr>`;
   }).join('');
+  // Total aprobado
+  const totalAprobado=misAdelantos.filter(a=>a.estado==='aprobado').reduce((s,a)=>s+(a.montoAprobado||0),0);
+  if(totalAprobado>0){
+    tbody.innerHTML+=`<tr style="background:rgba(192,57,43,.07);border-top:2px solid rgba(192,57,43,.3)">
+      <td colspan="4" style="font-family:var(--font-cond);font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;text-align:right;padding-right:16px">Total aprobado</td>
+      <td style="font-family:var(--font-cond);font-weight:700;font-size:1.05rem;color:#e74c3c">${fmt(totalAprobado)}</td>
+    </tr>`;
+  }
 }
 
 async function solicitarAdelanto(){
