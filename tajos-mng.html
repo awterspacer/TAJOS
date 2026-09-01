@@ -544,8 +544,11 @@ tbody tr:last-child td{border-bottom:none;}
     </div>
   </div>
   <div id="reporteTabServicios" style="display:none">
-    <div class="card"><div class="card-title">🗂 Servicios Más Populares</div>
+    <div class="card" style="margin-bottom:16px"><div class="card-title">🗂 Servicios Más Populares</div>
       <div class="table-wrap"><table><thead><tr><th>Servicio</th><th>Cantidad</th><th>Total</th><th>% del Total</th></tr></thead><tbody id="rServiciosTbody"></tbody></table></div>
+    </div>
+    <div class="card" id="rDetalleServiciosCard" style="display:none"><div class="card-title">📋 Detalle de Servicios</div>
+      <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Cliente</th><th>Servicio</th><th>Facturado</th></tr></thead><tbody id="rDetalleServiciosTbody"></tbody></table></div>
     </div>
   </div>
   <div id="reporteTabFlujo" style="display:none">
@@ -3817,6 +3820,26 @@ async function generarReporte(){
   const sMap={};cobros.forEach(co=>(co.items||[]).filter(i=>i.tipo==='servicio').forEach(i=>{if(!sMap[i.nombre])sMap[i.nombre]={count:0,total:0};sMap[i.nombre].count++;sMap[i.nombre].total+=i.precio;}));
   const sL=Object.entries(sMap).sort((a,b)=>b[1].total-a[1].total);const stot=sL.reduce((s,[,v])=>s+v.total,0);
   document.getElementById('rServiciosTbody').innerHTML=sL.length?sL.map(([n,d])=>`<tr><td><strong>${n}</strong></td><td>${d.count}</td><td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(d.total)}</td><td><div class="comm-bar-wrap"><div class="comm-bar" style="width:${stot?(d.total/stot*100).toFixed(1):0}%"></div></div><span style="font-size:.75rem;color:var(--text-muted)">${stot?(d.total/stot*100).toFixed(1):0}%</span></td></tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin datos</p></div></td></tr>';
+
+  // Detalle de servicios: solo cuando el reporte está filtrado a 1 barbero puntual,
+  // igual que "Mis Servicios" del portal barbero pero con nombre y apellido del
+  // cliente (dato oculto para el barbero en su propia vista).
+  const detCard=document.getElementById('rDetalleServiciosCard');
+  if(bf>0){
+    const cl=await dbAll('clientes');const cMap={};cl.forEach(c=>cMap[String(c.id)]=c.nombre+' '+c.apellido);
+    const detRows=[];
+    cobros.forEach(co=>(co.items||[]).filter(i=>i.tipo==='servicio').forEach(i=>{
+      detRows.push({fecha:co.fecha,cliente:cMap[String(co.clienteId||co.cliente_id||'')]||'Sin cliente',nombre:i.nombre,precio:i.precio});
+    }));
+    detRows.sort((a,b)=>b.fecha>a.fecha?1:-1);
+    document.getElementById('rDetalleServiciosTbody').innerHTML=detRows.length?detRows.map(r=>`<tr>
+      <td>${fmtD(r.fecha)}</td><td>${r.cliente}</td><td>${r.nombre}</td>
+      <td style="font-family:var(--font-cond);color:var(--gold-light)">${fmt(r.precio)}</td>
+    </tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><p>Sin servicios en este período</p></div></td></tr>';
+    detCard.style.display='';
+  }else{
+    detCard.style.display='none';
+  }
 }
 
 // Puebla los selectores dependientes de "Tipo de filtro" (semanal/mensual/anual) con
