@@ -872,7 +872,8 @@ async function renderAgenda(){
         }
       }
 
-      const t=misTurnos.find(t=>t.hora===hora);
+      const _tMatches=misTurnos.filter(t=>t.hora===hora);
+      const t=_tMatches.find(t=>t.estado!=='cancelado')||_tMatches[0];
       if(t){
         const span=t._slots||1;
         const isCompact=span===1;
@@ -922,7 +923,8 @@ async function renderAgenda(){
       html+=`<div class="time-label" style="padding:10px 6px;border-right:1px solid var(--border)">${hora}</div>`;
       dias.forEach(d=>{
         const fecha=toDS(d);
-        const t=misTurnos.find(t=>t.fecha===fecha&&t.hora===hora);
+        const _tMatches=misTurnos.filter(t=>t.fecha===fecha&&t.hora===hora);
+        const t=_tMatches.find(t=>t.estado!=='cancelado')||_tMatches[0];
         if(t){
           const cn=cMap[t.clienteId]||t.clienteNombre||'—';
           html+=`<div style="padding:3px 5px">
